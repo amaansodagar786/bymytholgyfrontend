@@ -1,0 +1,14 @@
+.admin-layout {
+  display: flex;
+
+  .admin-content {
+    margin-left: 70px;
+    padding: 20px;
+    width: 100%;
+    transition: 0.3s;
+  }
+
+  .sidebar.open ~ .admin-content {
+    margin-left: 230px;
+  }
+}
