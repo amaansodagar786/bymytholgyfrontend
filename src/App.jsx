@@ -17,6 +17,8 @@ import ProductOffers from "./Pages/AdminPanel/ProductOffers/ProductOffers";
 import ProductPage from "./Pages/ProductPage/ProductPage";
 import NotFound from "./Pages/NoPage/NotFound";
 import Wishlist from "./Pages/Wishlist/Wishlist";
+import Profile from "./Pages/Profile/Profile/Profile";
+import Checkout from "./Pages/CheckOut/Checkout";
 
 function App() {
 
@@ -31,7 +33,9 @@ function App() {
         <Route path="/adminlogin" element={<AdminLogin />} />
         <Route path="/product/:productId" element={<ProductPage />} />
         <Route path="*" element={<NotFound />} /> {/* Optional: 404 page */}
-        <Route path="/wishlist" element={<Wishlist />} /> {/* Optional: 404 page */}
+        <Route path="/wishlist" element={<Wishlist />} /> 
+        <Route path="/profile" element={<Profile />} /> 
+        <Route path="/checkout" element={<Checkout />} /> 
 
 
         <Route

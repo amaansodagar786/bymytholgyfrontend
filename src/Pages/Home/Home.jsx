@@ -16,10 +16,7 @@ function Home() {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
-  // Category icons for dummy images
-  const categoryIcons = [
-    "📱", "💻", "👕", "👟", "🛋️", "📚", "🍳", "🎮", "⚽", "💄"
-  ];
+
 
   // Fetch categories, products, and wishlist
   useEffect(() => {
@@ -35,12 +32,8 @@ function Home() {
         `${import.meta.env.VITE_API_URL}/categories/get`
       );
 
-      // Add icons to categories for dummy images
-      const categoriesWithIcons = categoriesRes.data.map((cat, index) => ({
-        ...cat,
-        icon: categoryIcons[index % categoryIcons.length]
-      }));
-      setCategories(categoriesWithIcons);
+      // Use actual images from database
+      setCategories(categoriesRes.data);
 
       // Fetch products
       const [productsRes, offersRes] = await Promise.all([
@@ -405,7 +398,25 @@ function Home() {
                 onClick={() => handleCategoryClick(category.categoryId || category._id)}
               >
                 <div className="category-image">
-                  <div className="category-icon">{category.icon}</div>
+                  {category.image ? (
+                    <img
+                      src={category.image}
+                      alt={category.name}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = `
+          <div class="category-icon">
+            ${category.name.charAt(0).toUpperCase()}
+          </div>
+        `;
+                      }}
+                    />
+                  ) : (
+                    <div className="category-icon">
+                      {category.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
                 <div className="category-info">
                   <h3>{category.name}</h3>

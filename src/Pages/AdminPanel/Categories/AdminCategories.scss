@@ -1,67 +1,314 @@
 .admin-cat {
   padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
 
-  h1 {
-    margin-bottom: 20px;
-  }
-
-  .cat-form {
+  .admin-header {
     display: flex;
-    gap: 10px;
-    margin-bottom: 25px;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
 
-    input {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
+    h1 {
+      color: #333;
+      margin: 0;
     }
 
-    button {
-      background: #1f2f61;
+    .logout-btn {
+      padding: 8px 16px;
+      background: #f44336;
       color: white;
-      padding: 10px 20px;
-      border-radius: 5px;
       border: none;
+      border-radius: 4px;
       cursor: pointer;
+      font-weight: bold;
 
       &:hover {
-        opacity: 0.8;
+        background: #da190b;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
     }
   }
+}
 
-  .cat-list {
+.access-denied {
+  text-align: center;
+  padding: 100px 20px;
+  
+  h2 {
+    color: #f44336;
+    margin-bottom: 20px;
+  }
+  
+  button {
+    padding: 10px 30px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    
+    &:hover {
+      background: #0b7dda;
+    }
+  }
+}
+
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  button {
+    background: none;
+    border: none;
+    color: #c62828;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    
+    &:hover {
+      color: #b71c1c;
+    }
+  }
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  
+  .spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  p {
+    color: #333;
+    font-weight: bold;
+  }
+}
+
+.cat-form {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+
+  input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    
+    &:disabled {
+      background: #eee;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.image-upload-section {
+  margin-bottom: 20px;
+
+  .image-upload-label {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #4CAF50;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 15px;
+
+    &:hover:not(:disabled) {
+      background: #45a049;
+    }
+    
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .image-preview {
+    margin-top: 15px;
+
+    img {
+      max-width: 200px;
+      max-height: 150px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+
+    p {
+      margin-top: 5px;
+      font-size: 12px;
+      color: #666;
+    }
+  }
+}
+
+.form-buttons {
+  display: flex;
+  gap: 10px;
+
+  button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &.add-btn {
+      background: #2196F3;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: #0b7dda;
+      }
+    }
+
+    &.update-btn {
+      background: #FF9800;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: #e68a00;
+      }
+    }
+
+    &.cancel-btn {
+      background: #f44336;
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: #da190b;
+      }
+    }
+  }
+}
+
+.cat-list {
+  h2 {
+    margin-bottom: 15px;
+    color: #333;
+  }
+  
+  .no-categories {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+    background: #f9f9f9;
+    border-radius: 4px;
+  }
+}
+
+.cat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 10px;
+
+  .cat-info {
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 15px;
 
-    .cat-item {
-      padding: 15px;
-      border: 1px solid #ddd;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-radius: 5px;
+    .cat-name {
+      font-weight: bold;
+      font-size: 18px;
+    }
 
-      .actions {
-        display: flex;
-        gap: 10px;
+    .cat-image-preview {
+      img {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid #eee;
+      }
+    }
+    
+    .no-image {
+      color: #999;
+      font-size: 14px;
+      font-style: italic;
+    }
+  }
 
-        .edit {
-          background: #ffc107;
+  .actions {
+    display: flex;
+    gap: 10px;
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      &.edit {
+        background: #FFC107;
+        color: #333;
+
+        &:hover:not(:disabled) {
+          background: #e0a800;
         }
+      }
 
-        .delete {
-          background: #dc3545;
-          color: white;
-        }
+      &.delete {
+        background: #dc3545;
+        color: white;
 
-        button {
-          padding: 6px 12px;
-          border-radius: 5px;
-          border: none;
-          cursor: pointer;
+        &:hover:not(:disabled) {
+          background: #c82333;
         }
       }
     }
