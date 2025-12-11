@@ -1,0 +1,706 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import './UserOrders.scss';
+
+const UserOrders = () => {
+    const navigate = useNavigate();
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [showOrderDetails, setShowOrderDetails] = useState(false);
+    const [stats, setStats] = useState({
+        totalOrders: 0,
+        pendingOrders: 0,
+        deliveredOrders: 0,
+        cancelledOrders: 0,
+        totalSpent: 0,
+        averageOrderValue: 0
+    });
+    const [filters, setFilters] = useState({
+        status: 'all',
+        page: 1,
+        limit: 10
+    });
+
+    const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId');
+
+    // Status colors mapping
+    const statusColors = {
+        'pending': 'var(--warning)',
+        'processing': 'var(--info)',
+        'shipped': 'var(--primary)',
+        'delivered': 'var(--success)',
+        'cancelled': 'var(--danger)',
+        'returned': 'var(--secondary)'
+    };
+
+    const statusIcons = {
+        'pending': '⏳',
+        'processing': '🔄',
+        'shipped': '🚚',
+        'delivered': '✅',
+        'cancelled': '❌',
+        'returned': '↩️'
+    };
+
+    const fetchUserOrders = async () => {
+        if (!token || !userId) {
+            navigate('/login');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError(null);
+
+            const queryParams = new URLSearchParams({
+                page: filters.page,
+                limit: filters.limit,
+                status: filters.status
+            }).toString();
+
+            const response = await axios.get(
+                `${import.meta.env.VITE_API_URL}/orders/user/${userId}?${queryParams}`,
+                {
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
+
+            if (response.data.success) {
+                setOrders(response.data.orders || []);
+
+                // Safe access to summary
+                const summary = response.data.summary || {};
+                setStats(prev => ({
+                    ...prev,
+                    totalOrders: summary.totalOrders || response.data.pagination?.total || 0,
+                    pendingOrders: summary.pendingOrders || 0,
+                    deliveredOrders: summary.deliveredOrders || 0,
+                    cancelledOrders: summary.cancelledOrders || 0
+                }));
+            } else {
+                setOrders([]);
+                setStats({
+                    totalOrders: 0,
+                    pendingOrders: 0,
+                    deliveredOrders: 0,
+                    cancelledOrders: 0,
+                    totalSpent: 0,
+                    averageOrderValue: 0
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error fetching orders:', error);
+            setError('Failed to load orders. Please try again.');
+            setOrders([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch order stats
+    const fetchOrderStats = async () => {
+        try {
+            const response = await axios.get(
+                `${import.meta.env.VITE_API_URL}/orders/stats/${userId}`,
+                {
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
+
+            if (response.data.success) {
+                // Safe access to stats
+                const statsData = response.data.stats || {};
+                setStats(prev => ({
+                    ...prev,
+                    totalSpent: statsData.totalSpent || statsData.totalSpent || 0,
+                    averageOrderValue: statsData.averageOrderValue || 0
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+            // Don't set error, just log it
+        }
+    };
+
+    useEffect(() => {
+        fetchUserOrders();
+        fetchOrderStats();
+    }, [filters.page, filters.status]);
+
+    // Handle order status filter change
+    const handleStatusFilter = (status) => {
+        setFilters(prev => ({
+            ...prev,
+            status,
+            page: 1 // Reset to first page
+        }));
+    };
+
+    // View order details
+    const handleViewOrderDetails = (order) => {
+        setSelectedOrder(order);
+        setShowOrderDetails(true);
+    };
+
+    // Cancel order
+    const handleCancelOrder = async (orderId, reason = "Changed my mind") => {
+        if (!window.confirm('Are you sure you want to cancel this order?')) {
+            return;
+        }
+
+        try {
+            const response = await axios.put(
+                `${import.meta.env.VITE_API_URL}/orders/${orderId}/cancel`,
+                { reason },
+                {
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
+
+            if (response.data.success) {
+                alert('✅ Order cancelled successfully!');
+                fetchUserOrders(); // Refresh orders
+                fetchOrderStats(); // Refresh stats
+            }
+        } catch (error) {
+            console.error('❌ Error cancelling order:', error);
+            alert(error.response?.data?.message || 'Failed to cancel order');
+        }
+    };
+
+    // Track order (simulated)
+    const handleTrackOrder = (order) => {
+        alert(`Tracking for order ${order.orderId}:\nStatus: ${order.orderStatus}\nEstimated Delivery: ${new Date(order.timeline.estimatedDelivery).toLocaleDateString()}`);
+    };
+
+    // Format date
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
+    // Format time
+    const formatTime = (dateString) => {
+        return new Date(dateString).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    // Calculate delivery date (estimated)
+    const getDeliveryDate = (orderDate) => {
+        const date = new Date(orderDate);
+        date.setDate(date.getDate() + 5); // +5 days for delivery
+        return date.toLocaleDateString('en-IN', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short'
+        });
+    };
+
+    // Render order card
+    const renderOrderCard = (order) => (
+        <div key={order._id} className="order-card">
+            <div className="order-header">
+                <div className="order-info">
+                    <div className="order-id-status">
+                        <h3 className="order-id">Order #{order.orderId}</h3>
+                        <div
+                            className="order-status-badge"
+                            style={{ backgroundColor: statusColors[order.orderStatus] || '#666' }}
+                        >
+                            {statusIcons[order.orderStatus]} {order.orderStatus.toUpperCase()}
+                        </div>
+                    </div>
+                    <div className="order-meta">
+                        <span className="order-date">
+                            📅 Placed on {formatDate(order.createdAt)} at {formatTime(order.createdAt)}
+                        </span>
+                        {order.checkoutMode === 'buy-now' && (
+                            <span className="order-mode-badge">Buy Now</span>
+                        )}
+                    </div>
+                </div>
+                <div className="order-total">
+                    <span className="total-label">Total</span>
+                    <span className="total-amount">₹{order.pricing.total.toLocaleString()}</span>
+                </div>
+            </div>
+
+            <div className="order-items-preview">
+                {order.items.slice(0, 2).map((item, index) => (
+                    <div key={index} className="order-item-preview">
+                        <div className="item-image">
+                            <div className="image-placeholder">
+                                {item.productName.charAt(0)}
+                            </div>
+                        </div>
+                        <div className="item-details">
+                            <h4 className="item-name">{item.productName}</h4>
+                            <div className="item-variants">
+                                {item.modelName !== "Default" && (
+                                    <span className="variant-chip">{item.modelName}</span>
+                                )}
+                                <span className="variant-chip">{item.colorName}</span>
+                                {item.size && (
+                                    <span className="variant-chip">Size: {item.size}</span>
+                                )}
+                            </div>
+                            <div className="item-quantity-price">
+                                <span className="quantity">Qty: {item.quantity}</span>
+                                <span className="price">₹{item.totalPrice.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                {order.items.length > 2 && (
+                    <div className="more-items">
+                        + {order.items.length - 2} more item{order.items.length - 2 > 1 ? 's' : ''}
+                    </div>
+                )}
+            </div>
+
+            <div className="order-summary-preview">
+                <div className="summary-row">
+                    <span>Items:</span>
+                    <span>{order.items.length} item{order.items.length > 1 ? 's' : ''}</span>
+                </div>
+                <div className="summary-row">
+                    <span>Delivery to:</span>
+                    <span className="delivery-address">
+                        {order.deliveryAddress.city}, {order.deliveryAddress.state}
+                    </span>
+                </div>
+                <div className="summary-row">
+                    <span>Expected delivery:</span>
+                    <span className="delivery-date">
+                        {getDeliveryDate(order.createdAt)}
+                    </span>
+                </div>
+            </div>
+
+            <div className="order-actions">
+                <button
+                    className="action-btn view-details-btn"
+                    onClick={() => handleViewOrderDetails(order)}
+                >
+                    📋 View Details
+                </button>
+
+                {order.orderStatus === 'pending' || order.orderStatus === 'processing' ? (
+                    <button
+                        className="action-btn cancel-btn"
+                        onClick={() => handleCancelOrder(order.orderId)}
+                    >
+                        ❌ Cancel Order
+                    </button>
+                ) : order.orderStatus === 'shipped' ? (
+                    <button
+                        className="action-btn track-btn"
+                        onClick={() => handleTrackOrder(order)}
+                    >
+                        🚚 Track Order
+                    </button>
+                ) : order.orderStatus === 'delivered' ? (
+                    <button
+                        className="action-btn review-btn"
+                        onClick={() => navigate(`/product/review/${order.items[0]?.productId}`)}
+                    >
+                        ⭐ Write Review
+                    </button>
+                ) : null}
+            </div>
+        </div>
+    );
+
+    // Render order details modal
+    const renderOrderDetails = () => (
+        <div className="order-details-modal">
+            <div className="modal-overlay" onClick={() => setShowOrderDetails(false)}></div>
+            <div className="modal-content">
+                <div className="modal-header">
+                    <h2>Order Details - #{selectedOrder.orderId}</h2>
+                    <button
+                        className="close-btn"
+                        onClick={() => setShowOrderDetails(false)}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div className="order-details-content">
+                    {/* Order Status Timeline */}
+                    <div className="order-timeline">
+                        <h3>Order Status</h3>
+                        <div className="timeline">
+                            <div className={`timeline-step ${selectedOrder.orderStatus === 'pending' ? 'active' : ''}`}>
+                                <div className="step-icon">⏳</div>
+                                <div className="step-info">
+                                    <span className="step-title">Order Placed</span>
+                                    <span className="step-date">{formatDate(selectedOrder.createdAt)}</span>
+                                </div>
+                            </div>
+
+                            <div className={`timeline-step ${selectedOrder.orderStatus === 'processing' ||
+                                selectedOrder.orderStatus === 'shipped' ||
+                                selectedOrder.orderStatus === 'delivered' ? 'active' : ''}`}>
+                                <div className="step-icon">🔄</div>
+                                <div className="step-info">
+                                    <span className="step-title">Processing</span>
+                                    {selectedOrder.timeline.processedAt && (
+                                        <span className="step-date">{formatDate(selectedOrder.timeline.processedAt)}</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className={`timeline-step ${selectedOrder.orderStatus === 'shipped' ||
+                                selectedOrder.orderStatus === 'delivered' ? 'active' : ''}`}>
+                                <div className="step-icon">🚚</div>
+                                <div className="step-info">
+                                    <span className="step-title">Shipped</span>
+                                    {selectedOrder.timeline.shippedAt && (
+                                        <span className="step-date">{formatDate(selectedOrder.timeline.shippedAt)}</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className={`timeline-step ${selectedOrder.orderStatus === 'delivered' ? 'active' : ''}`}>
+                                <div className="step-icon">✅</div>
+                                <div className="step-info">
+                                    <span className="step-title">Delivered</span>
+                                    {selectedOrder.timeline.deliveredAt && (
+                                        <span className="step-date">{formatDate(selectedOrder.timeline.deliveredAt)}</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Order Items */}
+                    <div className="order-items-full">
+                        <h3>Order Items</h3>
+                        {selectedOrder.items.map((item, index) => (
+                            <div key={index} className="order-item-full">
+                                <div className="item-image">
+                                    <div className="image-placeholder">
+                                        {item.productName.charAt(0)}
+                                    </div>
+                                </div>
+                                <div className="item-details-full">
+                                    <h4 className="item-name">{item.productName}</h4>
+                                    <div className="item-variants">
+                                        {item.modelName !== "Default" && (
+                                            <span className="variant-chip">{item.modelName}</span>
+                                        )}
+                                        <span className="variant-chip">{item.colorName}</span>
+                                        {item.size && (
+                                            <span className="variant-chip">Size: {item.size}</span>
+                                        )}
+                                    </div>
+                                    <div className="item-pricing">
+                                        <div className="price-breakdown">
+                                            <span className="price-label">Price:</span>
+                                            <span className="price">₹{item.offerPrice.toLocaleString()}</span>
+                                            {item.offerPercentage > 0 && (
+                                                <span className="original-price struck">₹{item.unitPrice.toLocaleString()}</span>
+                                            )}
+                                        </div>
+                                        {item.offerPercentage > 0 && (
+                                            <div className="offer-details">
+                                                <span className="offer-badge">{item.offerPercentage}% OFF</span>
+                                                <span className="savings">Saved: ₹{item.savedAmount.toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                        <div className="quantity-total">
+                                            <span>Quantity: {item.quantity}</span>
+                                            <span className="item-total">₹{item.totalPrice.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Delivery Address */}
+                    <div className="delivery-address-details">
+                        <h3>Delivery Address</h3>
+                        <div className="address-card">
+                            <div className="address-header">
+                                <h4>{selectedOrder.deliveryAddress.fullName}</h4>
+                                {selectedOrder.deliveryAddress.isDefault && (
+                                    <span className="default-badge">Default</span>
+                                )}
+                            </div>
+                            <p className="address-contact">
+                                📱 {selectedOrder.deliveryAddress.mobile}
+                                {selectedOrder.deliveryAddress.email && ` | ✉️ ${selectedOrder.deliveryAddress.email}`}
+                            </p>
+                            <div className="address-lines">
+                                <p>{selectedOrder.deliveryAddress.addressLine1}</p>
+                                {selectedOrder.deliveryAddress.addressLine2 && (
+                                    <p>{selectedOrder.deliveryAddress.addressLine2}</p>
+                                )}
+                                {selectedOrder.deliveryAddress.landmark && (
+                                    <p><strong>Landmark:</strong> {selectedOrder.deliveryAddress.landmark}</p>
+                                )}
+                                <p>{selectedOrder.deliveryAddress.city}, {selectedOrder.deliveryAddress.state} - {selectedOrder.deliveryAddress.pincode}</p>
+                                <p>{selectedOrder.deliveryAddress.country}</p>
+                            </div>
+                            {selectedOrder.deliveryAddress.instructions && (
+                                <div className="delivery-instructions">
+                                    <p><strong>Instructions:</strong> {selectedOrder.deliveryAddress.instructions}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Order Summary */}
+                    <div className="order-summary-full">
+                        <h3>Order Summary</h3>
+                        <div className="summary-details">
+                            <div className="summary-row">
+                                <span>Subtotal ({selectedOrder.items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
+                                <span>₹{selectedOrder.pricing.subtotal.toLocaleString()}</span>
+                            </div>
+
+                            {selectedOrder.pricing.totalSavings > 0 && (
+                                <div className="summary-row discount">
+                                    <span>Total Savings</span>
+                                    <span className="savings">-₹{selectedOrder.pricing.totalSavings.toLocaleString()}</span>
+                                </div>
+                            )}
+
+                            <div className="summary-row">
+                                <span>Shipping</span>
+                                <span className={selectedOrder.pricing.shipping === 0 ? 'free' : ''}>
+                                    {selectedOrder.pricing.shipping === 0 ? 'FREE' : `₹${selectedOrder.pricing.shipping}`}
+                                </span>
+                            </div>
+
+                            <div className="summary-row">
+                                <span>Tax (GST {selectedOrder.pricing.taxPercentage}%)</span>
+                                <span>₹{selectedOrder.pricing.tax.toLocaleString()}</span>
+                            </div>
+
+                            <div className="summary-row total">
+                                <span>Total Amount</span>
+                                <span className="total-amount">₹{selectedOrder.pricing.total.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Payment Details */}
+                    <div className="payment-details">
+                        <h3>Payment Details</h3>
+                        <div className="payment-card">
+                            <div className="payment-method">
+                                <span className="method-icon">
+                                    {selectedOrder.payment.method === 'cod' ? '💵' :
+                                        selectedOrder.payment.method === 'card' ? '💳' : '📱'}
+                                </span>
+                                <div className="method-info">
+                                    <span className="method-name">
+                                        {selectedOrder.payment.method === 'cod' ? 'Cash on Delivery' :
+                                            selectedOrder.payment.method === 'card' ? 'Credit/Debit Card' : 'UPI'}
+                                    </span>
+                                    <span className="method-status">
+                                        Status: <span className={`status-${selectedOrder.payment.status}`}>
+                                            {selectedOrder.payment.status.toUpperCase()}
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                            {selectedOrder.payment.paidAmount && (
+                                <div className="payment-amount">
+                                    <span>Paid Amount:</span>
+                                    <span className="paid-amount">₹{selectedOrder.payment.paidAmount.toLocaleString()}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="modal-actions">
+                    <button
+                        className="btn primary"
+                        onClick={() => {
+                            // Navigate to track order page or show tracking
+                            handleTrackOrder(selectedOrder);
+                        }}
+                    >
+                        🚚 Track Order
+                    </button>
+                    <button
+                        className="btn secondary"
+                        onClick={() => setShowOrderDetails(false)}
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
+    // Render empty state
+    const renderEmptyState = () => (
+        <div className="empty-orders">
+            <div className="empty-icon">📦</div>
+            <h2>No orders yet</h2>
+            <p>You haven't placed any orders yet. Start shopping!</p>
+            <button
+                className="shop-now-btn"
+                onClick={() => navigate('/products')}
+            >
+                Start Shopping
+            </button>
+        </div>
+    );
+
+    // Render loading state
+    const renderLoading = () => (
+        <div className="loading-container">
+            <div className="spinner"></div>
+            <p>Loading your orders...</p>
+        </div>
+    );
+
+    // Render error state
+    const renderError = () => (
+        <div className="error-container">
+            <div className="error-icon">❌</div>
+            <h2>Unable to load orders</h2>
+            <p>{error}</p>
+            <button
+                className="retry-btn"
+                onClick={fetchUserOrders}
+            >
+                Retry
+            </button>
+        </div>
+    );
+
+    if (!token || !userId) {
+        return (
+            <div className="login-required">
+                <h2>Login Required</h2>
+                <p>Please login to view your orders.</p>
+                <button onClick={() => navigate('/login')} className="auth-btn">
+                    Go to Login
+                </button>
+            </div>
+        );
+    }
+
+    if (loading) return renderLoading();
+    if (error) return renderError();
+
+    return (
+        <div className="user-orders-container">
+            {/* Header */}
+            <div className="orders-header">
+                <h1>My Orders</h1>
+                <div className="stats-summary">
+                    {/* Fix all stat displays with optional chaining: */}
+                    <div className="stat-card">
+                        <span className="stat-value">{stats.totalOrders || 0}</span>
+                        <span className="stat-label">Total Orders</span>
+                    </div>
+                    <div className="stat-card">
+                        <span className="stat-value">{stats.pendingOrders || 0}</span>
+                        <span className="stat-label">Pending</span>
+                    </div>
+                    <div className="stat-card">
+                        <span className="stat-value">{stats.deliveredOrders || 0}</span>
+                        <span className="stat-label">Delivered</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Status Filters */}
+            <div className="status-filters">
+                <button
+                    className={`filter-btn ${filters.status === 'all' ? 'active' : ''}`}
+                    onClick={() => handleStatusFilter('all')}
+                >
+                    All Orders
+                </button>
+                <button
+                    className={`filter-btn ${filters.status === 'pending' ? 'active' : ''}`}
+                    onClick={() => handleStatusFilter('pending')}
+                >
+                    ⏳ Pending
+                </button>
+                <button
+                    className={`filter-btn ${filters.status === 'processing' ? 'active' : ''}`}
+                    onClick={() => handleStatusFilter('processing')}
+                >
+                    🔄 Processing
+                </button>
+                <button
+                    className={`filter-btn ${filters.status === 'shipped' ? 'active' : ''}`}
+                    onClick={() => handleStatusFilter('shipped')}
+                >
+                    🚚 Shipped
+                </button>
+                <button
+                    className={`filter-btn ${filters.status === 'delivered' ? 'active' : ''}`}
+                    onClick={() => handleStatusFilter('delivered')}
+                >
+                    ✅ Delivered
+                </button>
+                <button
+                    className={`filter-btn ${filters.status === 'cancelled' ? 'active' : ''}`}
+                    onClick={() => handleStatusFilter('cancelled')}
+                >
+                    ❌ Cancelled
+                </button>
+            </div>
+
+            {/* Orders List */}
+            <div className="orders-list">
+                {orders.length === 0 ? (
+                    renderEmptyState()
+                ) : (
+                    <>
+                        {orders.map(renderOrderCard)}
+
+                        {/* Pagination */}
+                        {stats.totalOrders > filters.limit && (
+                            <div className="pagination">
+                                <button
+                                    className="page-btn"
+                                    disabled={filters.page === 1}
+                                    onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
+                                >
+                                    ← Previous
+                                </button>
+                                <span className="page-info">
+                                    Page {filters.page} of {Math.ceil(stats.totalOrders / filters.limit)}
+                                </span>
+                                <button
+                                    className="page-btn"
+                                    disabled={filters.page >= Math.ceil(stats.totalOrders / filters.limit)}
+                                    onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
+                                >
+                                    Next →
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {/* Order Details Modal */}
+            {showOrderDetails && selectedOrder && renderOrderDetails()}
+        </div>
+    );
+};
+
+export default UserOrders;

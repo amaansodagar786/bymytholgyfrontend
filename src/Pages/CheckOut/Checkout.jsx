@@ -2,15 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom';
 import './Checkout.scss';
 import AddressForm from './Address/AddressForm';
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1); // 1: Review, 2: Address, 3: Payment
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   // Cart Data
   const [cartItems, setCartItems] = useState([]);
   const [cartSummary, setCartSummary] = useState({
@@ -21,17 +23,22 @@ const Checkout = () => {
     totalItems: 0,
     totalSavings: 0
   });
-  
+
   // Address Data
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
-  
+
   // User Data
   const token = localStorage.getItem('token');
   const userId = localStorage.getItem('userId');
-  
+
+
+  const [checkoutMode, setCheckoutMode] = useState('cart'); // 'cart' or 'buy-now'
+  const [buyNowData, setBuyNowData] = useState(null);
+
+
   // Step Names
   const steps = [
     { number: 1, name: 'Review Order' },
@@ -45,20 +52,62 @@ const Checkout = () => {
       navigate('/login');
       return;
     }
-    fetchCartData();
-    fetchAddresses();
-  }, []);
+
+    // Check if we're in Buy Now mode (data passed from product page)
+    if (location.state && location.state.buyNowMode) {
+      setCheckoutMode('buy-now');
+      setBuyNowData(location.state.productData);
+      processBuyNowData(location.state.productData);
+    } else {
+      // Normal cart mode
+      setCheckoutMode('cart');
+      fetchCartData();
+      fetchAddresses();
+    }
+  }, [location.state]);
+
+  // Process Buy Now data
+  const processBuyNowData = async (productData) => {
+    try {
+      setLoading(true);
+
+      // Create checkout session on backend
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/buynow/create-checkout-session`,
+        productData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        // Set cart items and summary from buy now session
+        setCartItems(response.data.checkoutSession.cartItems);
+        setCartSummary(response.data.summary);
+      }
+
+      // Still fetch addresses (same for both modes)
+      await fetchAddresses();
+
+    } catch (error) {
+      console.error('Error processing Buy Now:', error);
+      alert('Failed to process Buy Now. Please try again.');
+      navigate('/products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   // Fetch cart data
   const fetchCartData = async () => {
     try {
       setLoading(true);
-      
+
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/cart/${userId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.data.cartItems) {
         setCartItems(response.data.cartItems);
         calculateCartSummary(response.data.cartItems, response.data.summary);
@@ -78,10 +127,10 @@ const Checkout = () => {
         `${import.meta.env.VITE_API_URL}/profile/addresses`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.data.success) {
         setAddresses(response.data.addresses);
-        
+
         // Set default address as selected
         const defaultAddress = response.data.addresses.find(addr => addr.isDefault);
         if (defaultAddress) {
@@ -121,23 +170,23 @@ const Checkout = () => {
   const handleAddAddress = async (addressData) => {
     try {
       setSaving(true);
-      
+
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/profile/address/add`,
         addressData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.data.success) {
         // Refresh addresses
         await fetchAddresses();
-        
+
         // ✅ Set newly added address as selected automatically
         setSelectedAddress(response.data.address);
-        
+
         // Close form
         setShowAddressForm(false);
-        
+
         // Success message
         alert('✅ Address added successfully! It is now selected for delivery.');
       }
@@ -152,26 +201,26 @@ const Checkout = () => {
   const handleUpdateAddress = async (addressData) => {
     try {
       setSaving(true);
-      
+
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/profile/address/update/${editingAddress.addressId}`,
         addressData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.data.success) {
         // Refresh addresses
         await fetchAddresses();
-        
+
         // Update selected address if it was the one being edited
         if (selectedAddress?.addressId === editingAddress.addressId) {
           setSelectedAddress(response.data.address);
         }
-        
+
         // Close form
         setShowAddressForm(false);
         setEditingAddress(null);
-        
+
         alert('✅ Address updated successfully!');
       }
     } catch (error) {
@@ -221,25 +270,108 @@ const Checkout = () => {
     }
   };
 
-  const handlePlaceOrder = () => {
+  // ==================== ORDER CREATION ====================
+  const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       alert('⚠️ Please select a delivery address');
       setCurrentStep(2);
       return;
     }
-    
-    // TODO: Implement actual order creation
-    alert('✅ Order placed successfully! (This is a demo)');
-    navigate('/orders');
+
+    try {
+      setSaving(true);
+
+      // Prepare order data based on checkout mode
+      const orderData = {
+        userId,
+        checkoutMode,
+        items: cartItems.map(item => ({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          finalPrice: item.finalPrice,
+          totalPrice: item.totalPrice,
+          selectedColor: item.selectedColor,
+          selectedSize: item.selectedSize,
+          selectedModel: item.selectedModel,
+          hasOffer: item.hasOffer,
+          offerDetails: item.offerDetails,
+          thumbnailImage: item.selectedColor?.images?.[0] || item.thumbnailImage
+        })),
+        address: selectedAddress,
+        paymentMethod: 'cod'
+      };
+
+      // Call backend to create order
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/orders/create`,
+        orderData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        // Success message with order details
+        alert(`✅ Order placed successfully!\nOrder ID: ${response.data.order.orderId}\nTotal: ₹${response.data.order.pricing.total.toLocaleString()}`);
+
+        // Dispatch event to update cart count in navbar
+        window.dispatchEvent(new Event('cartUpdated'));
+
+        // Navigate to orders page with success message
+        navigate('/orders', {
+          state: {
+            orderSuccess: true,
+            orderId: response.data.order.orderId,
+            orderTotal: response.data.order.pricing.total
+          }
+        });
+      } else {
+        throw new Error(response.data.message || 'Failed to place order');
+      }
+
+    } catch (error) {
+      console.error('❌ Error placing order:', error);
+
+      let errorMessage = 'Failed to place order. Please try again.';
+
+      if (error.response) {
+        // Backend returned an error
+        if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+
+        // Handle specific error cases
+        if (error.response.status === 400) {
+          if (error.response.data.message.includes('Insufficient stock')) {
+            errorMessage = 'Some items in your cart are out of stock. Please update your cart and try again.';
+            // Optionally refresh cart data
+            if (checkoutMode === 'cart') {
+              await fetchCartData();
+            }
+          } else if (error.response.data.message.includes('Product not found')) {
+            errorMessage = 'Some products in your cart are no longer available. Please update your cart.';
+          }
+        }
+      }
+
+      alert(`❌ ${errorMessage}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ==================== RENDER FUNCTIONS ====================
-  
+
   // Render Product Review Step
   const renderReviewStep = () => (
     <div className="checkout-step">
       <h2>Review Your Order</h2>
-      
+
       {/* Cart Items */}
       <div className="order-items">
         {cartItems.map(item => (
@@ -253,10 +385,10 @@ const Checkout = () => {
                 }}
               />
             </div>
-            
+
             <div className="item-details">
               <h4 className="item-name">{item.productName}</h4>
-              
+
               <div className="item-variants">
                 {item.selectedModel && (
                   <span className="variant-chip">{item.selectedModel.modelName}</span>
@@ -268,7 +400,7 @@ const Checkout = () => {
                   <span className="variant-chip">Size: {item.selectedSize}</span>
                 )}
               </div>
-              
+
               <div className="item-quantity-price">
                 <span className="quantity">Qty: {item.quantity}</span>
                 <span className="price">
@@ -284,40 +416,40 @@ const Checkout = () => {
           </div>
         ))}
       </div>
-      
+
       {/* Order Summary */}
       <div className="order-summary">
         <h3>Order Summary</h3>
-        
+
         <div className="summary-row">
           <span>Subtotal ({cartSummary.totalItems} items)</span>
           <span>₹{cartSummary.subtotal.toLocaleString()}</span>
         </div>
-        
+
         {cartSummary.totalSavings > 0 && (
           <div className="summary-row discount">
             <span>Total Savings</span>
             <span className="savings">-₹{cartSummary.totalSavings.toLocaleString()}</span>
           </div>
         )}
-        
+
         <div className="summary-row">
           <span>Shipping</span>
           <span className={cartSummary.shipping === 0 ? 'free' : ''}>
             {cartSummary.shipping === 0 ? 'FREE' : `₹${cartSummary.shipping}`}
           </span>
         </div>
-        
+
         <div className="summary-row">
           <span>Tax (GST 18%)</span>
           <span>₹{cartSummary.tax.toLocaleString()}</span>
         </div>
-        
+
         <div className="summary-row total">
           <span>Total Amount</span>
           <span className="total-amount">₹{cartSummary.total.toLocaleString()}</span>
         </div>
-        
+
         {cartSummary.subtotal < 1000 && (
           <div className="free-shipping-note">
             🚚 Add ₹{(1000 - cartSummary.subtotal).toLocaleString()} more for FREE shipping!
@@ -331,7 +463,7 @@ const Checkout = () => {
   const renderAddressStep = () => (
     <div className="checkout-step">
       <h2>Select Delivery Address</h2>
-      
+
       {/* Current Selected Address Preview */}
       {selectedAddress && (
         <div className="selected-address-preview">
@@ -358,11 +490,11 @@ const Checkout = () => {
           </div>
         </div>
       )}
-      
+
       {/* Address Options */}
       <div className="address-options-section">
         <h3>Choose from saved addresses:</h3>
-        
+
         {addresses.length === 0 ? (
           <div className="no-addresses">
             <div className="empty-state">
@@ -373,8 +505,8 @@ const Checkout = () => {
         ) : (
           <div className="address-options-list">
             {addresses.map(address => (
-              <div 
-                key={address.addressId} 
+              <div
+                key={address.addressId}
                 className={`address-option-card ${selectedAddress?.addressId === address.addressId ? 'selected' : ''}`}
                 onClick={() => handleSelectAddress(address)}
               >
@@ -393,18 +525,18 @@ const Checkout = () => {
                       <span className="default-badge">Default</span>
                     )}
                     <span className="address-type-badge">
-                      {address.addressType === 'home' ? '🏠 Home' : 
-                       address.addressType === 'work' ? '💼 Work' : '📌 Other'}
+                      {address.addressType === 'home' ? '🏠 Home' :
+                        address.addressType === 'work' ? '💼 Work' : '📌 Other'}
                     </span>
                   </div>
                 </div>
-                
+
                 <div className="address-option-content">
                   <p className="address-contact">
-                    📱 {address.mobile} 
+                    📱 {address.mobile}
                     {address.email && ` | ✉️ ${address.email}`}
                   </p>
-                  
+
                   <div className="address-details">
                     <p>{address.addressLine1}</p>
                     {address.addressLine2 && <p>{address.addressLine2}</p>}
@@ -412,15 +544,15 @@ const Checkout = () => {
                     <p>{address.city}, {address.state} - {address.pincode}</p>
                     <p>{address.country}</p>
                   </div>
-                  
+
                   {address.instructions && (
                     <div className="address-instructions">
                       <p><strong>Delivery Instructions:</strong> {address.instructions}</p>
                     </div>
                   )}
-                  
+
                   <div className="address-actions">
-                    <button 
+                    <button
                       className="edit-btn"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -435,10 +567,10 @@ const Checkout = () => {
             ))}
           </div>
         )}
-        
+
         {/* Add New Address Button */}
         <div className="add-address-section">
-          <button 
+          <button
             className="add-address-btn"
             onClick={() => setShowAddressForm(true)}
             disabled={saving}
@@ -446,8 +578,8 @@ const Checkout = () => {
             ＋ Add New Address
           </button>
           <p className="add-address-note">
-            {addresses.length === 0 ? 
-              "Add your first delivery address" : 
+            {addresses.length === 0 ?
+              "Add your first delivery address" :
               "Can't find your address? Add a new one"}
           </p>
         </div>
@@ -459,14 +591,14 @@ const Checkout = () => {
   const renderPaymentStep = () => (
     <div className="checkout-step">
       <h2>Payment Method</h2>
-      
+
       <div className="payment-methods">
         <div className="payment-method selected">
-          <input 
-            type="radio" 
-            id="cod" 
-            name="payment" 
-            defaultChecked 
+          <input
+            type="radio"
+            id="cod"
+            name="payment"
+            defaultChecked
             readOnly
           />
           <label htmlFor="cod">
@@ -477,7 +609,7 @@ const Checkout = () => {
             </div>
           </label>
         </div>
-        
+
         <div className="payment-method disabled">
           <input type="radio" id="card" name="payment" disabled />
           <label htmlFor="card">
@@ -488,7 +620,7 @@ const Checkout = () => {
             </div>
           </label>
         </div>
-        
+
         <div className="payment-method disabled">
           <input type="radio" id="upi" name="payment" disabled />
           <label htmlFor="upi">
@@ -500,7 +632,7 @@ const Checkout = () => {
           </label>
         </div>
       </div>
-      
+
       <div className="order-confirmation">
         <h3>Order Confirmation</h3>
         <div className="confirmation-details">
@@ -525,7 +657,7 @@ const Checkout = () => {
               <p className="error">⚠️ No address selected</p>
             )}
           </div>
-          
+
           <div className="order-summary-final">
             <div className="summary-row">
               <span>Items Total:</span>
@@ -546,7 +678,7 @@ const Checkout = () => {
               <span className="total-price">₹{cartSummary.total.toLocaleString()}</span>
             </div>
           </div>
-          
+
           <div className="payment-note">
             <p>💰 <strong>Cash on Delivery:</strong> Pay ₹{cartSummary.total.toLocaleString()} when your order arrives.</p>
             <p>📦 <strong>Delivery:</strong> 3-7 business days</p>
@@ -601,8 +733,8 @@ const Checkout = () => {
       {/* Progress Indicator */}
       <div className="checkout-progress">
         {steps.map(step => (
-          <div 
-            key={step.number} 
+          <div
+            key={step.number}
             className={`progress-step ${currentStep >= step.number ? 'active' : ''}`}
           >
             <div className="step-number">{step.number}</div>
@@ -624,18 +756,30 @@ const Checkout = () => {
         <button className="back-btn" onClick={goToPrevStep}>
           {currentStep === 1 ? 'Back to Cart' : 'Back'}
         </button>
-        
+
         <div className="step-indicator">
           Step {currentStep} of 3
         </div>
-        
+
+  
         {currentStep < 3 ? (
           <button className="next-btn" onClick={goToNextStep}>
             Continue to {currentStep === 1 ? 'Address' : 'Payment'}
           </button>
         ) : (
-          <button className="place-order-btn" onClick={handlePlaceOrder}>
-            Place Order
+          <button
+            className="place-order-btn"
+            onClick={handlePlaceOrder}
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <span className="loading-spinner-small"></span>
+                Processing...
+              </>
+            ) : (
+              'Place Order'
+            )}
           </button>
         )}
       </div>

@@ -19,6 +19,8 @@ import NotFound from "./Pages/NoPage/NotFound";
 import Wishlist from "./Pages/Wishlist/Wishlist";
 import Profile from "./Pages/Profile/Profile/Profile";
 import Checkout from "./Pages/CheckOut/Checkout";
+import UserOrders from "./Pages/Profile/UserOrders/UserOrders";
+import AdminOrders from "./Pages/AdminPanel/AdminOrders/AdminOrders";
 
 function App() {
 
@@ -36,6 +38,7 @@ function App() {
         <Route path="/wishlist" element={<Wishlist />} /> 
         <Route path="/profile" element={<Profile />} /> 
         <Route path="/checkout" element={<Checkout />} /> 
+        <Route path="/orders" element={<UserOrders />} /> 
 
 
         <Route
@@ -77,6 +80,15 @@ function App() {
           element={
             <AdminLayout>
               <ProductOffers />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/orders"
+          element={
+            <AdminLayout>
+              <AdminOrders />
             </AdminLayout>
           }
         />

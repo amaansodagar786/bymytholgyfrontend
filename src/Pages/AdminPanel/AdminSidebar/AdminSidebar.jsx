@@ -36,6 +36,13 @@ function AdminSidebar() {
         </li>
 
         <li>
+          <Link to="/admin/orders">
+            <MdProductionQuantityLimits className="icon" />
+            {open && <span>Manage Orders</span>}
+          </Link>
+        </li>
+
+        <li>
           <Link to="/admin/categories">
             <MdCategory className="icon" />
             {open && <span>Categories</span>}

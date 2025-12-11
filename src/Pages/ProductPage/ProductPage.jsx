@@ -762,7 +762,7 @@ function ProductPage() {
     }
   };
 
-  // NEW: Updated handle buy now WITH STOCK VALIDATION
+  // In ProductPage.jsx - Update handleBuyNow function
   const handleBuyNow = () => {
     // Check stock before proceeding
     if (!canPurchaseProduct()) {
@@ -774,9 +774,58 @@ function ProductPage() {
       return;
     }
 
-    // First add to cart, then navigate to checkout
-    handleAddToCart();
-    navigate("/checkout");
+    // Check if user is logged in
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+
+    if (!token || !userId) {
+      alert("Please login to proceed with Buy Now");
+      navigate("/login");
+      return;
+    }
+
+    const basePrice = getBasePrice();
+    const offerPrice = getOfferPrice();
+    const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
+    const selectedColorData = product.type === "simple" ? selectedColor : selectedModelColor;
+    const selectedSizeData = product.type === "simple" ? selectedSize : selectedModelSize;
+    const thumbnailImage = selectedColorData?.images?.[0] || product.thumbnailImage;
+
+    // Prepare Buy Now data
+    const buyNowData = {
+      userId,
+      productId: product.productId,
+      productName: product.productName,
+      quantity: quantity,
+      unitPrice: basePrice,
+      finalPrice: offerPrice,
+      totalPrice: getTotalPrice(),
+      selectedColor: selectedColorData,
+      selectedSize: selectedSizeData,
+      selectedModel: product.type === "variable" ? {
+        modelId: selectedModel._id || selectedModel.modelId,
+        modelName: selectedModel.modelName,
+        SKU: selectedModel.SKU
+      } : null,
+      hasOffer: hasOffer,
+      offerDetails: hasOffer ? {
+        offerId: currentOffer._id,
+        offerPercentage: currentOffer.offerPercentage,
+        offerLabel: currentOffer.offerLabel,
+        originalPrice: basePrice,
+        offerPrice: offerPrice,
+        savedAmount: (basePrice - offerPrice) * quantity
+      } : null,
+      thumbnailImage: thumbnailImage
+    };
+
+    // Navigate to checkout with Buy Now data
+    navigate('/checkout', {
+      state: {
+        buyNowMode: true,
+        productData: buyNowData
+      }
+    });
   };
 
   if (loading) {
@@ -978,7 +1027,7 @@ function ProductPage() {
                 </>
               ) : inventoryStatus.status === 'low-stock' ? (
                 <>
-                  ⚠️ Low Stock - 
+                  ⚠️ Low Stock -
                   {/* {inventoryStatus.threshold > 0 && (
                     <span className="stock-info">(Threshold: {inventoryStatus.threshold})</span>
                   )} */}
@@ -1348,14 +1397,14 @@ function ProductPage() {
           {/* NEW: Out of stock message */}
           {inventoryStatus.status === 'out-of-stock' && (
             <div className="out-of-stock-message">
-               This product is currently out of stock. You can still add it to your wishlist to be notified when it's back in stock.
+              This product is currently out of stock. You can still add it to your wishlist to be notified when it's back in stock.
             </div>
           )}
 
           {/* NEW: Low stock warning */}
           {inventoryStatus.status === 'low-stock' && inventoryStatus.stock < 5 && (
             <div className="low-stock-warning">
-               Hurry! Only {inventoryStatus.stock} item{inventoryStatus.stock > 1 ? 's' : ''} left in stock!
+              Hurry! Only {inventoryStatus.stock} item{inventoryStatus.stock > 1 ? 's' : ''} left in stock!
             </div>
           )}
 
