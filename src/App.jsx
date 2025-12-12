@@ -21,6 +21,9 @@ import Profile from "./Pages/Profile/Profile/Profile";
 import Checkout from "./Pages/CheckOut/Checkout";
 import UserOrders from "./Pages/Profile/UserOrders/UserOrders";
 import AdminOrders from "./Pages/AdminPanel/AdminOrders/AdminOrders";
+import UserReviews from "./Pages/Profile/UserReviews/UserReviews";
+import AllProducts from "./Pages/AllProducts/AllProducts";
+import CategoryProducts from "./Pages/CategoryProducts/CategoryProducts";
 
 function App() {
 
@@ -35,10 +38,14 @@ function App() {
         <Route path="/adminlogin" element={<AdminLogin />} />
         <Route path="/product/:productId" element={<ProductPage />} />
         <Route path="*" element={<NotFound />} /> {/* Optional: 404 page */}
-        <Route path="/wishlist" element={<Wishlist />} /> 
-        <Route path="/profile" element={<Profile />} /> 
-        <Route path="/checkout" element={<Checkout />} /> 
-        <Route path="/orders" element={<UserOrders />} /> 
+        <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/orders" element={<UserOrders />} />
+        <Route path="/my-reviews" element={<UserReviews />} />
+        <Route path="/products" element={<AllProducts />} />
+
+        <Route path="/category/:categoryId" element={<CategoryProducts />} />
 
 
         <Route

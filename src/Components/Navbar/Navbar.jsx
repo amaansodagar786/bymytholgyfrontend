@@ -226,6 +226,13 @@ function Navbar() {
                     </svg>
                     My Orders
                   </Link>
+
+                  <Link to="/my-reviews" className="dropdown-item" onClick={() => setMenuOpen(false)}>
+                    <svg className="dropdown-icon" viewBox="0 0 24 24" fill="none">
+                      <path d="M19 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V5H19V19ZM12 17C13.66 17 15 15.66 15 14C15 12.34 13.66 11 12 11C10.34 11 9 12.34 9 14C9 15.66 10.34 17 12 17ZM6 6H18V10H6V6Z" fill="currentColor"/>
+                    </svg>
+                    My Reviews
+                  </Link>
                   <div className="dropdown-divider"></div>
                   <button className="dropdown-item logout-btn" onClick={handleLogout}>
                     <svg className="dropdown-icon" viewBox="0 0 24 24" fill="none">

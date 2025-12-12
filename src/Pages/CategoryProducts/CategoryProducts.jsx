@@ -1,66 +1,70 @@
 import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import ProductCard from "../../Components/ProductCard/ProductCard";
-import "./Home.scss";
+import "./CategoryProducts.scss";
 
-function Home() {
-  const [categories, setCategories] = useState([]);
+function CategoryProducts() {
+  const { categoryId } = useParams();
+  const navigate = useNavigate();
+  
+  const [category, setCategory] = useState(null);
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [wishlist, setWishlist] = useState({});
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [visibleProducts, setVisibleProducts] = useState(12);
 
-  const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-
-  // Fetch categories, products, and wishlist
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchCategoryProducts();
+    if (localStorage.getItem("token")) {
+      fetchUserWishlist();
+    }
+  }, [categoryId]);
 
-  const fetchData = async () => {
+  // Fetch products for this category
+  const fetchCategoryProducts = async () => {
     try {
       setLoading(true);
-
-      // Fetch categories
+      
+      // Fetch category details
       const categoriesRes = await axios.get(
         `${import.meta.env.VITE_API_URL}/categories/get`
       );
-      setCategories(categoriesRes.data);
+      
+      const foundCategory = categoriesRes.data.find(
+        cat => cat.categoryId === categoryId || cat._id === categoryId
+      );
+      
+      if (!foundCategory) {
+        navigate("/");
+        return;
+      }
+      
+      setCategory(foundCategory);
 
-      // Fetch all products
+      // Fetch all products and offers
       const [productsRes, offersRes] = await Promise.all([
         axios.get(`${import.meta.env.VITE_API_URL}/products/all`),
         axios.get(`${import.meta.env.VITE_API_URL}/productoffers/active-color-offers`)
       ]);
 
+      // Process products
       const allProducts = processProducts(productsRes.data, offersRes.data);
-      setProducts(allProducts);
       
-      // Get 8 random products
-      const randomProducts = getRandomProducts(allProducts, 8);
-      setFilteredProducts(randomProducts);
-
-      // Fetch user's wishlist if logged in
-      if (token) {
-        await fetchUserWishlist();
-      }
+      // Filter products by category
+      const categoryProducts = allProducts.filter(
+        product => product.categoryId === (foundCategory.categoryId || foundCategory._id)
+      );
+      
+      setProducts(categoryProducts);
+      setFilteredProducts(categoryProducts.slice(0, visibleProducts));
 
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching category products:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Get random products function
-  const getRandomProducts = (productList, count) => {
-    if (!productList || productList.length === 0) return [];
-    const shuffled = [...productList].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
   };
 
   // Process products to group by productId and handle variants WITH OFFERS
@@ -197,7 +201,7 @@ function Home() {
     return Array.from(productMap.values());
   };
 
-  // Fetch user's wishlist from backend
+  // Fetch user's wishlist
   const fetchUserWishlist = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -227,9 +231,8 @@ function Home() {
 
       setWishlist(wishlistObj);
       window.dispatchEvent(new Event('wishlistUpdated'));
-
     } catch (error) {
-      console.error("Error fetching wishlist:", error.response?.data || error.message);
+      console.error("Error fetching wishlist:", error);
     }
   };
 
@@ -260,7 +263,6 @@ function Home() {
           }
         );
 
-        // Update local state
         setWishlist(prev => {
           const newWishlist = { ...prev };
           delete newWishlist[product.productId];
@@ -272,7 +274,7 @@ function Home() {
         const wishlistData = {
           userId,
           productId: product.productId,
-          addedFrom: "home"
+          addedFrom: "category"
         };
 
         await axios.post(
@@ -286,7 +288,6 @@ function Home() {
           }
         );
 
-        // Update local state
         setWishlist(prev => ({
           ...prev,
           [product.productId]: {
@@ -301,54 +302,15 @@ function Home() {
 
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      if (error.response?.data?.message) {
-        alert(error.response.data.message);
-      } else {
-        alert("Error updating wishlist. Please try again.");
-      }
+      alert("Error updating wishlist. Please try again.");
     }
   };
 
-  // Filter products by category (for home page - just filter the 8 random products)
-  const filterByCategory = (categoryId) => {
-    setActiveCategory(categoryId);
-
-    if (categoryId === "all") {
-      // Get new random 8 products from all
-      const randomProducts = getRandomProducts(products, 8);
-      setFilteredProducts(randomProducts);
-    } else {
-      // Get products from specific category and pick random 8
-      const categoryProducts = products.filter(product => product.categoryId === categoryId);
-      const randomProducts = getRandomProducts(categoryProducts, 8);
-      setFilteredProducts(randomProducts);
-    }
-  };
-
-  // Handle category click - navigate to category products page
-  const handleCategoryClick = (categoryId) => {
-    navigate(`/category/${categoryId}`);
-  };
-
-  // Handle slide navigation
-  const handleNextSlide = () => {
-    const totalSlides = Math.ceil(categories.length / 4);
-    setCurrentSlide(prev => (prev + 1) % totalSlides);
-  };
-
-  const handlePrevSlide = () => {
-    const totalSlides = Math.ceil(categories.length / 4);
-    setCurrentSlide(prev => (prev - 1 + totalSlides) % totalSlides);
-  };
-
-  const goToSlide = (index) => {
-    setCurrentSlide(index);
-  };
-
-  // Calculate visible categories based on current slide
-  const getVisibleCategories = () => {
-    const start = currentSlide * 4;
-    return categories.slice(start, start + 4);
+  // Load more products
+  const loadMoreProducts = () => {
+    const newVisibleCount = visibleProducts + 12;
+    setVisibleProducts(newVisibleCount);
+    setFilteredProducts(products.slice(0, newVisibleCount));
   };
 
   // Helper function to get color hex from color name
@@ -386,148 +348,30 @@ function Home() {
     );
   }
 
+  if (!category) {
+    return (
+      <div className="category-not-found">
+        <h2>Category not found</h2>
+        <button onClick={() => navigate("/")}>Go Back Home</button>
+      </div>
+    );
+  }
+
   return (
-    <div className="home">
-      {/* HERO SECTION */}
-      <div className="hero-section">
-        <h1>Welcome to Our E-Commerce Store</h1>
-        <p>Discover amazing products at unbeatable prices. Shop with confidence and style!</p>
-        <button className="shop-btn" onClick={() => navigate('/products')}>
-          Shop All Products
+    <div className="category-products-page">
+      {/* Category Header */}
+      <div className="category-header">
+        <div className="category-info">
+          <h1>{category.name}</h1>
+          <p>{products.length} products available</p>
+        </div>
+        <button className="back-btn" onClick={() => navigate("/")}>
+          ← Back to Home
         </button>
       </div>
 
-      {/* CATEGORIES SECTION */}
-      <div className="categories-section">
-        <div className="section-title">
-          <h2>Shop by Category</h2>
-        </div>
-
-        <div className="categories-container">
-          <div className="categories-slider">
-            {getVisibleCategories().map((category, index) => (
-              <div
-                key={category._id || index}
-                className="category-card"
-                onClick={() => handleCategoryClick(category.categoryId || category._id)}
-              >
-                <div className="category-image">
-                  {category.image ? (
-                    <img
-                      src={category.image}
-                      alt={category.name}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = `
-                          <div class="category-icon">
-                            ${category.name.charAt(0).toUpperCase()}
-                          </div>
-                        `;
-                      }}
-                    />
-                  ) : (
-                    <div className="category-icon">
-                      {category.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div className="category-info">
-                  <h3>{category.name}</h3>
-                  <div className="product-count">
-                    {products.filter(p => p.categoryId === (category.categoryId || category._id)).length} products
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Navigation Arrows */}
-          {categories.length > 4 && (
-            <div className="nav-arrows">
-              <button
-                className={`arrow ${currentSlide === 0 ? 'disabled' : ''}`}
-                onClick={handlePrevSlide}
-                disabled={currentSlide === 0}
-              >
-                ‹
-              </button>
-              <button
-                className={`arrow ${currentSlide >= Math.ceil(categories.length / 4) - 1 ? 'disabled' : ''}`}
-                onClick={handleNextSlide}
-                disabled={currentSlide >= Math.ceil(categories.length / 4) - 1}
-              >
-                ›
-              </button>
-            </div>
-          )}
-
-          {/* Slider Dots */}
-          {categories.length > 4 && (
-            <div className="slider-nav">
-              {Array.from({ length: Math.ceil(categories.length / 4) }).map((_, index) => (
-                <div
-                  key={index}
-                  className={`slider-dot ${currentSlide === index ? 'active' : ''}`}
-                  onClick={() => goToSlide(index)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* PRODUCTS SECTION */}
+      {/* Products Grid */}
       <div className="products-section">
-        <div className="section-title">
-          <h2>Featured Products</h2>
-        </div>
-
-        {/* Category Filter */}
-        <div className="category-filter" style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '10px',
-          marginBottom: '30px',
-          flexWrap: 'wrap'
-        }}>
-          <button
-            className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
-            onClick={() => filterByCategory('all')}
-            style={{
-              padding: '8px 20px',
-              borderRadius: '20px',
-              border: 'none',
-              background: activeCategory === 'all' ? '#667eea' : '#f7fafc',
-              color: activeCategory === 'all' ? 'white' : '#2d3748',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            All Products
-          </button>
-
-          {categories.slice(0, 6).map(category => (
-            <button
-              key={category._id}
-              className={`filter-btn ${activeCategory === (category.categoryId || category._id) ? 'active' : ''}`}
-              onClick={() => filterByCategory(category.categoryId || category._id)}
-              style={{
-                padding: '8px 20px',
-                borderRadius: '20px',
-                border: 'none',
-                background: activeCategory === (category.categoryId || category._id) ? '#667eea' : '#f7fafc',
-                color: activeCategory === (category.categoryId || category._id) ? 'white' : '#2d3748',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Products Grid */}
         <div className="products-grid">
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
@@ -541,25 +385,25 @@ function Home() {
             ))
           ) : (
             <div className="no-products">
-              <p>No products found. Please try another category.</p>
+              <h3>No products found in this category</h3>
+              <button onClick={() => navigate("/products")}>
+                Browse All Products
+              </button>
             </div>
           )}
         </div>
 
-        {/* View All Products Button */}
-        <div className="load-more">
-          <button onClick={() => navigate('/products')}>
-            View All Products
-          </button>
-        </div>
-      </div>
-
-      {/* FOOTER */}
-      <div className="home-footer">
-        <p>© 2024 My E-Commerce Store. All rights reserved.</p>
+        {/* Load More Button */}
+        {visibleProducts < products.length && (
+          <div className="load-more">
+            <button onClick={loadMoreProducts}>
+              Load More Products ({products.length - visibleProducts} more)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-export default Home;
+export default CategoryProducts;

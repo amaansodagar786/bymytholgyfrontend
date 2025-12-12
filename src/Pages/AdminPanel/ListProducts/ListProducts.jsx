@@ -1020,42 +1020,6 @@ const ListProducts = () => {
               </div>
 
               <div className="form-group">
-                <div className="section-header">
-                  <label>Sizes</label>
-                  <button
-                    type="button"
-                    onClick={() => addSizeToColor(colorIndex)}
-                    className="add-btn xsmall"
-                  >
-                    + Add Size
-                  </button>
-                </div>
-                {color.sizes && color.sizes.length > 0 ? (
-                  <div className="sizes-list">
-                    {color.sizes.map((size, sizeIndex) => (
-                      <div key={sizeIndex} className="size-item">
-                        <input
-                          placeholder="Size (e.g., S, M, L)"
-                          value={size}
-                          onChange={(e) => handleSizeChange(colorIndex, sizeIndex, e.target.value)}
-                          className="size-input"
-                        />
-                        <button
-                          type="button"
-                          className="remove-btn xsmall"
-                          onClick={() => removeSizeFromColor(colorIndex, sizeIndex)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="no-items">No sizes added yet.</p>
-                )}
-              </div>
-
-              <div className="form-group">
                 <label>Color Images</label>
                 <input
                   type="file"
@@ -1092,48 +1056,6 @@ const ListProducts = () => {
                       ))}
                     </div>
                   </div>
-                )}
-              </div>
-
-              <div className="form-group">
-                <div className="section-header">
-                  <label>Color Specifications</label>
-                  <button
-                    type="button"
-                    onClick={() => addColorSpecField(colorIndex)}
-                    className="add-btn xsmall"
-                  >
-                    + Add
-                  </button>
-                </div>
-                {color.colorSpecifications && color.colorSpecifications.length > 0 ? (
-                  <div className="specs-list">
-                    {color.colorSpecifications.map((spec, specIndex) => (
-                      <div key={specIndex} className="spec-row">
-                        <input
-                          placeholder="Key"
-                          value={spec.key}
-                          onChange={(e) => handleColorSpecChange(colorIndex, specIndex, 'key', e.target.value)}
-                          className="spec-input"
-                        />
-                        <input
-                          placeholder="Value"
-                          value={spec.value}
-                          onChange={(e) => handleColorSpecChange(colorIndex, specIndex, 'value', e.target.value)}
-                          className="spec-input"
-                        />
-                        <button
-                          type="button"
-                          className="remove-btn xsmall"
-                          onClick={() => removeColorSpecField(colorIndex, specIndex)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="no-items">No color specifications added yet.</p>
                 )}
               </div>
             </div>
@@ -1191,15 +1113,18 @@ const ListProducts = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Model Description</label>
-              <textarea
-                placeholder="Enter description for this model"
-                value={model.description || ''}
-                onChange={(e) => handleModelChange(modelIndex, 'description', e.target.value)}
-                rows={2}
-              />
-            </div>
+            {/* ===== HIDDEN: MODEL DESCRIPTION - COMMENTED OUT AS REQUESTED ===== */}
+            
+          <div className="form-group">
+            <label>Model Description</label>
+            <textarea
+              placeholder="Enter description for this model"
+              value={model.description || ''}
+              onChange={(e) => handleModelChange(modelIndex, 'description', e.target.value)}
+              rows={2}
+            />
+          </div>
+         
 
             <div className="form-group">
               <div className="section-header">
@@ -1307,42 +1232,6 @@ const ListProducts = () => {
                     </div>
 
                     <div className="form-group">
-                      <div className="section-header">
-                        <label>Sizes</label>
-                        <button
-                          type="button"
-                          onClick={() => addSizeToModelColor(modelIndex, colorIndex)}
-                          className="add-btn xsmall"
-                        >
-                          + Add Size
-                        </button>
-                      </div>
-                      {color.sizes && color.sizes.length > 0 ? (
-                        <div className="sizes-list">
-                          {color.sizes.map((size, sizeIndex) => (
-                            <div key={sizeIndex} className="size-item">
-                              <input
-                                placeholder="Size (e.g., S, M, L)"
-                                value={size}
-                                onChange={(e) => handleModelSizeChange(modelIndex, colorIndex, sizeIndex, e.target.value)}
-                                className="size-input"
-                              />
-                              <button
-                                type="button"
-                                className="remove-btn xsmall"
-                                onClick={() => removeSizeFromModelColor(modelIndex, colorIndex, sizeIndex)}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="no-items">No sizes added yet.</p>
-                      )}
-                    </div>
-
-                    <div className="form-group">
                       <label>Color Images</label>
                       <input
                         type="file"
@@ -1379,48 +1268,6 @@ const ListProducts = () => {
                             ))}
                           </div>
                         </div>
-                      )}
-                    </div>
-
-                    <div className="form-group">
-                      <div className="section-header">
-                        <label>Color Specifications</label>
-                        <button
-                          type="button"
-                          onClick={() => addModelColorSpecField(modelIndex, colorIndex)}
-                          className="add-btn xsmall"
-                        >
-                          + Add
-                        </button>
-                      </div>
-                      {color.colorSpecifications && color.colorSpecifications.length > 0 ? (
-                        <div className="specs-list">
-                          {color.colorSpecifications.map((spec, specIndex) => (
-                            <div key={specIndex} className="spec-row">
-                              <input
-                                placeholder="Key"
-                                value={spec.key}
-                                onChange={(e) => handleModelColorSpecChange(modelIndex, colorIndex, specIndex, 'key', e.target.value)}
-                                className="spec-input"
-                              />
-                              <input
-                                placeholder="Value"
-                                value={spec.value}
-                                onChange={(e) => handleModelColorSpecChange(modelIndex, colorIndex, specIndex, 'value', e.target.value)}
-                                className="spec-input"
-                              />
-                              <button
-                                type="button"
-                                className="remove-btn xsmall"
-                                onClick={() => removeModelColorSpecField(modelIndex, colorIndex, specIndex)}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="no-items">No color specifications added yet.</p>
                       )}
                     </div>
                   </div>
@@ -1606,16 +1453,18 @@ const ListProducts = () => {
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label>Product Description</label>
-                  <textarea
-                    name="description"
-                    placeholder="Enter product description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={3}
-                  />
-                </div>
+                {formData.type === "simple" && (
+                  <div className="form-group">
+                    <label>Product Description</label>
+                    <textarea
+                      name="description"
+                      placeholder="Enter product description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      rows={3}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="form-section">

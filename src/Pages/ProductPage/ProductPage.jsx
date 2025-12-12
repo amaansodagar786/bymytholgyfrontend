@@ -43,6 +43,108 @@ function ProductPage() {
   // NEW: Max quantity based on stock
   const [maxQuantity, setMaxQuantity] = useState(99);
 
+  // Add these states to your ProductPage component
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsStats, setReviewsStats] = useState({
+    averageRating: 0,
+    totalReviews: 0,
+    ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+  });
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [reviewsLimit] = useState(5);
+
+  // Fetch reviews for the product
+  const fetchProductReviews = async (page = 1) => {
+    try {
+      setReviewsLoading(true);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/reviews/product/${productId}`,
+        {
+          params: {
+            page,
+            limit: reviewsLimit
+          }
+        }
+      );
+
+      if (response.data.success) {
+        if (page === 1) {
+          setReviews(response.data.reviews);
+          setReviewsStats(response.data.stats);
+        } else {
+          setReviews(prev => [...prev, ...response.data.reviews]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+
+
+
+  // Call this in useEffect when product loads
+  useEffect(() => {
+    if (productId) {
+      fetchProductReviews();
+    }
+  }, [productId]);
+
+  // Render star rating
+  const renderRatingStars = (rating, size = 'medium') => {
+    const stars = [];
+    const starSize = size === 'small' ? '1.2rem' : '1.5rem';
+
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span
+          key={i}
+          className={`star ${i <= Math.round(rating) ? 'filled' : 'empty'}`}
+          style={{ fontSize: starSize }}
+        >
+          {i <= rating ? '★' : i <= Math.floor(rating) ? '★' : i - rating <= 0.5 && i - rating > 0 ? '★' : '☆'}
+        </span>
+      );
+    }
+    return stars;
+  };
+
+  // Format date for reviews
+  const formatReviewDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  // Open reviews modal
+  const handleOpenReviewsModal = () => {
+    setShowReviewsModal(true);
+    fetchProductReviews(1); // Refresh with page 1
+  };
+
+
+
+
+
+
+
+
   // Fetch product data AND offers
   useEffect(() => {
     fetchProduct();
@@ -512,24 +614,33 @@ function ProductPage() {
   };
 
   // Get specifications (ALWAYS use color specifications)
+  // Get specifications (CHANGED: Use product specs for simple, model specs for variable)
   const getSpecifications = () => {
     const specs = [];
 
-    if (product.type === "simple" && selectedColor && selectedColor.colorSpecifications) {
-      // Use color specifications for simple products
-      selectedColor.colorSpecifications.forEach(spec => {
-        specs.push({ key: spec.key, value: spec.value });
-      });
-    } else if (product.type === "variable" && selectedModelColor && selectedModelColor.colorSpecifications) {
-      // Use color specifications for variable products
-      selectedModelColor.colorSpecifications.forEach(spec => {
-        specs.push({ key: spec.key, value: spec.value });
-      });
-    } else if (product.specifications) {
-      // Fallback to product specifications
-      product.specifications.forEach(spec => {
-        specs.push({ key: spec.key, value: spec.value });
-      });
+    // SIMPLE PRODUCT: Use product specifications (global specs)
+    if (product.type === "simple") {
+      if (product.specifications && product.specifications.length > 0) {
+        // Use product-level specifications for simple products
+        product.specifications.forEach(spec => {
+          specs.push({ key: spec.key, value: spec.value });
+        });
+      }
+    }
+
+    // VARIABLE PRODUCT: Use selected model specifications
+    else if (product.type === "variable") {
+      if (selectedModel && selectedModel.modelSpecifications && selectedModel.modelSpecifications.length > 0) {
+        // Use selected model's specifications
+        selectedModel.modelSpecifications.forEach(spec => {
+          specs.push({ key: spec.key, value: spec.value });
+        });
+      } else if (product.specifications && product.specifications.length > 0) {
+        // Fallback to product specifications if model has none
+        product.specifications.forEach(spec => {
+          specs.push({ key: spec.key, value: spec.value });
+        });
+      }
     }
 
     return specs;
@@ -922,6 +1033,101 @@ function ProductPage() {
               ))}
             </div>
           )}
+
+
+          {/* Ratings & Reviews Section */}
+          <div className="ratings-reviews-section">
+            <div className="section-title">
+              Ratings & Reviews
+              {reviewsStats.totalReviews > 0 && (
+                <span className="see-all-reviews" onClick={handleOpenReviewsModal}>
+                  See All ({reviewsStats.totalReviews})
+                </span>
+              )}
+            </div>
+
+            {reviewsStats.totalReviews > 0 ? (
+              <div className="ratings-overview">
+                <div className="average-rating">
+                  <div className="rating-score">
+                    <span className="rating-number">{reviewsStats.averageRating}</span>
+                    <span className="rating-out-of">/5</span>
+                  </div>
+                  <div className="rating-stars-large">
+                    {renderRatingStars(reviewsStats.averageRating, 'large')}
+                  </div>
+                  <div className="total-reviews">
+                    {reviewsStats.totalReviews} rating{reviewsStats.totalReviews > 1 ? 's' : ''} & reviews
+                  </div>
+                </div>
+
+                <div className="rating-distribution">
+                  {[5, 4, 3, 2, 1].map(star => {
+                    const count = reviewsStats.ratingDistribution[star] || 0;
+                    const percentage = reviewsStats.totalReviews > 0
+                      ? Math.round((count / reviewsStats.totalReviews) * 100)
+                      : 0;
+
+                    return (
+                      <div key={star} className="rating-bar-row">
+                        <span className="star-label">{star} ★</span>
+                        <div className="rating-bar-container">
+                          <div
+                            className="rating-bar-fill"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                        <span className="rating-count">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="reviews-preview">
+                  <div className="preview-title">Latest Reviews</div>
+                  {reviews.slice(0, 2).map((review, index) => (
+                    <div key={index} className="review-preview-item">
+                      <div className="reviewer-info">
+                        <span className="reviewer-name">{review.userName}</span>
+                        <div className="reviewer-rating">
+                          {renderRatingStars(review.rating, 'small')}
+                          <span className="review-date">{formatReviewDate(review.createdAt)}</span>
+                        </div>
+                      </div>
+                      {review.reviewText && (
+                        <p className="review-text-preview">
+                          "{review.reviewText.length > 100
+                            ? review.reviewText.substring(0, 100) + '...'
+                            : review.reviewText}"
+                        </p>
+                      )}
+                      {review.isVerifiedPurchase && (
+                        <span className="verified-badge">✅ Verified Purchase</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="no-reviews-yet">
+                <div className="no-reviews-icon">⭐</div>
+                <div className="no-reviews-text">
+                  <p>No reviews yet for this product</p>
+                  <p className="subtext">Be the first to review this product!</p>
+                </div>
+              </div>
+            )}
+
+            <button
+              className="view-all-reviews-btn"
+              onClick={handleOpenReviewsModal}
+              disabled={reviewsStats.totalReviews === 0}
+            >
+              {reviewsStats.totalReviews > 0
+                ? `View All ${reviewsStats.totalReviews} Reviews`
+                : 'No Reviews Yet'}
+            </button>
+          </div>
         </div>
 
         {/* Right Column - Details */}
@@ -1365,6 +1571,9 @@ function ProductPage() {
             </div>
           )}
 
+
+
+
           {/* NEW: Updated Action Buttons with stock validation */}
           <div className="action-buttons">
             <button
@@ -1471,6 +1680,184 @@ function ProductPage() {
           </div>
         </div>
       )}
+
+      {/* Reviews Modal */}
+      {showReviewsModal && (
+        <div className="reviews-modal">
+          <div className="modal-overlay" onClick={() => setShowReviewsModal(false)}></div>
+          <div className="modal-content reviews-modal-content">
+            <div className="modal-header">
+              <h2>
+                Customer Reviews
+                <span className="reviews-count-badge">
+                  {reviewsStats.totalReviews} review{reviewsStats.totalReviews > 1 ? 's' : ''}
+                </span>
+              </h2>
+              <button
+                className="close-btn"
+                onClick={() => setShowReviewsModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="reviews-modal-body">
+              {/* Stats Sidebar */}
+              <div className="reviews-stats-sidebar">
+                <div className="overall-rating">
+                  <div className="overall-rating-number">
+                    {reviewsStats.averageRating}
+                  </div>
+                  <div className="overall-rating-stars">
+                    {renderRatingStars(reviewsStats.averageRating, 'large')}
+                  </div>
+                  <div className="overall-rating-text">
+                    {reviewsStats.totalReviews} rating{reviewsStats.totalReviews > 1 ? 's' : ''}
+                  </div>
+                </div>
+
+                <div className="rating-breakdown">
+                  <h4>Rating Breakdown</h4>
+                  {[5, 4, 3, 2, 1].map(star => {
+                    const count = reviewsStats.ratingDistribution[star] || 0;
+                    const percentage = reviewsStats.totalReviews > 0
+                      ? Math.round((count / reviewsStats.totalReviews) * 100)
+                      : 0;
+
+                    return (
+                      <div key={star} className="breakdown-row">
+                        <span className="breakdown-star">{star} ★</span>
+                        <div className="breakdown-bar-container">
+                          <div
+                            className="breakdown-bar-fill"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                        <span className="breakdown-count">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Reviews List */}
+              <div className="reviews-list-section">
+                <div className="reviews-filter">
+                  <div className="filter-buttons">
+                    <button className="filter-btn active">All</button>
+                    <button className="filter-btn">5 Star ({reviewsStats.ratingDistribution[5]})</button>
+                    <button className="filter-btn">4 Star ({reviewsStats.ratingDistribution[4]})</button>
+                    <button className="filter-btn">3 Star ({reviewsStats.ratingDistribution[3]})</button>
+                    <button className="filter-btn">2 Star ({reviewsStats.ratingDistribution[2]})</button>
+                    <button className="filter-btn">1 Star ({reviewsStats.ratingDistribution[1]})</button>
+                  </div>
+                  <div className="sort-options">
+                    <select className="sort-select">
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                      <option value="highest">Highest Rating</option>
+                      <option value="lowest">Lowest Rating</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="reviews-list-container">
+                  {reviewsLoading && reviews.length === 0 ? (
+                    <div className="loading-reviews">
+                      <div className="spinner-small"></div>
+                      Loading reviews...
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    <>
+                      {reviews.map((review, index) => (
+                        <div key={index} className="review-card-full">
+                          <div className="review-header-full">
+                            <div className="reviewer-info-full">
+                              <div className="reviewer-avatar">
+                                {review.userName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="reviewer-details">
+                                <div className="reviewer-name-full">{review.userName}</div>
+                                <div className="review-meta">
+                                  <div className="review-rating-full">
+                                    {renderRatingStars(review.rating, 'small')}
+                                    <span className="review-rating-value">{review.rating}/5</span>
+                                  </div>
+                                  <span className="review-date-full">
+                                    {formatReviewDate(review.createdAt)}
+                                  </span>
+                                  {review.updatedAt && review.updatedAt !== review.createdAt && (
+                                    <span className="review-updated">
+                                      (Updated)
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="review-variant-info">
+                              {review.modelName !== "Default" && (
+                                <span className="variant-chip">{review.modelName}</span>
+                              )}
+                              <span className="variant-chip">{review.colorName}</span>
+                              {review.size && (
+                                <span className="variant-chip">Size: {review.size}</span>
+                              )}
+                              {review.isVerifiedPurchase && (
+                                <span className="verified-purchase-chip">
+                                  ✅ Verified Purchase
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="review-content-full">
+                            {review.reviewText ? (
+                              <p className="review-text-full">"{review.reviewText}"</p>
+                            ) : (
+                              <p className="no-review-text">No review text provided</p>
+                            )}
+                          </div>
+
+                          <div className="review-actions-full">
+                            <button className="helpful-btn">
+                              👍 Helpful ({review.helpfulCount || 0})
+                            </button>
+                            <button className="report-btn">Report</button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Load More Button */}
+                      {reviews.length < reviewsStats.totalReviews && (
+                        <button
+                          className="load-more-btn"
+                          onClick={() => {
+                            const nextPage = reviewsPage + 1;
+                            setReviewsPage(nextPage);
+                            fetchProductReviews(nextPage);
+                          }}
+                          disabled={reviewsLoading}
+                        >
+                          {reviewsLoading ? 'Loading...' : 'Load More Reviews'}
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="no-reviews-full">
+                      <div className="no-reviews-icon-full">⭐</div>
+                      <h3>No reviews yet</h3>
+                      <p>Be the first to review this product!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
     </div>
   );
 }
