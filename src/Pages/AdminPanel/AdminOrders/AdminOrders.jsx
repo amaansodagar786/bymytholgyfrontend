@@ -1,6 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import {
+  FiPackage,
+  FiSearch,
+  FiRefreshCw,
+  FiEye,
+  FiLogOut,
+  FiChevronLeft,
+  FiChevronRight,
+  FiX,
+  FiCheck,
+  FiClock,
+  FiTruck,
+  FiDollarSign,
+  FiShoppingBag,
+  FiUser,
+  FiCalendar,
+  FiCreditCard,
+  FiInfo,
+  FiAlertCircle
+} from "react-icons/fi";
+import {
+  MdOutlinePendingActions,
+  MdOutlineCancel
+} from "react-icons/md";
+import {
+  HiOutlineCurrencyRupee
+} from "react-icons/hi";
 import "./AdminOrders.scss";
 
 const AdminOrders = () => {
@@ -22,7 +51,8 @@ const AdminOrders = () => {
     pendingOrders: 0,
     processingOrders: 0,
     shippedOrders: 0,
-    deliveredOrders: 0
+    deliveredOrders: 0,
+    cancelledOrders: 0
   });
   const [statusUpdate, setStatusUpdate] = useState({
     orderId: "",
@@ -30,30 +60,47 @@ const AdminOrders = () => {
     notes: ""
   });
 
-  // Status colors for UI
-  const statusColors = {
-    'pending': '#f39c12',
-    'processing': '#17a2b8',
-    'shipped': '#3498db',
-    'delivered': '#2ecc71',
-    'cancelled': '#e74c3c',
-    'returned': '#95a5a6'
-  };
+  const searchTimeoutRef = useRef(null);
 
-  const statusLabels = {
-    'pending': '⏳ Pending',
-    'processing': '🔄 Processing',
-    'shipped': '🚚 Shipped',
-    'delivered': '✅ Delivered',
-    'cancelled': '❌ Cancelled',
-    'returned': '↩️ Returned'
+  // Status configuration
+  const statusConfig = {
+    'pending': {
+      label: 'Pending',
+      color: '#f39c12',
+      icon: <FiClock className="status-icon" />,
+      bgColor: '#fef5e6'
+    },
+    'processing': {
+      label: 'Processing',
+      color: '#17a2b8',
+      icon: <FiRefreshCw className="status-icon" />,
+      bgColor: '#e8f4f8'
+    },
+    'shipped': {
+      label: 'Shipped',
+      color: '#3498db',
+      icon: <FiTruck className="status-icon" />,
+      bgColor: '#e8f4fc'
+    },
+    'delivered': {
+      label: 'Delivered',
+      color: '#2ecc71',
+      icon: <FiCheck className="status-icon" />,
+      bgColor: '#e8f8ef'
+    },
+    'cancelled': {
+      label: 'Cancelled',
+      color: '#e74c3c',
+      icon: <MdOutlineCancel className="status-icon" />,
+      bgColor: '#fdedec'
+    }
   };
 
   // ✅ TOKEN VALIDATION FUNCTION
   const validateToken = () => {
     const token = localStorage.getItem("adminToken");
     const role = localStorage.getItem("role");
-    
+
     if (!token || !role || role !== "admin") {
       localStorage.removeItem("adminToken");
       localStorage.removeItem("role");
@@ -61,16 +108,7 @@ const AdminOrders = () => {
       navigate("/admin/login");
       return false;
     }
-    
-    const tokenParts = token.split('.');
-    if (tokenParts.length !== 3) {
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("role");
-      localStorage.removeItem("adminId");
-      navigate("/admin/login");
-      return false;
-    }
-    
+
     return true;
   };
 
@@ -86,77 +124,144 @@ const AdminOrders = () => {
     };
   };
 
-  // 📋 FETCH ALL ORDERS
-  const fetchOrders = async () => {
-    try {
-      if (!validateToken()) return;
-      
-      setIsLoading(true);
-      setError("");
-      
-      const queryParams = new URLSearchParams({
-        page: filters.page,
-        limit: filters.limit,
-        status: filters.status !== "all" ? filters.status : "",
-        search: filters.search
-      }).toString();
+// 📋 FETCH ALL ORDERS WITH SEARCH - MODIFIED VERSION
+const fetchOrders = async () => {
+  try {
+    if (!validateToken()) return;
+    
+    setIsLoading(true);
+    setError("");
+    
+    const queryParams = new URLSearchParams({
+      page: filters.page,
+      limit: filters.limit,
+      status: filters.status !== "all" ? filters.status : "",
+      search: filters.search.trim()
+    }).toString();
 
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/orders/all/orders?${queryParams}`,
-        { headers: getAuthHeaders() }
-      );
+    console.log("📤 Fetching orders with params:", {
+      page: filters.page,
+      limit: filters.limit,
+      status: filters.status,
+      search: filters.search.trim(),
+      queryString: queryParams
+    });
 
-      if (response.data.success) {
-        setOrders(response.data.orders || []);
-        setStats(response.data.stats || {
-          totalOrders: 0,
-          totalRevenue: 0,
-          pendingOrders: 0,
-          processingOrders: 0,
-          shippedOrders: 0,
-          deliveredOrders: 0
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching orders:", err);
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL}/orders/all/orders?${queryParams}`,
+      { headers: getAuthHeaders() }
+    );
+
+    console.log("✅ Orders API Response:", response.data);
+    console.log("📦 Orders count:", response.data.orders?.length || 0);
+
+    if (response.data.success) {
+      setOrders(response.data.orders || []);
       
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        setError("Session expired. Please login again.");
-        localStorage.removeItem("adminToken");
-        localStorage.removeItem("role");
-        localStorage.removeItem("adminId");
-        setTimeout(() => navigate("/admin/login"), 2000);
-      } else {
-        setError(err.response?.data?.message || "Failed to fetch orders");
-      }
-    } finally {
-      setIsLoading(false);
+      // REMOVE THIS PART - Don't overwrite stats from /admin/stats
+      // Keep stats separate
+      
+    } else {
+      console.log("❌ API success false:", response.data);
     }
-  };
+  } catch (err) {
+    console.error("❌ Error fetching orders:", err);
+    console.error("Error details:", {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status
+    });
+    
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      toast.error("Session expired. Please login again.");
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("role");
+      localStorage.removeItem("adminId");
+      setTimeout(() => navigate("/admin/login"), 2000);
+    } else {
+      setError(err.response?.data?.message || "Failed to fetch orders");
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-  // 📊 FETCH ORDER STATS
+  // 📊 FETCH ORDER STATS SEPARATELY - DEBUGGED
   const fetchOrderStats = async () => {
     try {
+      console.log("📊 Fetching stats from:", `${import.meta.env.VITE_API_URL}/orders/admin/stats`);
+
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/orders/admin/stats`,
         { headers: getAuthHeaders() }
       );
 
-      if (response.data.success) {
-        setStats(response.data.stats);
+      console.log("✅ Stats API Response:", response.data);
+      console.log("📈 Stats success:", response.data.success);
+      console.log("📊 Stats data:", response.data.stats);
+
+      if (response.data.success && response.data.stats) {
+        // Extract stats directly from the response.data.stats object
+        const statsData = response.data.stats;
+
+        console.log("📊 Raw stats data:", statsData);
+        console.log("🔍 Checking keys:", Object.keys(statsData));
+        console.log("🔍 totalOrders value:", statsData.totalOrders);
+        console.log("🔍 Type of totalOrders:", typeof statsData.totalOrders);
+
+        // Map the stats correctly - they come directly from stats object
+        const newStats = {
+          totalOrders: statsData.totalOrders || 0,
+          totalRevenue: statsData.totalRevenue || 0,
+          pendingOrders: statsData.pendingOrders || 0,
+          processingOrders: statsData.processingOrders || 0,
+          shippedOrders: statsData.shippedOrders || 0,
+          deliveredOrders: statsData.deliveredOrders || 0,
+          cancelledOrders: statsData.cancelledOrders || 0
+        };
+
+        console.log("🔄 Setting new stats:", newStats);
+        setStats(newStats);
+
+        // Also update the orders count if needed
+        if (statsData.totalOrders > 0) {
+          console.log(`✅ Successfully loaded ${statsData.totalOrders} orders`);
+        }
+      } else {
+        console.log("⚠️ Stats API didn't return expected data");
+        console.log("Response structure:", {
+          success: response.data.success,
+          hasStats: !!response.data.stats,
+          statsKeys: response.data.stats ? Object.keys(response.data.stats) : 'no stats'
+        });
       }
     } catch (err) {
-      console.error("Error fetching stats:", err);
+      console.error("❌ Error fetching stats:", err);
+      console.error("Stats error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        url: err.config?.url
+      });
+
+      // Log the actual URL being called
+      console.log("🔗 API URL being called:", `${import.meta.env.VITE_API_URL}/orders/admin/stats`);
+
+      if (err.response?.status === 404) {
+        console.error("❌ Route not found - check backend routes");
+      }
     }
   };
 
   useEffect(() => {
+    console.log("🚀 Component mounted, fetching orders and stats");
     fetchOrders();
     fetchOrderStats();
   }, [filters.page, filters.status]);
 
   // 🔍 VIEW ORDER DETAILS
   const handleViewOrderDetails = (order) => {
+    console.log("👁️ Viewing order details:", order.orderId);
     setSelectedOrder(order);
     setShowOrderDetails(true);
     setStatusUpdate({
@@ -170,14 +275,16 @@ const AdminOrders = () => {
   const handleUpdateStatus = async () => {
     try {
       if (!validateToken()) return;
-      
+
       if (!statusUpdate.status) {
-        alert("Please select a status");
+        toast.warning("Please select a status");
         return;
       }
 
       setIsLoading(true);
-      
+
+      console.log("🔄 Updating order status:", statusUpdate);
+
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/orders/${statusUpdate.orderId}/status`,
         {
@@ -188,57 +295,77 @@ const AdminOrders = () => {
       );
 
       if (response.data.success) {
-        alert("✅ Order status updated successfully!");
-        
+        toast.success("✅ Order status updated successfully!");
+
         // Update local state
-        setOrders(prevOrders => 
-          prevOrders.map(order => 
-            order.orderId === statusUpdate.orderId 
+        setOrders(prevOrders =>
+          prevOrders.map(order =>
+            order.orderId === statusUpdate.orderId
               ? { ...order, ...response.data.order }
               : order
           )
         );
-        
+
         if (selectedOrder) {
           setSelectedOrder(response.data.order);
         }
-        
+
         // Refresh stats
         fetchOrderStats();
+        fetchOrders();
       }
     } catch (err) {
       console.error("Error updating order status:", err);
-      
+
       if (err.response?.status === 401 || err.response?.status === 403) {
-        alert("Session expired. Please login again.");
+        toast.error("Session expired. Please login again.");
         localStorage.clear();
         navigate("/admin/login");
       } else {
-        alert(err.response?.data?.message || "Failed to update order status");
+        toast.error(err.response?.data?.message || "Failed to update order status");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 🔎 SEARCH ORDERS
+  // 🔎 SEARCH ORDERS WITH DEBOUNCE - DEBUGGED
   const handleSearch = (e) => {
     const value = e.target.value;
+
+    console.log("🔍 Search input changed:", {
+      value: value,
+      previousValue: filters.search,
+      length: value.length
+    });
+
     setFilters(prev => ({ ...prev, search: value, page: 1 }));
-    
-    // Debounce search
-    clearTimeout(searchTimeout);
-    const searchTimeout = setTimeout(() => {
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      console.log("⏰ Cleared previous search timeout");
+    }
+
+    // Set new timeout for debounce
+    searchTimeoutRef.current = setTimeout(() => {
+      console.log("🚀 Executing search with value:", value);
+      console.log("📋 Current filters:", filters);
       fetchOrders();
     }, 500);
   };
 
   // 📅 FORMAT DATE
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: 'numeric',
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      day: '2-digit',
       month: 'short',
       year: 'numeric'
+    }) + ' ' + date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -260,277 +387,404 @@ const AdminOrders = () => {
   useEffect(() => {
     const role = localStorage.getItem("role");
     const token = localStorage.getItem("adminToken");
-    
+
     if (!token || role !== "admin") {
       navigate("/admin/login");
     }
   }, [navigate]);
 
+  // DEBUG: Log current stats values
+  useEffect(() => {
+    console.log("📊 Current stats values:", stats);
+    console.log("🔄 Stats debug check:", {
+      totalOrders: stats.totalOrders,
+      totalRevenue: stats.totalRevenue,
+      pendingOrders: stats.pendingOrders,
+      processingOrders: stats.processingOrders,
+      shippedOrders: stats.shippedOrders,
+      deliveredOrders: stats.deliveredOrders,
+      typeOfTotalOrders: typeof stats.totalOrders,
+      isZero: stats.totalOrders === 0
+    });
+  }, [stats]);
+
   // If not admin, show access denied
   const role = localStorage.getItem("role");
   const token = localStorage.getItem("adminToken");
-  
+
   if (!token || role !== "admin") {
     return (
-      <div className="access-denied">
-        <h2>❌ Access Denied: Admin Only</h2>
-        <p>Please login as admin to access this page.</p>
-        <button onClick={() => navigate("/admin/login")}>Go to Login</button>
+      <div className="admin-orders access-denied">
+        <div className="access-denied-content">
+          <FiPackage className="denied-icon" />
+          <h2>Access Restricted</h2>
+          <p>Administrator privileges required to view this page.</p>
+          <button
+            className="auth-btn"
+            onClick={() => navigate("/admin/login")}
+          >
+            Go to Login
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="admin-orders">
-      {/* Header with logout */}
-      <div className="admin-header">
-        <h1>📦 Manage Orders</h1>
-        <div className="header-actions">
-          <button onClick={() => fetchOrders()} className="refresh-btn">
-            🔄 Refresh
-          </button>
-          <button onClick={handleLogout} className="logout-btn">
-            Logout
-          </button>
+    <div className="admin-orders-container">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+
+      {/* Header */}
+      <header className="admin-orders-header">
+        <div className="header-content">
+          <div className="header-title">
+            <FiPackage className="header-icon" />
+            <h1>Order Management</h1>
+            <span className="orders-badge">{stats.totalOrders || 0}</span>
+          </div>
+
+          <div className="header-actions">
+            <button
+              className="refresh-orders-btn"
+              onClick={() => {
+                console.log("🔄 Manual refresh clicked");
+                fetchOrders();
+                fetchOrderStats();
+              }}
+              disabled={isLoading}
+            >
+              <FiRefreshCw className={isLoading ? "spinning" : ""} />
+              Refresh
+            </button>
+            <button className="logout-orders-btn" onClick={handleLogout}>
+              <FiLogOut />
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Stats Cards - DEBUG INFO */}
+      <div className="orders-stats-grid">
+        <div className="orders-stat-card">
+          <div className="stat-icon-card total-orders">
+            <FiShoppingBag />
+          </div>
+          <div className="stat-card-content">
+            <h3>{stats.totalOrders || 0}</h3>
+            <p>Total Orders</p>
+            
+          </div>
+        </div>
+
+        <div className="orders-stat-card">
+          <div className="stat-icon-card revenue-orders">
+            <HiOutlineCurrencyRupee />
+          </div>
+          <div className="stat-card-content">
+            <h3>₹{stats.totalRevenue ? stats.totalRevenue.toLocaleString('en-IN') : 0}</h3>
+            <p>Total Revenue</p>
+           
+          </div>
+        </div>
+
+        <div className="orders-stat-card">
+          <div className="stat-icon-card pending-orders">
+            <MdOutlinePendingActions />
+          </div>
+          <div className="stat-card-content">
+            <h3>{stats.pendingOrders || 0}</h3>
+            <p>Pending Orders</p>
+           
+          </div>
+        </div>
+
+        <div className="orders-stat-card">
+          <div className="stat-icon-card processing-orders">
+            <FiRefreshCw />
+          </div>
+          <div className="stat-card-content">
+            <h3>{stats.processingOrders || 0}</h3>
+            <p>Processing</p>
+            
+          </div>
+        </div>
+
+        <div className="orders-stat-card">
+          <div className="stat-icon-card shipped-orders">
+            <FiTruck />
+          </div>
+          <div className="stat-card-content">
+            <h3>{stats.shippedOrders || 0}</h3>
+            <p>Shipped</p>
+           
+          </div>
+        </div>
+
+        <div className="orders-stat-card">
+          <div className="stat-icon-card delivered-orders">
+            <FiCheck />
+          </div>
+          <div className="stat-card-content">
+            <h3>{stats.deliveredOrders || 0}</h3>
+            <p>Delivered</p>
+            
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="stats-cards">
-        <div className="stat-card">
-          <div className="stat-value">{stats.totalOrders}</div>
-          <div className="stat-label">Total Orders</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">₹{stats.totalRevenue?.toLocaleString() || 0}</div>
-          <div className="stat-label">Total Revenue</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.pendingOrders}</div>
-          <div className="stat-label">Pending</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.processingOrders}</div>
-          <div className="stat-label">Processing</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.shippedOrders}</div>
-          <div className="stat-label">Shipped</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.deliveredOrders}</div>
-          <div className="stat-label">Delivered</div>
-        </div>
-      </div>
-
-      {/* Filters & Search */}
-      <div className="filters-section">
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="Search by Order ID, Customer Name, Product..."
-            value={filters.search}
-            onChange={handleSearch}
-            disabled={isLoading}
-          />
-          <span className="search-icon">🔍</span>
+      {/* Filters Section */}
+      <div className="orders-filters-section">
+        <div className="orders-search-container">
+          <div className="orders-search-box">
+            <FiSearch className="orders-search-icon" />
+            <input
+              type="text"
+              placeholder="Search by Order ID, Customer, Product..."
+              value={filters.search}
+              onChange={handleSearch}
+              disabled={isLoading}
+              className="orders-search-input"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  console.log("🔍 Enter pressed for search:", filters.search);
+                  fetchOrders();
+                }
+              }}
+            />
+          </div>
+          
         </div>
 
-        <div className="status-filters">
-          <button 
-            className={`filter-btn ${filters.status === "all" ? "active" : ""}`}
-            onClick={() => setFilters(prev => ({ ...prev, status: "all", page: 1 }))}
+        <div className="orders-status-filters">
+          <button
+            className={`orders-filter-btn ${filters.status === "all" ? "active" : ""}`}
+            onClick={() => {
+              console.log("📊 Filter: All Orders");
+              setFilters(prev => ({ ...prev, status: "all", page: 1 }));
+            }}
           >
             All Orders
           </button>
-          <button 
-            className={`filter-btn ${filters.status === "pending" ? "active" : ""}`}
-            onClick={() => setFilters(prev => ({ ...prev, status: "pending", page: 1 }))}
-          >
-            ⏳ Pending
-          </button>
-          <button 
-            className={`filter-btn ${filters.status === "processing" ? "active" : ""}`}
-            onClick={() => setFilters(prev => ({ ...prev, status: "processing", page: 1 }))}
-          >
-            🔄 Processing
-          </button>
-          <button 
-            className={`filter-btn ${filters.status === "shipped" ? "active" : ""}`}
-            onClick={() => setFilters(prev => ({ ...prev, status: "shipped", page: 1 }))}
-          >
-            🚚 Shipped
-          </button>
-          <button 
-            className={`filter-btn ${filters.status === "delivered" ? "active" : ""}`}
-            onClick={() => setFilters(prev => ({ ...prev, status: "delivered", page: 1 }))}
-          >
-            ✅ Delivered
-          </button>
-          <button 
-            className={`filter-btn ${filters.status === "cancelled" ? "active" : ""}`}
-            onClick={() => setFilters(prev => ({ ...prev, status: "cancelled", page: 1 }))}
-          >
-            ❌ Cancelled
-          </button>
+          {Object.entries(statusConfig).map(([key, config]) => (
+            <button
+              key={key}
+              className={`orders-filter-btn ${filters.status === key ? "active" : ""}`}
+              onClick={() => {
+                console.log(`📊 Filter: ${config.label}`);
+                setFilters(prev => ({ ...prev, status: key, page: 1 }));
+              }}
+              style={{ color: filters.status === key ? 'white' : config.color }}
+            >
+              {config.icon}
+              {config.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="error-message">
+        <div className="orders-error-alert">
+          <FiAlertCircle className="orders-error-icon" />
           <span>{error}</span>
-          <button onClick={() => setError("")}>×</button>
+          <button onClick={() => setError("")} className="orders-close-error">
+            <FiX />
+          </button>
         </div>
       )}
 
-      {/* Loading Indicator */}
+      {/* Loading State */}
       {isLoading && (
-        <div className="loading-overlay">
-          <div className="spinner"></div>
+        <div className="orders-loading-overlay">
+          <div className="orders-loading-spinner"></div>
           <p>Loading orders...</p>
         </div>
       )}
 
       {/* Orders Table */}
-      <div className="orders-table-container">
-        <table className="orders-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Items</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Payment</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.length === 0 ? (
+      <div className="orders-table-wrapper">
+        <div className="orders-table-responsive">
+          <table className="admin-orders-table">
+            <thead>
               <tr>
-                <td colSpan="8" className="no-orders">
-                  📭 No orders found
-                </td>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Payment</th>
+                <th>Actions</th>
               </tr>
-            ) : (
-              orders.map((order) => (
-                <tr key={order._id}>
-                  <td className="order-id">
-                    <strong>#{order.orderId}</strong>
-                    {order.checkoutMode === "buy-now" && (
-                      <span className="buy-now-badge">Buy Now</span>
-                    )}
-                  </td>
-                  <td>
-                    <div className="customer-info">
-                      <div className="customer-name">{order.deliveryAddress?.fullName || "N/A"}</div>
-                      <div className="customer-contact">
-                        {formatPhone(order.deliveryAddress?.mobile)}
+            </thead>
+            <tbody>
+              {orders.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="orders-no-data">
+                    <div className="orders-empty-state">
+                      <FiPackage />
+                      <p>No orders found</p>
+                      <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+                        Showing 0 of {stats.totalOrders} total orders
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="items-info">
-                      {order.items.length} item{order.items.length > 1 ? "s" : ""}
-                      <div className="items-preview">
-                        {order.items.slice(0, 2).map((item, idx) => (
-                          <span key={idx} className="item-tag">
-                            {item.productName}
-                            {item.fragrance && item.fragrance !== "Default" && (
-                              <span className="fragrance-badge">🍃 {item.fragrance}</span>
-                            )}
-                          </span>
-                        ))}
-                        {order.items.length > 2 && (
-                          <span className="more-items">+{order.items.length - 2} more</span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="amount">
-                    <div className="amount-value">₹{order.pricing?.total?.toLocaleString() || 0}</div>
-                    {order.pricing?.totalSavings > 0 && (
-                      <div className="savings">Saved: ₹{order.pricing.totalSavings.toLocaleString()}</div>
-                    )}
-                  </td>
-                  <td>
-                    <div className="date-info">
-                      {formatDate(order.createdAt)}
-                    </div>
-                  </td>
-                  <td>
-                    <div 
-                      className="status-badge"
-                      style={{ backgroundColor: statusColors[order.orderStatus] || '#666' }}
-                    >
-                      {statusLabels[order.orderStatus] || order.orderStatus}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="payment-info">
-                      <span className="payment-method">
-                        {order.payment?.method === "cod" ? "💵 COD" : 
-                         order.payment?.method === "card" ? "💳 Card" : "📱 UPI"}
-                      </span>
-                      <span className={`payment-status ${order.payment?.status}`}>
-                        {order.payment?.status || "pending"}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button
-                        className="view-btn"
-                        onClick={() => handleViewOrderDetails(order)}
-                        disabled={isLoading}
-                      >
-                        📋 View
-                      </button>
-                      <button
-                        className="status-btn"
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setShowOrderDetails(true);
-                          setStatusUpdate({
-                            orderId: order.orderId,
-                            status: order.orderStatus,
-                            notes: order.notes || ""
-                          });
-                        }}
-                        disabled={isLoading}
-                      >
-                        ✏️ Status
-                      </button>
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                orders.map((order) => {
+                  const status = statusConfig[order.orderStatus] || statusConfig.pending;
+
+                  return (
+                    <tr key={order._id}>
+                      <td className="order-id-cell-data">
+                        <div className="order-id-display">
+                          <strong>#{order.orderId}</strong>
+                          {order.checkoutMode === "buy-now" && (
+                            <span className="order-mode-badge">Buy Now</span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td>
+                        <div className="customer-info-cell">
+                          <div className="customer-avatar-cell">
+                            <FiUser />
+                          </div>
+                          <div className="customer-details-cell">
+                            <div className="customer-name-cell">
+                              {order.deliveryAddress?.fullName || "N/A"}
+                            </div>
+                            <div className="customer-contact-cell">
+                              {formatPhone(order.deliveryAddress?.mobile)}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>
+                        <div className="items-info-cell">
+                          <div className="items-count-display">
+                            {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                          </div>
+                          <div className="items-preview-display">
+                            {order.items.slice(0, 2).map((item, idx) => (
+                              <div key={idx} className="item-preview-display">
+                                <span className="item-name-display">{item.productName}</span>
+                              </div>
+                            ))}
+                            {order.items.length > 2 && (
+                              <div className="more-items-display">+{order.items.length - 2} more</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="amount-display-cell">
+                        <div className="amount-display">
+                          <HiOutlineCurrencyRupee className="currency-icon-display" />
+                          <span className="amount-value-display">
+                            {order.pricing?.total?.toLocaleString('en-IN') || 0}
+                          </span>
+                        </div>
+                        {order.pricing?.totalSavings > 0 && (
+                          <div className="savings-badge-display">
+                            Saved ₹{order.pricing.totalSavings.toLocaleString('en-IN')}
+                          </div>
+                        )}
+                      </td>
+
+                      <td>
+                        <div className="date-info-cell">
+                          <FiCalendar className="date-icon-display" />
+                          <span>{formatDate(order.createdAt)}</span>
+                        </div>
+                      </td>
+
+                      <td>
+                        <div
+                          className="order-status-badge"
+                          style={{
+                            backgroundColor: status.bgColor,
+                            color: status.color,
+                            borderColor: status.color
+                          }}
+                        >
+                          {status.icon}
+                          <span>{status.label}</span>
+                        </div>
+                      </td>
+
+                      <td>
+                        <div className="payment-info-cell">
+                          <div className="payment-method-cell">
+                            <FiCreditCard />
+                            <span>{order.payment?.method === "cod" ? "COD" : "Prepaid"}</span>
+                          </div>
+                          <div className={`payment-status-cell ${order.payment?.status}`}>
+                            {order.payment?.status || "pending"}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>
+                        <div className="order-action-buttons">
+                          <button
+                            className="view-edit-order-btn"
+                            onClick={() => handleViewOrderDetails(order)}
+                            title="View & Edit Order"
+                          >
+                            <FiEye className="action-icon-display" />
+                            <span className="action-text-display">Manage</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Pagination */}
         {stats.totalOrders > filters.limit && (
-          <div className="pagination">
+          <div className="orders-pagination">
             <button
-              className="page-btn"
+              className="orders-page-btn prev"
               onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
               disabled={filters.page === 1 || isLoading}
             >
-              ← Previous
+              <FiChevronLeft />
+              Previous
             </button>
-            <span className="page-info">
-              Page {filters.page} of {Math.ceil(stats.totalOrders / filters.limit)}
-              ({stats.totalOrders} total orders)
-            </span>
+
+            <div className="orders-page-info">
+              Page <strong>{filters.page}</strong> of{" "}
+              <strong>{Math.ceil(stats.totalOrders / filters.limit)}</strong>
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                Total orders: {stats.totalOrders}
+              </div>
+            </div>
+
             <button
-              className="page-btn"
+              className="orders-page-btn next"
               onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
               disabled={filters.page >= Math.ceil(stats.totalOrders / filters.limit) || isLoading}
             >
-              Next →
+              Next
+              <FiChevronRight />
             </button>
           </div>
         )}
@@ -538,91 +792,104 @@ const AdminOrders = () => {
 
       {/* Order Details Modal */}
       {showOrderDetails && selectedOrder && (
-        <div className="order-details-modal">
-          <div className="modal-overlay" onClick={() => setShowOrderDetails(false)}></div>
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>Order Details - #{selectedOrder.orderId}</h2>
-              <button className="close-btn" onClick={() => setShowOrderDetails(false)}>
-                ✕
+        <div className="order-details-modal-overlay">
+          <div className="modal-backdrop" onClick={() => setShowOrderDetails(false)}></div>
+          <div className="order-details-modal-content">
+            <div className="modal-header-section">
+              <div className="modal-title-section">
+                <FiPackage />
+                <h2>Order #{selectedOrder.orderId}</h2>
+              </div>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowOrderDetails(false)}
+              >
+                <FiX />
               </button>
             </div>
 
-            <div className="modal-body">
-              {/* Order Information */}
-              <div className="section">
-                <h3>Order Information</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Order ID:</label>
-                    <span>#{selectedOrder.orderId}</span>
+            <div className="modal-body-section">
+              {/* Order Overview */}
+              <div className="modal-section-item">
+                <h3 className="section-title-item">
+                  <FiInfo />
+                  Order Overview
+                </h3>
+                <div className="overview-grid-section">
+                  <div className="overview-item-section">
+                    <span className="overview-label-section">Order Date</span>
+                    <span className="overview-value-section">{formatDate(selectedOrder.createdAt)}</span>
                   </div>
-                  <div className="info-item">
-                    <label>Order Date:</label>
-                    <span>{formatDate(selectedOrder.createdAt)}</span>
-                  </div>
-                  <div className="info-item">
-                    <label>Checkout Mode:</label>
-                    <span>{selectedOrder.checkoutMode === "buy-now" ? "Buy Now" : "Cart"}</span>
-                  </div>
-                  <div className="info-item">
-                    <label>Current Status:</label>
-                    <span className="current-status" style={{ color: statusColors[selectedOrder.orderStatus] }}>
-                      {selectedOrder.orderStatus.toUpperCase()}
+                  <div className="overview-item-section">
+                    <span className="overview-label-section">Checkout Mode</span>
+                    <span className="overview-value-section mode-section">
+                      {selectedOrder.checkoutMode === "buy-now" ? "Buy Now" : "Cart"}
                     </span>
                   </div>
-                  <div className="info-item">
-                    <label>Total Items:</label>
-                    <span>{selectedOrder.items?.length || 0} items</span>
+                  <div className="overview-item-section">
+                    <span className="overview-label-section">Total Items</span>
+                    <span className="overview-value-section">
+                      {selectedOrder.items?.length || 0} items
+                    </span>
                   </div>
-                  <div className="info-item">
-                    <label>User ID:</label>
-                    <span>{selectedOrder.userId}</span>
+                  <div className="overview-item-section">
+                    <span className="overview-label-section">Order Status</span>
+                    <span
+                      className="overview-value-section status-section"
+                      style={{ color: statusConfig[selectedOrder.orderStatus]?.color || '#666' }}
+                    >
+                      {statusConfig[selectedOrder.orderStatus]?.label || selectedOrder.orderStatus}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Update Status Section */}
-              <div className="section">
-                <h3>Update Order Status</h3>
-                <div className="status-update-form">
-                  <div className="form-group">
-                    <label>New Status:</label>
+              {/* Status Update Section */}
+              <div className="modal-section-item">
+                <h3 className="section-title-item">
+                  <FiRefreshCw />
+                  Update Order Status
+                </h3>
+                <div className="status-update-form-section">
+                  <div className="form-group-section">
+                    <label>New Status</label>
                     <select
                       value={statusUpdate.status}
                       onChange={(e) => setStatusUpdate(prev => ({ ...prev, status: e.target.value }))}
                       disabled={isLoading}
+                      className="status-select-section"
                     >
                       <option value="">Select Status</option>
-                      <option value="pending">⏳ Pending</option>
-                      <option value="processing">🔄 Processing</option>
-                      <option value="shipped">🚚 Shipped</option>
-                      <option value="delivered">✅ Delivered</option>
-                      <option value="cancelled">❌ Cancelled</option>
+                      {Object.entries(statusConfig).map(([key, config]) => (
+                        <option key={key} value={key} style={{ color: config.color }}>
+                          {config.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
-                  
-                  <div className="form-group">
-                    <label>Notes (Optional):</label>
+
+                  {/* <div className="form-group-section">
+                    <label>Update Notes</label>
                     <textarea
                       placeholder="Add any notes or instructions..."
                       value={statusUpdate.notes}
                       onChange={(e) => setStatusUpdate(prev => ({ ...prev, notes: e.target.value }))}
                       disabled={isLoading}
                       rows="3"
+                      className="notes-textarea-section"
                     />
-                  </div>
+                  </div> */}
 
-                  <div className="form-actions">
+                  <div className="form-actions-section">
                     <button
-                      className="update-status-btn"
+                      className="btn-primary-section"
                       onClick={handleUpdateStatus}
                       disabled={isLoading || !statusUpdate.status}
                     >
                       {isLoading ? "Updating..." : "Update Status"}
                     </button>
                     <button
-                      className="cancel-btn"
+                      className="btn-secondary-section"
                       onClick={() => setShowOrderDetails(false)}
                       disabled={isLoading}
                     >
@@ -633,106 +900,90 @@ const AdminOrders = () => {
               </div>
 
               {/* Customer Information */}
-              <div className="section">
-                <h3>Customer Information</h3>
-                <div className="customer-details">
-                  <div className="detail-row">
-                    <strong>Name:</strong> {selectedOrder.deliveryAddress?.fullName || "N/A"}
+              <div className="modal-section-item">
+                <h3 className="section-title-item">
+                  <FiUser />
+                  Customer Information
+                </h3>
+                <div className="customer-info-grid-section">
+                  <div className="info-item-section">
+                    <span className="info-label-section">Name</span>
+                    <span className="info-value-section">{selectedOrder.deliveryAddress?.fullName || "N/A"}</span>
                   </div>
-                  <div className="detail-row">
-                    <strong>Mobile:</strong> {selectedOrder.deliveryAddress?.mobile || "N/A"}
+                  <div className="info-item-section">
+                    <span className="info-label-section">Mobile</span>
+                    <span className="info-value-section">{selectedOrder.deliveryAddress?.mobile || "N/A"}</span>
                   </div>
-                  <div className="detail-row">
-                    <strong>Email:</strong> {selectedOrder.deliveryAddress?.email || "N/A"}
+                  <div className="info-item-section">
+                    <span className="info-label-section">Email</span>
+                    <span className="info-value-section">{selectedOrder.deliveryAddress?.email || "N/A"}</span>
                   </div>
-                  <div className="detail-row">
-                    <strong>Address:</strong> 
-                    <div className="address-details">
+                  <div className="info-item-section full-width-section">
+                    <span className="info-label-section">Delivery Address</span>
+                    <div className="address-details-section">
                       <p>{selectedOrder.deliveryAddress?.addressLine1}</p>
                       {selectedOrder.deliveryAddress?.addressLine2 && (
                         <p>{selectedOrder.deliveryAddress.addressLine2}</p>
                       )}
                       <p>{selectedOrder.deliveryAddress?.city}, {selectedOrder.deliveryAddress?.state} - {selectedOrder.deliveryAddress?.pincode}</p>
-                      <p>{selectedOrder.deliveryAddress?.country || "India"}</p>
-                      {selectedOrder.deliveryAddress?.landmark && (
-                        <p><strong>Landmark:</strong> {selectedOrder.deliveryAddress.landmark}</p>
-                      )}
-                      {selectedOrder.deliveryAddress?.instructions && (
-                        <p><strong>Instructions:</strong> {selectedOrder.deliveryAddress.instructions}</p>
-                      )}
                     </div>
-                  </div>
-                  <div className="detail-row">
-                    <strong>Address Type:</strong> {selectedOrder.deliveryAddress?.addressType || "home"}
-                    {selectedOrder.deliveryAddress?.isDefault && (
-                      <span className="default-badge">Default</span>
-                    )}
                   </div>
                 </div>
               </div>
 
               {/* Order Items */}
-              <div className="section">
-                <h3>Order Items ({selectedOrder.items?.length || 0})</h3>
-                <div className="order-items-list">
+              <div className="modal-section-item">
+                <h3 className="section-title-item">
+                  <FiShoppingBag />
+                  Order Items ({selectedOrder.items?.length || 0})
+                </h3>
+                <div className="order-items-list-section">
                   {selectedOrder.items?.map((item, index) => (
-                    <div key={index} className="order-item">
-                      <div className="item-info">
-                        <div className="item-name">{item.productName}</div>
-                        <div className="item-variants">
-                          {item.modelName !== "Default" && <span className="variant-badge">Model: {item.modelName}</span>}
-                          <span className="variant-badge">Color: {item.colorName}</span>
-                          {/* ADDED FRAGRANCE DISPLAY */}
-                          {item.fragrance && item.fragrance !== "Default" && (
-                            <span className="variant-badge fragrance-badge">🍃 Fragrance: {item.fragrance}</span>
-                          )}
-                          {item.size && <span className="variant-badge">Size: {item.size}</span>}
-                          {item.offerPercentage > 0 && (
-                            <span className="offer-badge">{item.offerPercentage}% OFF</span>
-                          )}
-                        </div>
-                        <div className="item-sku">
-                          SKU: {item.modelId || item.productId}
-                        </div>
-                        <div className="item-inventory">
-                          <span className="inventory-info">
-                            Purchased from stock: {item.purchasedFromStock}
-                          </span>
-                          {item.inventoryId && (
-                            <span className="inventory-id">Inventory ID: {item.inventoryId}</span>
-                          )}
-                        </div>
+                    <div key={index} className="order-item-card-section">
+                      <div className="item-header-section">
+                        <div className="item-name-section">{item.productName}</div>
+                        <div className="item-quantity-section">Qty: {item.quantity}</div>
                       </div>
-                      <div className="item-pricing">
-                        <div className="price-row">
-                          <span>Quantity:</span>
-                          <span className="quantity-value">{item.quantity}</span>
-                        </div>
-                        <div className="price-row">
-                          <span>Unit Price:</span>
-                          <span>₹{item.unitPrice?.toLocaleString()}</span>
-                        </div>
-                        {item.offerPercentage > 0 && (
-                          <>
-                            <div className="price-row">
-                              <span>Offer Price:</span>
-                              <span className="offer-price">₹{item.offerPrice?.toLocaleString()}</span>
-                            </div>
-                            <div className="price-row discount">
-                              <span>Discount ({item.offerPercentage}%):</span>
-                              <span>-₹{item.savedAmount?.toLocaleString()}</span>
-                            </div>
-                          </>
-                        )}
-                        <div className="price-row total">
-                          <span>Total:</span>
-                          <span className="total-price">₹{item.totalPrice?.toLocaleString()}</span>
-                        </div>
-                        {item.offerLabel && (
-                          <div className="offer-label">
-                            🎁 Offer: {item.offerLabel}
+
+                      <div className="item-details-section">
+                        {item.fragrance && item.fragrance !== "Default" && (
+                          <div className="item-attribute-section">
+                            <span className="attribute-label-section">Fragrance:</span>
+                            <span className="attribute-value-section">{item.fragrance}</span>
                           </div>
                         )}
+                        {item.colorName && item.colorName !== "Default" && (
+                          <div className="item-attribute-section">
+                            <span className="attribute-label-section">Color:</span>
+                            <span className="attribute-value-section">{item.colorName}</span>
+                          </div>
+                        )}
+                        {item.size && (
+                          <div className="item-attribute-section">
+                            <span className="attribute-label-section">Size:</span>
+                            <span className="attribute-value-section">{item.size}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="item-pricing-section">
+                        <div className="price-row-section">
+                          <span>Unit Price:</span>
+                          <span>₹{item.unitPrice?.toLocaleString('en-IN')}</span>
+                        </div>
+                        {item.offerPercentage > 0 && (
+                          <div className="price-row-section discount-section">
+                            <span>Discount ({item.offerPercentage}%):</span>
+                            <span>-₹{item.savedAmount?.toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+                        <div className="price-row-section total-section">
+                          <span>Total:</span>
+                          <span className="total-amount-section">
+                            {/* <HiOutlineCurrencyRupee />  */}
+                            ₹{item.totalPrice?.toLocaleString('en-IN')}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -740,120 +991,52 @@ const AdminOrders = () => {
               </div>
 
               {/* Order Summary */}
-              <div className="section">
-                <h3>Order Summary</h3>
-                <div className="order-summary">
-                  <div className="summary-row">
-                    <span>Subtotal ({selectedOrder.items?.reduce((sum, item) => sum + item.quantity, 0) || 0} items):</span>
-                    <span>₹{selectedOrder.pricing?.subtotal?.toLocaleString() || 0}</span>
+              <div className="modal-section-item">
+                <h3 className="section-title-item">
+                  <FiDollarSign />
+                  Order Summary
+                </h3>
+                <div className="order-summary-card-section">
+                  <div className="summary-row-section">
+                    <span>Subtotal</span>
+                    <span>₹{selectedOrder.pricing?.subtotal?.toLocaleString('en-IN') || 0}</span>
                   </div>
+
                   {selectedOrder.pricing?.totalSavings > 0 && (
-                    <div className="summary-row discount">
-                      <span>Total Savings:</span>
-                      <span>-₹{selectedOrder.pricing.totalSavings.toLocaleString()}</span>
+                    <div className="summary-row-section discount-section">
+                      <span>Total Savings</span>
+                      <span>-₹{selectedOrder.pricing.totalSavings.toLocaleString('en-IN')}</span>
                     </div>
                   )}
-                  <div className="summary-row">
-                    <span>Shipping:</span>
-                    <span className={selectedOrder.pricing?.shipping === 0 ? 'free-shipping' : ''}>
-                      {selectedOrder.pricing?.shipping === 0 
-                        ? "FREE" 
+
+                  <div className="summary-row-section">
+                    <span>Shipping</span>
+                    <span className={selectedOrder.pricing?.shipping === 0 ? 'free-section' : ''}>
+                      {selectedOrder.pricing?.shipping === 0
+                        ? "FREE"
                         : `₹${selectedOrder.pricing?.shipping || 0}`}
                     </span>
                   </div>
-                  <div className="summary-row">
-                    <span>Tax (GST {selectedOrder.pricing?.taxPercentage || 18}%):</span>
-                    <span>₹{selectedOrder.pricing?.tax?.toLocaleString() || 0}</span>
-                  </div>
-                  <div className="summary-row grand-total">
-                    <span>Total Amount:</span>
-                    <span className="grand-total-amount">₹{selectedOrder.pricing?.total?.toLocaleString() || 0}</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Payment Information */}
-              <div className="section">
-                <h3>Payment Information</h3>
-                <div className="payment-details">
-                  <div className="detail-row">
-                    <strong>Method:</strong> 
-                    {selectedOrder.payment?.method === "cod" ? "💵 Cash on Delivery" :
-                     selectedOrder.payment?.method === "card" ? "💳 Credit/Debit Card" : "📱 UPI"}
+                  <div className="summary-row-section">
+                    <span>Tax (GST)</span>
+                    <span>₹{selectedOrder.pricing?.tax?.toLocaleString('en-IN') || 0}</span>
                   </div>
-                  <div className="detail-row">
-                    <strong>Status:</strong> 
-                    <span className={`payment-status ${selectedOrder.payment?.status}`}>
-                      {selectedOrder.payment?.status?.toUpperCase() || "PENDING"}
+
+                  <div className="summary-row-section total-section">
+                    <span>Total Amount</span>
+                    <span className="grand-total-section">
+                      {/* <HiOutlineCurrencyRupee /> */}
+                      ₹{selectedOrder.pricing?.total?.toLocaleString('en-IN') || 0}
                     </span>
                   </div>
-                  {selectedOrder.payment?.paidAmount && (
-                    <div className="detail-row">
-                      <strong>Paid Amount:</strong> ₹{selectedOrder.payment.paidAmount.toLocaleString()}
-                    </div>
-                  )}
-                  {selectedOrder.payment?.paymentDate && (
-                    <div className="detail-row">
-                      <strong>Payment Date:</strong> {formatDate(selectedOrder.payment.paymentDate)}
-                    </div>
-                  )}
-                  {selectedOrder.payment?.transactionId && (
-                    <div className="detail-row">
-                      <strong>Transaction ID:</strong> {selectedOrder.payment.transactionId}
-                    </div>
-                  )}
                 </div>
               </div>
-
-              {/* Timeline Information */}
-              <div className="section">
-                <h3>Order Timeline</h3>
-                <div className="timeline-details">
-                  <div className="detail-row">
-                    <strong>Order Placed:</strong> {formatDate(selectedOrder.timeline?.placedAt)}
-                  </div>
-                  {selectedOrder.timeline?.processedAt && (
-                    <div className="detail-row">
-                      <strong>Processed:</strong> {formatDate(selectedOrder.timeline.processedAt)}
-                    </div>
-                  )}
-                  {selectedOrder.timeline?.shippedAt && (
-                    <div className="detail-row">
-                      <strong>Shipped:</strong> {formatDate(selectedOrder.timeline.shippedAt)}
-                    </div>
-                  )}
-                  {selectedOrder.timeline?.deliveredAt && (
-                    <div className="detail-row">
-                      <strong>Delivered:</strong> {formatDate(selectedOrder.timeline.deliveredAt)}
-                    </div>
-                  )}
-                  {selectedOrder.timeline?.cancelledAt && (
-                    <div className="detail-row">
-                      <strong>Cancelled:</strong> {formatDate(selectedOrder.timeline.cancelledAt)}
-                    </div>
-                  )}
-                  {selectedOrder.timeline?.estimatedDelivery && (
-                    <div className="detail-row estimated">
-                      <strong>Estimated Delivery:</strong> {formatDate(selectedOrder.timeline.estimatedDelivery)}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Notes */}
-              {selectedOrder.notes && (
-                <div className="section">
-                  <h3>Order Notes</h3>
-                  <div className="order-notes">
-                    <p>{selectedOrder.notes}</p>
-                  </div>
-                </div>
-              )}
             </div>
 
-            <div className="modal-footer">
+            <div className="modal-footer-section">
               <button
-                className="close-modal-btn"
+                className="btn-secondary-section"
                 onClick={() => setShowOrderDetails(false)}
               >
                 Close

@@ -1,20 +1,33 @@
-// AdminCategories.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import {
+  FiGrid,
+  FiPlus,
+  FiEdit,
+  FiTrash2,
+  FiRefreshCw,
+  FiLogOut,
+  FiX,
+  FiCheck,
+  FiAlertCircle
+} from "react-icons/fi";
 import "./AdminCategories.scss";
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState([]);
   const [categoryName, setCategoryName] = useState("");
-  const [categoryImage, setCategoryImage] = useState(null);
   const [editId, setEditId] = useState(null);
-  const [editImage, setEditImage] = useState(null);
-  const [previewImage, setPreviewImage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [stats, setStats] = useState({
+    totalCategories: 0,
+    activeCategories: 0
+  });
   
-  const navigate = useNavigate(); // Initialize navigate
+  const navigate = useNavigate();
 
   // ✅ TOKEN VALIDATION FUNCTION
   const validateToken = () => {
@@ -22,19 +35,6 @@ const AdminCategories = () => {
     const role = localStorage.getItem("role");
     
     if (!token || !role || role !== "admin") {
-      // Clear invalid tokens
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("role");
-      localStorage.removeItem("adminId");
-      
-      // Redirect to login
-      navigate("/admin/login");
-      return false;
-    }
-    
-    // Optional: You can also validate token format
-    const tokenParts = token.split('.');
-    if (tokenParts.length !== 3) {
       localStorage.removeItem("adminToken");
       localStorage.removeItem("role");
       localStorage.removeItem("adminId");
@@ -53,30 +53,40 @@ const AdminCategories = () => {
     }
     return {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "multipart/form-data"
+      "Content-Type": "application/json"
     };
   };
 
-  // FETCH ALL CATEGORIES
+  // 📋 FETCH ALL CATEGORIES
   const fetchCategories = async () => {
     try {
-      // Check token before making request
       if (!validateToken()) return;
       
       setIsLoading(true);
       setError("");
       
-      const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/categories/get`
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/categories/get`,
+        { headers: getAuthHeaders() }
       );
+
+      console.log("✅ Categories fetched:", response.data);
       
-      setCategories(res.data);
+      if (Array.isArray(response.data)) {
+        setCategories(response.data);
+        setStats({
+          totalCategories: response.data.length,
+          activeCategories: response.data.length // All are considered active
+        });
+      } else {
+        console.error("❌ Unexpected response format:", response.data);
+        setCategories([]);
+      }
     } catch (err) {
-      console.error("Error fetching categories:", err);
+      console.error("❌ Error fetching categories:", err);
       
-      // Handle unauthorized access
       if (err.response?.status === 401 || err.response?.status === 403) {
-        setError("Session expired. Please login again.");
+        toast.error("Session expired. Please login again.");
         localStorage.removeItem("adminToken");
         localStorage.removeItem("role");
         localStorage.removeItem("adminId");
@@ -93,206 +103,150 @@ const AdminCategories = () => {
     fetchCategories();
   }, []);
 
-  // ADD CATEGORY
+  // ➕ ADD CATEGORY (TEXT ONLY)
   const addCategory = async () => {
     try {
-      // Check token
       if (!validateToken()) return;
       
       // Validate inputs
       if (!categoryName.trim()) {
-        alert("Please enter category name");
+        toast.warning("Please enter category name");
         return;
       }
       
       setIsLoading(true);
       setError("");
-      
-      // Create FormData
-      const formData = new FormData();
-      formData.append("name", categoryName.trim());
-      if (categoryImage) {
-        formData.append("image", categoryImage);
-      }
 
-      await axios.post(
+      const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/categories/add`,
-        formData,
+        { name: categoryName.trim() },
         { 
           headers: getAuthHeaders()
         }
       );
 
-      // Reset form
-      setCategoryName("");
-      setCategoryImage(null);
-      setPreviewImage("");
-      fetchCategories();
-      
-      alert("Category added successfully!");
+      if (response.data) {
+        toast.success("✅ Category added successfully!");
+        
+        // Reset form
+        setCategoryName("");
+        fetchCategories();
+      }
     } catch (err) {
-      console.error("Error adding category:", err);
+      console.error("❌ Error adding category:", err);
       
-      // Handle specific error cases
       if (err.response?.status === 401 || err.response?.status === 403) {
-        alert("Session expired. Please login again.");
+        toast.error("Session expired. Please login again.");
         localStorage.clear();
         navigate("/admin/login");
-      } else if (err.response?.status === 400) {
-        alert(err.response.data.message || "Invalid request");
       } else if (err.response?.status === 409) {
-        alert("Category already exists!");
+        toast.error("Category already exists!");
       } else {
-        alert(err.response?.data?.message || "Failed to add category");
+        toast.error(err.response?.data?.message || "Failed to add category");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // UPDATE CATEGORY
+  // ✏️ UPDATE CATEGORY (TEXT ONLY)
   const updateCategory = async () => {
     try {
-      // Check token
       if (!validateToken()) return;
       
       // Validate inputs
       if (!categoryName.trim()) {
-        alert("Please enter category name");
+        toast.warning("Please enter category name");
         return;
       }
       
       setIsLoading(true);
       setError("");
-      
-      // Create FormData
-      const formData = new FormData();
-      formData.append("name", categoryName.trim());
-      if (editImage) {
-        formData.append("image", editImage);
-      }
 
-      await axios.put(
+      const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/categories/update/${editId}`,
-        formData,
+        { name: categoryName.trim() },
         { 
           headers: getAuthHeaders()
         }
       );
 
-      // Reset form
-      setCategoryName("");
-      setEditId(null);
-      setEditImage(null);
-      setPreviewImage("");
-      fetchCategories();
-      
-      alert("Category updated successfully!");
+      if (response.data) {
+        toast.success("✅ Category updated successfully!");
+        
+        // Reset form
+        setCategoryName("");
+        setEditId(null);
+        fetchCategories();
+      }
     } catch (err) {
-      console.error("Error updating category:", err);
+      console.error("❌ Error updating category:", err);
       
       if (err.response?.status === 401 || err.response?.status === 403) {
-        alert("Session expired. Please login again.");
+        toast.error("Session expired. Please login again.");
         localStorage.clear();
         navigate("/admin/login");
       } else if (err.response?.status === 404) {
-        alert("Category not found!");
+        toast.error("Category not found!");
       } else {
-        alert(err.response?.data?.message || "Failed to update category");
+        toast.error(err.response?.data?.message || "Failed to update category");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // DELETE CATEGORY
+  // 🗑️ DELETE CATEGORY
   const deleteCategory = async (id) => {
     try {
-      // Check token
       if (!validateToken()) return;
       
-      if (!window.confirm(`Are you sure you want to delete this category?`)) {
+      if (!window.confirm(`Are you sure you want to delete this category? This action cannot be undone.`)) {
         return;
       }
       
       setIsLoading(true);
-      
-      await axios.delete(
+
+      const response = await axios.delete(
         `${import.meta.env.VITE_API_URL}/categories/delete/${id}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` } }
+        { headers: getAuthHeaders() }
       );
 
-      fetchCategories();
-      alert("Category deleted successfully!");
+      if (response.data) {
+        toast.success("✅ Category deleted successfully!");
+        fetchCategories();
+      }
     } catch (err) {
-      console.error("Error deleting category:", err);
+      console.error("❌ Error deleting category:", err);
       
       if (err.response?.status === 401 || err.response?.status === 403) {
-        alert("Session expired. Please login again.");
+        toast.error("Session expired. Please login again.");
         localStorage.clear();
         navigate("/admin/login");
       } else if (err.response?.status === 404) {
-        alert("Category not found!");
+        toast.error("Category not found!");
       } else {
-        alert(err.response?.data?.message || "Failed to delete category");
+        toast.error(err.response?.data?.message || "Failed to delete category");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle image selection
-  const handleImageSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file size (5MB = 5 * 1024 * 1024 bytes)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size must be less than 5MB");
-        return;
-      }
-      
-      // Validate file type
-      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (!validTypes.includes(file.type)) {
-        alert("Only image files are allowed (JPEG, JPG, PNG, GIF, WEBP)");
-        return;
-      }
-      
-      if (editId) {
-        setEditImage(file);
-      } else {
-        setCategoryImage(file);
-      }
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Set edit mode
+  // ✏️ SET EDIT MODE
   const handleEdit = (cat) => {
     setEditId(cat.categoryId);
     setCategoryName(cat.name);
-    setPreviewImage(cat.image || "");
-    setEditImage(null);
-    setCategoryImage(null);
   };
 
-  // Cancel edit mode
+  // ❌ CANCEL EDIT MODE
   const cancelEdit = () => {
     setEditId(null);
     setCategoryName("");
-    setPreviewImage("");
-    setEditImage(null);
-    setCategoryImage(null);
     setError("");
   };
 
-  // Logout function
+  // 🚪 LOGOUT FUNCTION
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("role");
@@ -316,139 +270,220 @@ const AdminCategories = () => {
   
   if (!token || role !== "admin") {
     return (
-      <div className="access-denied">
-        <h2>❌ Access Denied: Admin Only</h2>
-        <p>Please login as admin to access this page.</p>
-        <button onClick={() => navigate("/admin/login")}>Go to Login</button>
+      <div className="admin-categories access-denied">
+        <div className="access-denied-content">
+          <FiGrid className="denied-icon" />
+          <h2>Access Restricted</h2>
+          <p>Administrator privileges required to view this page.</p>
+          <button
+            className="auth-btn"
+            onClick={() => navigate("/admin/login")}
+          >
+            Go to Login
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="admin-cat">
-      {/* Header with logout */}
-      <div className="admin-header">
-        <h1>Manage Categories</h1>
-        <button onClick={handleLogout} className="logout-btn">
-          Logout
-        </button>
+    <div className="admin-categories-container">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+
+      {/* Header */}
+      <header className="admin-categories-header">
+        <div className="header-content">
+          <div className="header-title">
+            <FiGrid className="header-icon" />
+            <h1>Category Management</h1>
+            <span className="categories-badge">{stats.totalCategories || 0}</span>
+          </div>
+
+          <div className="header-actions">
+            <button
+              className="refresh-categories-btn"
+              onClick={fetchCategories}
+              disabled={isLoading}
+            >
+              <FiRefreshCw className={isLoading ? "spinning" : ""} />
+              Refresh
+            </button>
+            <button className="logout-categories-btn" onClick={handleLogout}>
+              <FiLogOut />
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Stats Cards */}
+      <div className="categories-stats-grid">
+        <div className="categories-stat-card">
+          <div className="stat-icon-card total-categories">
+            <FiGrid />
+          </div>
+          <div className="stat-card-content">
+            <h3>{stats.totalCategories || 0}</h3>
+            <p>Total Categories</p>
+          </div>
+        </div>
+
+        <div className="categories-stat-card">
+          <div className="stat-icon-card active-categories">
+            <FiCheck />
+          </div>
+          <div className="stat-card-content">
+            <h3>{stats.activeCategories || 0}</h3>
+            <p>Active Categories</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Form */}
+      <div className="categories-form-section">
+        <h2 className="form-section-title">
+          {editId ? "✏️ Edit Category" : "➕ Add New Category"}
+        </h2>
+        
+        <div className="form-input-group">
+          <input
+            type="text"
+            placeholder="Enter category name (e.g., Electronics, Clothing, Home Decor)"
+            value={categoryName}
+            onChange={(e) => setCategoryName(e.target.value)}
+            disabled={isLoading}
+            className="category-name-input"
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                editId ? updateCategory() : addCategory();
+              }
+            }}
+          />
+          
+          <div className="form-buttons-group">
+            {editId ? (
+              <>
+                <button 
+                  onClick={updateCategory} 
+                  className="btn-primary-form"
+                  disabled={isLoading || !categoryName.trim()}
+                >
+                  <FiCheck />
+                  {isLoading ? "Updating..." : "Update Category"}
+                </button>
+                <button 
+                  onClick={cancelEdit} 
+                  className="btn-secondary-form"
+                  disabled={isLoading}
+                >
+                  <FiX />
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button 
+                onClick={addCategory} 
+                className="btn-primary-form"
+                disabled={isLoading || !categoryName.trim()}
+              >
+                <FiPlus />
+                {isLoading ? "Adding..." : "Add Category"}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="error-message">
+        <div className="categories-error-alert">
+          <FiAlertCircle className="categories-error-icon" />
           <span>{error}</span>
-          <button onClick={() => setError("")}>×</button>
+          <button onClick={() => setError("")} className="categories-close-error">
+            <FiX />
+          </button>
         </div>
       )}
 
-      {/* Loading Indicator */}
+      {/* Loading State */}
       {isLoading && (
-        <div className="loading-overlay">
-          <div className="spinner"></div>
-          <p>Processing...</p>
+        <div className="categories-loading-overlay">
+          <div className="categories-loading-spinner"></div>
+          <p>Processing request...</p>
         </div>
       )}
 
-      <div className="cat-form">
-        <input
-          type="text"
-          placeholder="Category Name"
-          value={categoryName}
-          onChange={(e) => setCategoryName(e.target.value)}
-          disabled={isLoading}
-        />
-
-        {/* Image Upload */}
-        <div className="image-upload-section">
-          <label className="image-upload-label" style={isLoading ? {opacity: 0.6, cursor: 'not-allowed'} : {}}>
-            <span>{previewImage ? "Change Image" : "Select Image"}</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              style={{ display: "none" }}
-              disabled={isLoading}
-            />
-          </label>
-          
-          {previewImage && (
-            <div className="image-preview">
-              <img src={previewImage} alt="Preview" />
-              <p>Image Preview (Max: 5MB)</p>
-            </div>
-          )}
+      {/* Categories List */}
+      <div className="categories-list-section">
+        <div className="list-header">
+          <h2>All Categories ({categories.length})</h2>
+          <div className="list-stats">
+            <span className="stat-badge">Total: {categories.length}</span>
+          </div>
         </div>
 
-        <div className="form-buttons">
-          {editId ? (
-            <>
-              <button 
-                onClick={updateCategory} 
-                className="update-btn"
-                disabled={isLoading}
-              >
-                {isLoading ? "Updating..." : "Update Category"}
-              </button>
-              <button 
-                onClick={cancelEdit} 
-                className="cancel-btn"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <button 
-              onClick={addCategory} 
-              className="add-btn"
-              disabled={isLoading}
-            >
-              {isLoading ? "Adding..." : "Add Category"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="cat-list">
-        <h2>All Categories ({categories.length})</h2>
-        
         {categories.length === 0 ? (
-          <p className="no-categories">No categories found. Add your first category!</p>
+          <div className="categories-empty-state">
+            <FiGrid className="empty-icon" />
+            <p>No categories found</p>
+            <p className="empty-subtext">Add your first category using the form above</p>
+          </div>
         ) : (
-          categories.map((cat) => (
-            <div key={cat.categoryId} className="cat-item">
-              <div className="cat-info">
-                <span className="cat-name">{cat.name}</span>
-                {cat.image && (
-                  <div className="cat-image-preview">
-                    <img src={cat.image} alt={cat.name} />
+          <div className="categories-grid">
+            {categories.map((category) => (
+              <div key={category._id || category.categoryId} className="category-card">
+                <div className="category-card-header">
+                  <div className="category-icon">
+                    <FiGrid />
                   </div>
-                )}
-                {!cat.image && (
-                  <span className="no-image">No Image</span>
-                )}
+                  <div className="category-info">
+                    <h3 className="category-name">{category.name}</h3>
+                    <div className="category-meta">
+                      <span className="category-id">ID: {category.categoryId}</span>
+                      {category.createdAt && (
+                        <span className="category-date">
+                          Created: {new Date(category.createdAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="category-actions">
+                  <button
+                    className="category-edit-btn"
+                    onClick={() => handleEdit(category)}
+                    disabled={isLoading}
+                    title="Edit Category"
+                  >
+                    <FiEdit />
+                    <span>Edit</span>
+                  </button>
+                  
+                  <button
+                    className="category-delete-btn"
+                    onClick={() => deleteCategory(category.categoryId)}
+                    disabled={isLoading}
+                    title="Delete Category"
+                  >
+                    <FiTrash2 />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
-
-              <div className="actions">
-                <button
-                  className="edit"
-                  onClick={() => handleEdit(cat)}
-                  disabled={isLoading}
-                >
-                  Edit
-                </button>
-
-                <button
-                  className="delete"
-                  onClick={() => deleteCategory(cat.categoryId)}
-                  disabled={isLoading}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
     </div>

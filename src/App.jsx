@@ -99,7 +99,7 @@ function App() {
         <Route
           path="/admin/orders"
           element={
-            <AdminLayout>
+            <AdminLayout> 
               <AdminOrders />
             </AdminLayout>
           }

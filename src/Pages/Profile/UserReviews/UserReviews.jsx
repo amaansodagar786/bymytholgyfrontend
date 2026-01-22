@@ -1,7 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './UserReviews.scss'; // We'll create this CSS file
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import {
+  FiStar,
+  FiEdit2,
+  FiTrash2,
+  FiPackage,
+  FiShoppingBag,
+  FiCalendar,
+  FiCheckCircle,
+  FiMessageSquare,
+  FiFilter,
+  FiChevronLeft,
+  FiChevronRight,
+  FiAlertCircle,
+  FiRefreshCw,
+  FiX,
+  FiCheck,
+  FiClock,
+  FiUser,
+  FiTag
+} from 'react-icons/fi';
+import { MdOutlineRateReview } from 'react-icons/md';
+import './UserReviews.scss';
 
 const UserReviews = () => {
     const navigate = useNavigate();
@@ -10,19 +33,27 @@ const UserReviews = () => {
     const [error, setError] = useState(null);
     const [selectedReview, setSelectedReview] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [reviewData, setReviewData] = useState({
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [editingReview, setEditingReview] = useState({
         rating: 0,
         reviewText: '',
         hoverRating: 0
     });
-    const [submitting, setSubmitting] = useState(false);
-    
-    // Pagination
-    const [pagination, setPagination] = useState({
+    const [updating, setUpdating] = useState(false);
+    const [stats, setStats] = useState({
+        totalReviews: 0,
+        averageRating: 0,
+        fiveStar: 0,
+        fourStar: 0,
+        threeStar: 0,
+        twoStar: 0,
+        oneStar: 0
+    });
+    const [filters, setFilters] = useState({
+        rating: 'all',
+        sortBy: 'newest',
         page: 1,
-        limit: 10,
-        total: 0,
-        pages: 1
+        limit: 10
     });
 
     const token = localStorage.getItem('token');
@@ -41,8 +72,8 @@ const UserReviews = () => {
             setError(null);
 
             const queryParams = new URLSearchParams({
-                page: pagination.page,
-                limit: pagination.limit
+                page: filters.page,
+                limit: filters.limit
             }).toString();
 
             const response = await axios.get(
@@ -53,44 +84,136 @@ const UserReviews = () => {
             );
 
             if (response.data.success) {
-                setReviews(response.data.reviews || []);
-                setPagination(response.data.pagination || {
-                    page: 1,
-                    limit: 10,
-                    total: 0,
-                    pages: 1
-                });
+                const reviewsData = response.data.reviews || [];
+                setReviews(reviewsData);
+
+                // Calculate stats from reviews
+                calculateStats(reviewsData);
+
+                // Fetch order details for each review
+                await fetchOrderDetails(reviewsData);
             } else {
                 setReviews([]);
+                setStats({
+                    totalReviews: 0,
+                    averageRating: 0,
+                    fiveStar: 0,
+                    fourStar: 0,
+                    threeStar: 0,
+                    twoStar: 0,
+                    oneStar: 0
+                });
             }
         } catch (error) {
             console.error('❌ Error fetching reviews:', error);
-            setError('Failed to load your reviews. Please try again.');
+            setError('Failed to load reviews. Please try again.');
             setReviews([]);
+            toast.error('Failed to load reviews');
         } finally {
             setLoading(false);
         }
     };
 
+    // Calculate review statistics
+    const calculateStats = (reviewsData) => {
+        const total = reviewsData.length;
+        const averageRating = total > 0 
+            ? reviewsData.reduce((sum, review) => sum + review.rating, 0) / total 
+            : 0;
+
+        const ratingCounts = {
+            5: reviewsData.filter(r => r.rating === 5).length,
+            4: reviewsData.filter(r => r.rating === 4).length,
+            3: reviewsData.filter(r => r.rating === 3).length,
+            2: reviewsData.filter(r => r.rating === 2).length,
+            1: reviewsData.filter(r => r.rating === 1).length
+        };
+
+        setStats({
+            totalReviews: total,
+            averageRating: parseFloat(averageRating.toFixed(1)),
+            fiveStar: ratingCounts[5],
+            fourStar: ratingCounts[4],
+            threeStar: ratingCounts[3],
+            twoStar: ratingCounts[2],
+            oneStar: ratingCounts[1]
+        });
+    };
+
+    // Fetch order details for reviews
+    const fetchOrderDetails = async (reviewsData) => {
+        try {
+            const enhancedReviews = await Promise.all(
+                reviewsData.map(async (review) => {
+                    try {
+                        const orderResponse = await axios.get(
+                            `${import.meta.env.VITE_API_URL}/orders/${review.orderId}`,
+                            {
+                                headers: { Authorization: `Bearer ${token}` }
+                            }
+                        );
+
+                        if (orderResponse.data.success) {
+                            const order = orderResponse.data.order;
+                            
+                            // Find the specific item in the order
+                            const orderItem = order.items.find(item => 
+                                item.productId === review.productId && 
+                                item.colorId === review.colorId
+                            );
+
+                            return {
+                                ...review,
+                                orderDetails: {
+                                    orderId: order.orderId,
+                                    orderDate: order.createdAt,
+                                    orderStatus: order.orderStatus,
+                                    item: orderItem || null,
+                                    deliveryAddress: order.deliveryAddress
+                                }
+                            };
+                        }
+                        return review;
+                    } catch (error) {
+                        console.error('Error fetching order details:', error);
+                        return review;
+                    }
+                })
+            );
+
+            setReviews(enhancedReviews);
+        } catch (error) {
+            console.error('Error fetching order details batch:', error);
+        }
+    };
+
     useEffect(() => {
         fetchUserReviews();
-    }, [pagination.page]);
+    }, [filters.page, filters.rating, filters.sortBy]);
 
-    // Format date
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-IN', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+    // Handle filter change
+    const handleFilterChange = (filterType, value) => {
+        setFilters(prev => ({
+            ...prev,
+            [filterType]: value,
+            page: 1
+        }));
+    };
+
+    // Handle star hover
+    const handleStarHover = (rating) => {
+        setEditingReview(prev => ({ ...prev, hoverRating: rating }));
+    };
+
+    // Handle star click
+    const handleStarClick = (rating) => {
+        setEditingReview(prev => ({ ...prev, rating }));
     };
 
     // Open edit modal
     const handleOpenEditModal = (review) => {
         setSelectedReview(review);
-        setReviewData({
+        setEditingReview({
             rating: review.rating,
             reviewText: review.reviewText || '',
             hoverRating: review.rating
@@ -98,32 +221,33 @@ const UserReviews = () => {
         setShowEditModal(true);
     };
 
-    // Handle star hover
-    const handleStarHover = (rating) => {
-        setReviewData(prev => ({ ...prev, hoverRating: rating }));
-    };
-
-    // Handle star click
-    const handleStarClick = (rating) => {
-        setReviewData(prev => ({ ...prev, rating }));
+    // Open delete modal
+    const handleOpenDeleteModal = (review) => {
+        setSelectedReview(review);
+        setShowDeleteModal(true);
     };
 
     // Update review
     const handleUpdateReview = async () => {
-        if (!reviewData.rating || !selectedReview) {
-            alert('Please select a rating');
+        if (!editingReview.rating) {
+            toast.warning('Please select a star rating');
+            return;
+        }
+
+        if (!selectedReview) {
+            toast.error('No review selected');
             return;
         }
 
         try {
-            setSubmitting(true);
+            setUpdating(true);
 
             const response = await axios.put(
                 `${import.meta.env.VITE_API_URL}/reviews/update/${selectedReview.reviewId}`,
                 {
                     userId,
-                    rating: reviewData.rating,
-                    reviewText: reviewData.reviewText.trim()
+                    rating: editingReview.rating,
+                    reviewText: editingReview.reviewText.trim()
                 },
                 {
                     headers: { Authorization: `Bearer ${token}` }
@@ -131,40 +255,44 @@ const UserReviews = () => {
             );
 
             if (response.data.success) {
-                alert('✅ Review updated successfully!');
+                toast.success('Review updated successfully!');
                 setShowEditModal(false);
                 
-                // Update the reviews list
-                setReviews(prevReviews => 
-                    prevReviews.map(review => 
+                // Update the review in state
+                setReviews(prevReviews =>
+                    prevReviews.map(review =>
                         review.reviewId === selectedReview.reviewId
                             ? {
                                 ...review,
-                                rating: reviewData.rating,
-                                reviewText: reviewData.reviewText.trim(),
-                                updatedAt: new Date()
+                                rating: editingReview.rating,
+                                reviewText: editingReview.reviewText.trim(),
+                                updatedAt: new Date().toISOString()
                             }
                             : review
                     )
                 );
+
+                // Recalculate stats
+                fetchUserReviews();
             }
         } catch (error) {
             console.error('❌ Error updating review:', error);
-            alert(error.response?.data?.message || 'Failed to update review');
+            toast.error(error.response?.data?.message || 'Failed to update review');
         } finally {
-            setSubmitting(false);
+            setUpdating(false);
         }
     };
 
     // Delete review
-    const handleDeleteReview = async (reviewId) => {
-        if (!window.confirm('Are you sure you want to delete this review?')) {
+    const handleDeleteReview = async () => {
+        if (!selectedReview) {
+            toast.error('No review selected');
             return;
         }
 
         try {
             const response = await axios.delete(
-                `${import.meta.env.VITE_API_URL}/reviews/${reviewId}`,
+                `${import.meta.env.VITE_API_URL}/reviews/${selectedReview.reviewId}`,
                 {
                     headers: { Authorization: `Bearer ${token}` },
                     data: { userId }
@@ -172,234 +300,357 @@ const UserReviews = () => {
             );
 
             if (response.data.success) {
-                alert('✅ Review deleted successfully!');
+                toast.success('Review deleted successfully!');
+                setShowDeleteModal(false);
                 
-                // Remove from reviews list
-                setReviews(prevReviews => 
-                    prevReviews.filter(review => review.reviewId !== reviewId)
+                // Remove the review from state
+                setReviews(prevReviews =>
+                    prevReviews.filter(review => review.reviewId !== selectedReview.reviewId)
                 );
-                
-                // Update pagination total
-                setPagination(prev => ({
-                    ...prev,
-                    total: prev.total - 1
-                }));
+
+                // Recalculate stats
+                fetchUserReviews();
             }
         } catch (error) {
             console.error('❌ Error deleting review:', error);
-            alert(error.response?.data?.message || 'Failed to delete review');
+            toast.error(error.response?.data?.message || 'Failed to delete review');
         }
     };
 
-    // View product page
-    const handleViewProduct = (productId) => {
-        navigate(`/product/${productId}`);
+    // Format date
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
     };
 
-    // Render stars for rating display
-    const renderRatingStars = (rating) => {
+    // Format time
+    const formatTime = (dateString) => {
+        return new Date(dateString).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    // Render star rating
+    const renderStars = (rating, interactive = false, size = 'medium') => {
         const stars = [];
+        const displayRating = interactive ? (editingReview.hoverRating || editingReview.rating) : rating;
+        const starSize = size === 'large' ? 28 : size === 'small' ? 14 : 20;
+
         for (let i = 1; i <= 5; i++) {
             stars.push(
-                <span key={i} className={`star ${i <= rating ? 'filled' : 'empty'}`}>
-                    {i <= rating ? '★' : '☆'}
-                </span>
+                interactive ? (
+                    <button
+                        key={i}
+                        type="button"
+                        className={`star-btn ${i <= displayRating ? 'active' : ''} ${size}`}
+                        onClick={() => handleStarClick(i)}
+                        onMouseEnter={() => handleStarHover(i)}
+                        onMouseLeave={() => handleStarHover(0)}
+                        disabled={updating}
+                        style={{ fontSize: `${starSize}px` }}
+                    >
+                        <FiStar className="star-icon" />
+                    </button>
+                ) : (
+                    <span
+                        key={i}
+                        className={`star-display ${i <= displayRating ? 'filled' : 'empty'} ${size}`}
+                        style={{ fontSize: `${starSize}px` }}
+                    >
+                        <FiStar className="star-icon" />
+                    </span>
+                )
             );
         }
-        return stars;
+        return (
+            <div className={`star-container ${size}`}>
+                {stars}
+                {!interactive && (
+                    <span className="rating-text">{rating.toFixed(1)}</span>
+                )}
+            </div>
+        );
     };
 
-    // Render stars for editing
-    const renderEditStars = () => {
-        const stars = [];
-        const displayRating = reviewData.hoverRating || reviewData.rating;
+    // Render rating distribution bar
+    const renderRatingBar = (count, total, rating) => {
+        const percentage = total > 0 ? (count / total) * 100 : 0;
         
-        for (let i = 1; i <= 5; i++) {
-            stars.push(
-                <button
-                    key={i}
-                    type="button"
-                    className={`star-btn ${i <= displayRating ? 'active' : ''}`}
-                    onClick={() => handleStarClick(i)}
-                    onMouseEnter={() => handleStarHover(i)}
-                    onMouseLeave={() => handleStarHover(0)}
-                    disabled={submitting}
-                >
-                    {i <= displayRating ? '★' : '☆'}
-                </button>
-            );
-        }
-        return stars;
+        return (
+            <div className="rating-bar-item">
+                <div className="bar-label">
+                    <span className="rating-number">{rating} star</span>
+                    <span className="rating-count">{count}</span>
+                </div>
+                <div className="bar-container">
+                    <div 
+                        className="bar-fill" 
+                        style={{ width: `${percentage}%` }}
+                    ></div>
+                </div>
+                <span className="bar-percentage">{percentage.toFixed(0)}%</span>
+            </div>
+        );
     };
 
     // Render review card
-    const renderReviewCard = (review) => (
-        <div key={review._id || review.reviewId} className="review-card">
-            <div className="review-header">
-                <div className="product-info">
-                    <h3 className="product-name" onClick={() => handleViewProduct(review.productId)}>
-                        {review.productName}
-                    </h3>
-                    <div className="product-variants">
-                        {review.modelName !== "Default" && (
-                            <span className="variant-chip">{review.modelName}</span>
-                        )}
-                        <span className="variant-chip">{review.colorName}</span>
-                        {review.size && (
-                            <span className="variant-chip">Size: {review.size}</span>
-                        )}
+    const renderReviewCard = (review) => {
+        return (
+            <div key={review.reviewId} className="review-card">
+                <div className="review-header">
+                    <div className="product-info">
+                        <h3 className="product-name">{review.productName}</h3>
+                        <div className="product-meta">
+                            {review.modelName !== "Default" && (
+                                <span className="meta-tag">
+                                    <FiShoppingBag className="meta-icon" />
+                                    {review.modelName}
+                                </span>
+                            )}
+                            {review.size && (
+                                <span className="meta-tag">
+                                    <FiTag className="meta-icon" />
+                                    Size: {review.size}
+                                </span>
+                            )}
+                        </div>
                     </div>
-                </div>
-                <div className="review-meta">
-                    <div className="review-rating">
-                        {renderRatingStars(review.rating)}
-                        <span className="rating-value">{review.rating}/5</span>
-                    </div>
-                    <div className="review-dates">
+                    
+                    <div className="review-rating-display">
+                        {renderStars(review.rating, false, 'small')}
                         <span className="review-date">
                             Reviewed on {formatDate(review.createdAt)}
                         </span>
-                        {review.updatedAt && review.updatedAt !== review.createdAt && (
-                            <span className="updated-date">
-                                (Updated on {formatDate(review.updatedAt)})
-                            </span>
-                        )}
                     </div>
                 </div>
-            </div>
 
-            <div className="review-content">
-                {review.reviewText ? (
-                    <p className="review-text">"{review.reviewText}"</p>
-                ) : (
-                    <p className="no-text-review">No review text provided</p>
-                )}
-            </div>
+                <div className="review-body">
+                    {review.reviewText ? (
+                        <p className="review-text">{review.reviewText}</p>
+                    ) : (
+                        <p className="review-text empty">No review text provided</p>
+                    )}
 
-            <div className="review-footer">
-                <div className="review-status">
-                    <span className={`status-badge ${review.isVerifiedPurchase ? 'verified' : 'unverified'}`}>
-                        {review.isVerifiedPurchase ? '✅ Verified Purchase' : '❌ Unverified'}
-                    </span>
-                    <span className={`status-badge ${review.isApproved ? 'approved' : 'pending'}`}>
-                        {review.isApproved ? '✅ Approved' : '⏳ Pending Approval'}
-                    </span>
-                    {review.helpfulCount > 0 && (
-                        <span className="helpful-count">
-                            👍 {review.helpfulCount} people found this helpful
-                        </span>
+                    {/* Order Information */}
+                    {review.orderDetails && (
+                        <div className="order-info">
+                            <h4 className="order-info-title">
+                                <FiPackage className="title-icon" />
+                                Order Information
+                            </h4>
+                            <div className="order-details-grid">
+                                <div className="order-detail-item">
+                                    <span className="detail-label">Order ID:</span>
+                                    <span className="detail-value">{review.orderDetails.orderId}</span>
+                                </div>
+                                <div className="order-detail-item">
+                                    <span className="detail-label">Date:</span>
+                                    <span className="detail-value">{formatDate(review.orderDetails.orderDate)}</span>
+                                </div>
+                                <div className="order-detail-item">
+                                    <span className="detail-label">Status:</span>
+                                    <span className={`status-badge ${review.orderDetails.orderStatus}`}>
+                                        {review.orderDetails.orderStatus}
+                                    </span>
+                                </div>
+                                {review.orderDetails.item && (
+                                    <>
+                                        <div className="order-detail-item">
+                                            <span className="detail-label">Quantity:</span>
+                                            <span className="detail-value">{review.orderDetails.item.quantity}</span>
+                                        </div>
+                                        <div className="order-detail-item">
+                                            <span className="detail-label">Price:</span>
+                                            <span className="detail-value">₹{review.orderDetails.item.totalPrice.toLocaleString()}</span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
                     )}
                 </div>
 
-                <div className="review-actions">
-                    <button
-                        className="action-btn edit-btn"
-                        onClick={() => handleOpenEditModal(review)}
-                    >
-                        ✏️ Edit Review
-                    </button>
-                    <button
-                        className="action-btn delete-btn"
-                        onClick={() => handleDeleteReview(review.reviewId)}
-                    >
-                        🗑️ Delete Review
-                    </button>
-                    <button
-                        className="action-btn view-order-btn"
-                        onClick={() => navigate(`/orders`)}
-                        title="View Order Details"
-                    >
-                        📦 View Order
-                    </button>
+                <div className="review-footer">
+                    <div className="review-meta">
+                        <span className="verification-badge">
+                            <FiCheckCircle className="badge-icon" />
+                            Verified Purchase
+                        </span>
+                        {review.updatedAt && review.updatedAt !== review.createdAt && (
+                            <span className="updated-info">
+                                Updated on {formatDate(review.updatedAt)}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="review-actions">
+                        <button
+                            className="btn edit-btn"
+                            onClick={() => handleOpenEditModal(review)}
+                        >
+                            <FiEdit2 />
+                            Edit
+                        </button>
+                        <button
+                            className="btn delete-btn"
+                            onClick={() => handleOpenDeleteModal(review)}
+                        >
+                            <FiTrash2 />
+                            Delete
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     // Render edit modal
     const renderEditModal = () => (
-        <div className="edit-review-modal">
-            <div className="modal-overlay" onClick={() => !submitting && setShowEditModal(false)}></div>
-            <div className="modal-content edit-modal-content">
+        <div className="edit-modal">
+            <div className="modal-overlay" onClick={() => !updating && setShowEditModal(false)}></div>
+            <div className="modal-content">
                 <div className="modal-header">
-                    <h2>Edit Your Review</h2>
+                    <h2>
+                        <FiEdit2 className="header-icon" />
+                        Edit Review
+                    </h2>
                     <button
                         className="close-btn"
-                        onClick={() => !submitting && setShowEditModal(false)}
-                        disabled={submitting}
+                        onClick={() => !updating && setShowEditModal(false)}
+                        disabled={updating}
                     >
                         ✕
                     </button>
                 </div>
 
-                <div className="review-product-info">
-                    <h3>{selectedReview?.productName}</h3>
-                    <div className="product-variants">
+                <div className="modal-body">
+                    <div className="product-info-modal">
+                        <h3>{selectedReview?.productName}</h3>
                         {selectedReview?.modelName !== "Default" && (
-                            <span className="variant-chip">{selectedReview?.modelName}</span>
-                        )}
-                        <span className="variant-chip">{selectedReview?.colorName}</span>
-                        {selectedReview?.size && (
-                            <span className="variant-chip">Size: {selectedReview?.size}</span>
+                            <p className="product-model">{selectedReview?.modelName}</p>
                         )}
                     </div>
-                    <p className="order-info">Order #{selectedReview?.orderId}</p>
-                </div>
 
-                <div className="edit-review-form">
-                    <div className="rating-section">
-                        <label>Your Rating *</label>
-                        <div className="star-rating">
-                            {renderEditStars()}
-                            <span className="rating-text">
-                                {reviewData.rating > 0 ? `${reviewData.rating} star${reviewData.rating > 1 ? 's' : ''}` : 'Select rating'}
-                            </span>
+                    <div className="edit-form">
+                        <div className="rating-section">
+                            <label>Your Rating *</label>
+                            <div className="star-rating-edit">
+                                <div className="stars-container">
+                                    {renderStars(0, true, 'large')}
+                                </div>
+                                <span className="rating-text">
+                                    {editingReview.rating > 0 ? 
+                                        `${editingReview.rating} star${editingReview.rating > 1 ? 's' : ''}` : 
+                                        'Select rating'
+                                    }
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="review-text-section">
+                            <label>Your Review</label>
+                            <textarea
+                                className="review-textarea"
+                                placeholder="Share your experience with this product..."
+                                value={editingReview.reviewText}
+                                onChange={(e) => setEditingReview(prev => ({ 
+                                    ...prev, 
+                                    reviewText: e.target.value 
+                                }))}
+                                rows={5}
+                                maxLength={1000}
+                                disabled={updating}
+                            />
+                            <div className="char-count">
+                                {editingReview.reviewText.length}/1000 characters
+                            </div>
                         </div>
                     </div>
 
-                    <div className="review-text-section">
-                        <label>Your Review (Optional)</label>
-                        <textarea
-                            className="review-textarea"
-                            placeholder="Share your experience with this product..."
-                            value={reviewData.reviewText}
-                            onChange={(e) => setReviewData(prev => ({ ...prev, reviewText: e.target.value }))}
-                            rows={5}
-                            maxLength={1000}
-                            disabled={submitting}
-                        />
-                        <div className="char-count">
-                            {reviewData.reviewText.length}/1000 characters
-                        </div>
-                    </div>
-
-                    <div className="edit-note">
-                        <p>✏️ Editing your review will update it for all users to see</p>
-                        <p>✅ This review is from a verified purchase</p>
+                    <div className="modal-actions">
+                        <button
+                            className="btn secondary-btn"
+                            onClick={() => !updating && setShowEditModal(false)}
+                            disabled={updating}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="btn primary-btn"
+                            onClick={handleUpdateReview}
+                            disabled={updating || editingReview.rating === 0}
+                        >
+                            {updating ? (
+                                <>
+                                    <FiRefreshCw className="spinner" />
+                                    Updating...
+                                </>
+                            ) : (
+                                'Update Review'
+                            )}
+                        </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
 
-                <div className="modal-actions">
+    // Render delete modal
+    const renderDeleteModal = () => (
+        <div className="delete-modal">
+            <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}></div>
+            <div className="modal-content">
+                <div className="modal-header">
+                    <h2>
+                        <FiAlertCircle className="header-icon" />
+                        Delete Review
+                    </h2>
                     <button
-                        className="btn secondary"
-                        onClick={() => !submitting && setShowEditModal(false)}
-                        disabled={submitting}
+                        className="close-btn"
+                        onClick={() => setShowDeleteModal(false)}
                     >
-                        Cancel
+                        ✕
                     </button>
-                    <button
-                        className="btn primary submit-btn"
-                        onClick={handleUpdateReview}
-                        disabled={submitting || reviewData.rating === 0}
-                    >
-                        {submitting ? (
-                            <>
-                                <span className="spinner-small"></span> Updating...
-                            </>
-                        ) : (
-                            'Update Review'
+                </div>
+
+                <div className="modal-body">
+                    <div className="warning-icon">
+                        <FiAlertCircle />
+                    </div>
+                    <h3>Are you sure?</h3>
+                    <p>
+                        You're about to delete your review for <strong>{selectedReview?.productName}</strong>. 
+                        This action cannot be undone.
+                    </p>
+
+                    <div className="review-preview">
+                        <div className="preview-rating">
+                            {renderStars(selectedReview?.rating || 0, false, 'small')}
+                        </div>
+                        {selectedReview?.reviewText && (
+                            <p className="preview-text">"{selectedReview.reviewText.substring(0, 100)}..."</p>
                         )}
-                    </button>
+                    </div>
+
+                    <div className="modal-actions">
+                        <button
+                            className="btn secondary-btn"
+                            onClick={() => setShowDeleteModal(false)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="btn danger-btn"
+                            onClick={handleDeleteReview}
+                        >
+                            <FiTrash2 />
+                            Delete Review
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -407,30 +658,25 @@ const UserReviews = () => {
 
     // Render empty state
     const renderEmptyState = () => (
-        <div className="empty-reviews">
-            <div className="empty-icon">⭐</div>
-            <h2>No reviews yet</h2>
-            <p>You haven't written any reviews yet. Reviews you write will appear here.</p>
-            <div className="empty-actions">
-                <button
-                    className="btn primary"
-                    onClick={() => navigate('/orders')}
-                >
-                    View My Orders
-                </button>
-                <button
-                    className="btn secondary"
-                    onClick={() => navigate('/products')}
-                >
-                    Browse Products
-                </button>
+        <div className="empty-state">
+            <div className="empty-icon">
+                <MdOutlineRateReview />
             </div>
+            <h2>No Reviews Yet</h2>
+            <p>You haven't reviewed any products yet. Reviews help other shoppers make better decisions.</p>
+            <button
+                className="btn primary-btn view-orders"
+                onClick={() => navigate('/my-orders')}
+            >
+                <FiPackage />
+                View My Orders
+            </button>
         </div>
     );
 
     // Render loading state
     const renderLoading = () => (
-        <div className="loading-container">
+        <div className="loading-state">
             <div className="spinner"></div>
             <p>Loading your reviews...</p>
         </div>
@@ -438,105 +684,155 @@ const UserReviews = () => {
 
     // Render error state
     const renderError = () => (
-        <div className="error-container">
-            <div className="error-icon">❌</div>
-            <h2>Unable to load reviews</h2>
+        <div className="error-state">
+            <div className="error-icon">
+                <FiAlertCircle />
+            </div>
+            <h2>Unable to Load Reviews</h2>
             <p>{error}</p>
             <button
-                className="retry-btn"
+                className="btn primary-btn retry-btn"
                 onClick={fetchUserReviews}
             >
-                Retry
+                <FiRefreshCw />
+                Try Again
             </button>
         </div>
     );
 
     if (!token || !userId) {
         return (
-            <div className="login-required">
+            <div className="auth-required">
                 <h2>Login Required</h2>
-                <p>Please login to view your reviews.</p>
-                <button onClick={() => navigate('/login')} className="auth-btn">
+                <p>Please login to view your reviews</p>
+                <button onClick={() => navigate('/login')} className="btn primary-btn">
                     Go to Login
                 </button>
             </div>
         );
     }
 
-    if (loading) return renderLoading();
-    if (error) return renderError();
-
     return (
-        <div className="user-reviews-container">
+        <div className="my-reviews">
+            <ToastContainer position="top-right" />
+            
             {/* Header */}
             <div className="reviews-header">
-                <h1>My Reviews</h1>
-                <div className="reviews-summary">
-                    <div className="summary-card">
-                        <span className="summary-value">{pagination.total}</span>
-                        <span className="summary-label">Total Reviews</span>
+                <h1>
+                    <MdOutlineRateReview className="header-icon" />
+                    My Reviews
+                </h1>
+                <p className="subtitle">Manage and edit all your product reviews in one place</p>
+            </div>
+
+            {/* Stats Section */}
+            <div className="stats-section">
+                <div className="main-stat">
+                    <div className="stat-value">{stats.averageRating}</div>
+                    <div className="stat-label">Average Rating</div>
+                    <div className="stat-stars">
+                        {renderStars(stats.averageRating, false, 'small')}
                     </div>
-                    <div className="summary-card">
-                        <span className="summary-value">
-                            {reviews.filter(r => r.isVerifiedPurchase).length}
-                        </span>
-                        <span className="summary-label">Verified</span>
+                </div>
+                <div className="stats-grid">
+                    <div className="stat-card">
+                        <div className="stat-value">{stats.totalReviews}</div>
+                        <div className="stat-label">Total Reviews</div>
                     </div>
-                    <div className="summary-card">
-                        <span className="summary-value">
-                            {reviews.length > 0 
-                                ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-                                : '0.0'
-                            }
-                        </span>
-                        <span className="summary-label">Avg Rating</span>
+                    <div className="stat-card">
+                        <div className="stat-value">{stats.fiveStar}</div>
+                        <div className="stat-label">5 Star Reviews</div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-value">{stats.fourStar}</div>
+                        <div className="stat-label">4 Star Reviews</div>
                     </div>
                 </div>
             </div>
 
-            {/* Navigation */}
-            <div className="reviews-nav">
-                <Link to="/orders" className="nav-link">
-                    ← Back to My Orders
-                </Link>
-                <div className="nav-actions">
-                    <button
-                        className="nav-btn refresh-btn"
-                        onClick={fetchUserReviews}
-                        disabled={loading}
-                    >
-                        🔄 Refresh
-                    </button>
+            {/* Rating Distribution */}
+            <div className="rating-distribution">
+                <h3 className="section-title">
+                    <FiStar className="section-icon" />
+                    Rating Breakdown
+                </h3>
+                <div className="distribution-bars">
+                    {renderRatingBar(stats.fiveStar, stats.totalReviews, 5)}
+                    {renderRatingBar(stats.fourStar, stats.totalReviews, 4)}
+                    {renderRatingBar(stats.threeStar, stats.totalReviews, 3)}
+                    {renderRatingBar(stats.twoStar, stats.totalReviews, 2)}
+                    {renderRatingBar(stats.oneStar, stats.totalReviews, 1)}
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className="filters-section">
+                <div className="section-title">
+                    <FiFilter className="section-icon" />
+                    Filter & Sort
+                </div>
+                <div className="filter-controls">
+                    <div className="filter-group">
+                        <label>Filter by Rating:</label>
+                        <select
+                            className="filter-select"
+                            value={filters.rating}
+                            onChange={(e) => handleFilterChange('rating', e.target.value)}
+                        >
+                            <option value="all">All Ratings</option>
+                            <option value="5">5 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="2">2 Stars</option>
+                            <option value="1">1 Star</option>
+                        </select>
+                    </div>
+                    <div className="filter-group">
+                        <label>Sort by:</label>
+                        <select
+                            className="filter-select"
+                            value={filters.sortBy}
+                            onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                        >
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="highest">Highest Rating</option>
+                            <option value="lowest">Lowest Rating</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
             {/* Reviews List */}
-            <div className="reviews-list">
-                {reviews.length === 0 ? (
-                    renderEmptyState()
-                ) : (
+            <div className="reviews-container">
+                {loading ? renderLoading() : 
+                 error ? renderError() : 
+                 reviews.length === 0 ? renderEmptyState() : (
                     <>
-                        {reviews.map(renderReviewCard)}
+                        <div className="reviews-list">
+                            {reviews.map(renderReviewCard)}
+                        </div>
 
-                        {/* Pagination */}
-                        {pagination.pages > 1 && (
+                        {stats.totalReviews > filters.limit && (
                             <div className="pagination">
                                 <button
-                                    className="page-btn"
-                                    disabled={pagination.page === 1}
-                                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                                    className="pagination-btn"
+                                    disabled={filters.page === 1}
+                                    onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
                                 >
-                                    ← Previous
+                                    <FiChevronLeft />
+                                    Previous
                                 </button>
                                 <span className="page-info">
-                                    Page {pagination.page} of {pagination.pages}
+                                    Page {filters.page} of {Math.ceil(stats.totalReviews / filters.limit)}
                                 </span>
                                 <button
-                                    className="page-btn"
-                                    disabled={pagination.page >= pagination.pages}
-                                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                                    className="pagination-btn"
+                                    disabled={filters.page >= Math.ceil(stats.totalReviews / filters.limit)}
+                                    onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
                                 >
-                                    Next →
+                                    Next
+                                    <FiChevronRight />
                                 </button>
                             </div>
                         )}
@@ -544,8 +840,9 @@ const UserReviews = () => {
                 )}
             </div>
 
-            {/* Edit Modal */}
+            {/* Modals */}
             {showEditModal && selectedReview && renderEditModal()}
+            {showDeleteModal && selectedReview && renderDeleteModal()}
         </div>
     );
 };

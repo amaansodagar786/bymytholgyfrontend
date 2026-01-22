@@ -1,16 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import {
+  FiCheck,
+  FiPackage,
+  FiMapPin,
+  FiCreditCard,
+  FiTruck,
+  FiTag,
+  FiShoppingBag,
+  FiHome,
+  FiBriefcase,
+  FiMap,
+  FiEdit2,
+  FiChevronLeft,
+  FiChevronRight,
+  FiArrowLeft,
+  FiPlus,
+  FiMinus
+} from 'react-icons/fi';
+import { IoCashOutline, IoCardOutline } from 'react-icons/io5';
+import { MdOutlineLocalShipping } from 'react-icons/md';
 import './Checkout.scss';
 import AddressForm from './Address/AddressForm';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentStep, setCurrentStep] = useState(1); // 1: Review, 2: Address, 3: Payment
+  const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [updatingQuantity, setUpdatingQuantity] = useState({});
+
+  // Refs for scrolling to step
+  const stepRef = useRef(null);
+  const [filledSteps, setFilledSteps] = useState([1]); // Track filled steps for line animation
 
   // Cart Data
   const [cartItems, setCartItems] = useState([]);
@@ -33,15 +60,35 @@ const Checkout = () => {
   const token = localStorage.getItem('token');
   const userId = localStorage.getItem('userId');
 
-  const [checkoutMode, setCheckoutMode] = useState('cart'); // 'cart' or 'buy-now'
+  const [checkoutMode, setCheckoutMode] = useState('cart');
   const [buyNowData, setBuyNowData] = useState(null);
 
   // Step Names
   const steps = [
-    { number: 1, name: 'Review Order' },
-    { number: 2, name: 'Select Address' },
-    { number: 3, name: 'Payment' }
+    { number: 1, name: 'Review', icon: <FiPackage />, fullName: 'Review Order' },
+    { number: 2, name: 'Address', icon: <FiMapPin />, fullName: 'Select Address' },
+    { number: 3, name: 'Payment', icon: <FiCreditCard />, fullName: 'Payment' }
   ];
+
+  // Scroll to step when changed
+  useEffect(() => {
+    if (stepRef.current) {
+      const offset = 300;
+      const elementPosition = stepRef.current.offsetTop - offset;
+
+      window.scrollTo({
+        top: elementPosition,
+        behavior: 'smooth'
+      });
+    }
+  }, [currentStep]);
+
+  // Update filled steps based on current step
+  useEffect(() => {
+    if (currentStep > 1 && !filledSteps.includes(currentStep - 1)) {
+      setFilledSteps(prev => [...prev, currentStep - 1]);
+    }
+  }, [currentStep]);
 
   // ==================== INITIAL DATA FETCHING ====================
   useEffect(() => {
@@ -50,20 +97,17 @@ const Checkout = () => {
       return;
     }
 
-    // Check if we're in Buy Now mode (data passed from product page)
     if (location.state && location.state.buyNowMode) {
       setCheckoutMode('buy-now');
       setBuyNowData(location.state.productData);
       processBuyNowData(location.state.productData);
     } else if (location.state && location.state.cartMode) {
-      // Cart mode with data passed from cart
       setCheckoutMode('cart');
       setCartItems(location.state.cartData.items);
       setCartSummary(location.state.cartData.summary);
       fetchAddresses();
       setLoading(false);
     } else {
-      // Normal cart mode (fetch from API)
       setCheckoutMode('cart');
       fetchCartData();
       fetchAddresses();
@@ -75,13 +119,11 @@ const Checkout = () => {
     try {
       setLoading(true);
 
-      // Add fragrance to buy now data if not already present
       const enhancedProductData = {
         ...productData,
         selectedFragrance: productData.selectedFragrance || null
       };
 
-      // Create checkout session on backend
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/buynow/create-checkout-session`,
         enhancedProductData,
@@ -89,17 +131,15 @@ const Checkout = () => {
       );
 
       if (response.data.success) {
-        // Set cart items and summary from buy now session
         setCartItems(response.data.checkoutSession.cartItems);
         setCartSummary(response.data.summary);
       }
 
-      // Still fetch addresses (same for both modes)
       await fetchAddresses();
 
     } catch (error) {
       console.error('Error processing Buy Now:', error);
-      alert('Failed to process Buy Now. Please try again.');
+      toast.error('Failed to process Buy Now. Please try again.');
       navigate('/products');
     } finally {
       setLoading(false);
@@ -122,7 +162,7 @@ const Checkout = () => {
       }
     } catch (error) {
       console.error('❌ Error fetching cart:', error);
-      alert('Failed to load cart. Please try again.');
+      toast.error('Failed to load cart. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -139,7 +179,6 @@ const Checkout = () => {
       if (response.data.success) {
         setAddresses(response.data.addresses);
 
-        // Set default address as selected
         const defaultAddress = response.data.addresses.find(addr => addr.isDefault);
         if (defaultAddress) {
           setSelectedAddress(defaultAddress);
@@ -152,15 +191,15 @@ const Checkout = () => {
 
   // Calculate cart summary
   const calculateCartSummary = (items, apiSummary) => {
-    const subtotal = apiSummary?.subtotal || items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalSavings = apiSummary?.totalSavings || items.reduce((sum, item) => {
+    const subtotal = items.reduce((sum, item) => sum + (item.finalPrice * item.quantity), 0);
+    const totalSavings = items.reduce((sum, item) => {
       if (item.hasOffer && item.offerDetails?.savedAmount) {
-        return sum + item.offerDetails.savedAmount;
+        return sum + (item.offerDetails.savedAmount * item.quantity);
       }
       return sum;
     }, 0);
-    const shipping = subtotal > 1000 ? 0 : 50; // Free shipping above ₹1000
-    const tax = subtotal * 0.18; // 18% GST
+    const shipping = subtotal > 1000 ? 0 : 50;
+    const tax = subtotal * 0.18;
     const total = subtotal + shipping + tax;
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -172,6 +211,111 @@ const Checkout = () => {
       total,
       totalItems
     });
+  };
+
+  // ==================== QUANTITY UPDATE FUNCTIONS ====================
+  const handleQuantityChange = async (itemId, newQuantity) => {
+    if (newQuantity < 1) return;
+
+    setUpdatingQuantity(prev => ({ ...prev, [itemId]: true }));
+
+    try {
+      const item = cartItems.find(item => item._id === itemId);
+      if (!item) return;
+
+      // Check inventory stock before allowing quantity increase
+      if (newQuantity > item.quantity) {
+        // User is increasing quantity - check inventory
+        const inventoryResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/inventory/product/${item.productId}/status`,
+          {
+            params: {
+              colorId: item.selectedColor?.colorId || "Default",
+              fragrance: item.selectedFragrance || "Default"
+            },
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+
+        const availableStock = inventoryResponse.data.stock;
+
+        // User-friendly error message (don't show exact numbers)
+        if (availableStock < newQuantity) {
+          if (availableStock === 0) {
+            toast.error('This item is currently out of stock!');
+          } else {
+            toast.error('Not enough stock available for this item!');
+          }
+          setUpdatingQuantity(prev => ({ ...prev, [itemId]: false }));
+          return;
+        }
+      }
+
+      // Update local state only (no API call, no success toast)
+      setCartItems(prev => prev.map(item =>
+        item._id === itemId ? {
+          ...item,
+          quantity: newQuantity,
+          totalPrice: item.finalPrice * newQuantity
+        } : item
+      ));
+
+      // Recalculate summary
+      setTimeout(() => {
+        const updatedItems = cartItems.map(item =>
+          item._id === itemId ? {
+            ...item,
+            quantity: newQuantity,
+            totalPrice: item.finalPrice * newQuantity
+          } : item
+        );
+        calculateCartSummary(updatedItems, cartSummary);
+      }, 100);
+
+      // ❌ NO SUCCESS TOAST HERE ❌
+
+    } catch (error) {
+      console.error('Error checking inventory:', error);
+      // Still allow quantity change but show generic warning
+      toast.warning('Unable to check stock availability');
+
+      // Update local state anyway
+      setCartItems(prev => prev.map(item =>
+        item._id === itemId ? {
+          ...item,
+          quantity: newQuantity,
+          totalPrice: item.finalPrice * newQuantity
+        } : item
+      ));
+
+      setTimeout(() => {
+        const updatedItems = cartItems.map(item =>
+          item._id === itemId ? {
+            ...item,
+            quantity: newQuantity,
+            totalPrice: item.finalPrice * newQuantity
+          } : item
+        );
+        calculateCartSummary(updatedItems, cartSummary);
+      }, 100);
+
+    } finally {
+      setUpdatingQuantity(prev => ({ ...prev, [itemId]: false }));
+    }
+  };
+
+  const incrementQuantity = (itemId) => {
+    const item = cartItems.find(item => item._id === itemId);
+    if (item) {
+      handleQuantityChange(itemId, item.quantity + 1);
+    }
+  };
+
+  const decrementQuantity = (itemId) => {
+    const item = cartItems.find(item => item._id === itemId);
+    if (item && item.quantity > 1) {
+      handleQuantityChange(itemId, item.quantity - 1);
+    }
   };
 
   // ==================== ADDRESS MANAGEMENT ====================
@@ -186,21 +330,14 @@ const Checkout = () => {
       );
 
       if (response.data.success) {
-        // Refresh addresses
         await fetchAddresses();
-
-        // ✅ Set newly added address as selected automatically
         setSelectedAddress(response.data.address);
-
-        // Close form
         setShowAddressForm(false);
-
-        // Success message
-        alert('✅ Address added successfully! It is now selected for delivery.');
+        toast.success('Address added successfully!');
       }
     } catch (error) {
       console.error('❌ Error adding address:', error);
-      alert(error.response?.data?.message || 'Failed to add address');
+      toast.error(error.response?.data?.message || 'Failed to add address');
     } finally {
       setSaving(false);
     }
@@ -217,23 +354,17 @@ const Checkout = () => {
       );
 
       if (response.data.success) {
-        // Refresh addresses
         await fetchAddresses();
-
-        // Update selected address if it was the one being edited
         if (selectedAddress?.addressId === editingAddress.addressId) {
           setSelectedAddress(response.data.address);
         }
-
-        // Close form
         setShowAddressForm(false);
         setEditingAddress(null);
-
-        alert('✅ Address updated successfully!');
+        toast.success('Address updated successfully!');
       }
     } catch (error) {
       console.error('❌ Error updating address:', error);
-      alert(error.response?.data?.message || 'Failed to update address');
+      toast.error(error.response?.data?.message || 'Failed to update address');
     } finally {
       setSaving(false);
     }
@@ -264,9 +395,15 @@ const Checkout = () => {
   // ==================== STEP NAVIGATION ====================
   const goToNextStep = () => {
     if (currentStep === 2 && !selectedAddress) {
-      alert('⚠️ Please select or add a delivery address');
+      toast.warning('Please select or add a delivery address');
       return;
     }
+
+    // Mark current step as filled when moving to next
+    if (!filledSteps.includes(currentStep)) {
+      setFilledSteps(prev => [...prev, currentStep]);
+    }
+
     setCurrentStep(prev => Math.min(prev + 1, 3));
   };
 
@@ -281,7 +418,7 @@ const Checkout = () => {
   // ==================== ORDER CREATION ====================
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
-      alert('⚠️ Please select a delivery address');
+      toast.warning('Please select a delivery address');
       setCurrentStep(2);
       return;
     }
@@ -289,7 +426,6 @@ const Checkout = () => {
     try {
       setSaving(true);
 
-      // Prepare order data with fragrance
       const orderData = {
         userId,
         checkoutMode,
@@ -301,7 +437,7 @@ const Checkout = () => {
           finalPrice: item.finalPrice,
           totalPrice: item.totalPrice,
           selectedColor: item.selectedColor,
-          selectedFragrance: item.selectedFragrance || null, // INCLUDED FRAGRANCE
+          selectedFragrance: item.selectedFragrance || null,
           selectedSize: item.selectedSize,
           selectedModel: item.selectedModel,
           hasOffer: item.hasOffer,
@@ -312,9 +448,6 @@ const Checkout = () => {
         paymentMethod: 'cod'
       };
 
-      console.log('🚀 Order data with fragrance:', orderData);
-
-      // Call backend to create order
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/orders/create`,
         orderData,
@@ -327,50 +460,55 @@ const Checkout = () => {
       );
 
       if (response.data.success) {
-        // Success message with order details
-        alert(`✅ Order placed successfully!\nOrder ID: ${response.data.order.orderId}\nTotal: ₹${response.data.order.pricing.total.toLocaleString()}`);
+        toast.success(
+          <div>
+            <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>✅ Order Placed Successfully!</p>
+            <p>Order ID: {response.data.order.orderId}</p>
+            <p>Total: ₹{response.data.order.pricing.total.toLocaleString()}</p>
+          </div>,
+          {
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true
+          }
+        );
 
-        // Dispatch event to update cart count in navbar
         window.dispatchEvent(new Event('cartUpdated'));
 
-        // Navigate to orders page with success message
-        navigate('/orders', {
-          state: {
-            orderSuccess: true,
-            orderId: response.data.order.orderId,
-            orderTotal: response.data.order.pricing.total
-          }
-        });
+        // Navigate after toast
+        setTimeout(() => {
+          navigate('/orders', {
+            state: {
+              orderSuccess: true,
+              orderId: response.data.order.orderId,
+              orderTotal: response.data.order.pricing.total
+            }
+          });
+        }, 2000);
       } else {
         throw new Error(response.data.message || 'Failed to place order');
       }
 
     } catch (error) {
       console.error('❌ Error placing order:', error);
-
       let errorMessage = 'Failed to place order. Please try again.';
 
       if (error.response) {
-        // Backend returned an error
         if (error.response.data.message) {
           errorMessage = error.response.data.message;
         }
-
-        // Handle specific error cases
         if (error.response.status === 400) {
           if (error.response.data.message.includes('Insufficient stock')) {
-            errorMessage = 'Some items in your cart are out of stock. Please update your cart and try again.';
-            // Optionally refresh cart data
+            errorMessage = 'Some items are out of stock. Please update your cart.';
             if (checkoutMode === 'cart') {
               await fetchCartData();
             }
-          } else if (error.response.data.message.includes('Product not found')) {
-            errorMessage = 'Some products in your cart are no longer available. Please update your cart.';
           }
         }
       }
-
-      alert(`❌ ${errorMessage}`);
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -378,21 +516,25 @@ const Checkout = () => {
 
   // ==================== RENDER FUNCTIONS ====================
 
-  // Render Product Review Step
+  // Render Product Review Step - UPDATED WITH QUANTITY CONTROLS
   const renderReviewStep = () => (
-    <div className="checkout-step">
-      <h2>Review Your Order</h2>
+    <div className="checkout-step" ref={stepRef}>
+      <div className="step-header">
+        <div className="step-icon-wrapper">
+          <FiPackage className="step-icon" />
+        </div>
+        <h2>Review Your Order</h2>
+      </div>
 
-      {/* Cart Items */}
       <div className="order-items">
         {cartItems.map(item => (
           <div key={item._id} className="order-item">
             <div className="item-image">
               <img
-                src={item.selectedColor?.images?.[0] || item.thumbnailImage || "https://via.placeholder.com/80x80"}
+                src={item.selectedColor?.images?.[0] || item.thumbnailImage || "https://via.placeholder.com/100x100"}
                 alt={item.productName}
                 onError={(e) => {
-                  e.target.src = "https://via.placeholder.com/80x80";
+                  e.target.src = "https://via.placeholder.com/100x100";
                 }}
               />
             </div>
@@ -401,15 +543,20 @@ const Checkout = () => {
               <h4 className="item-name">{item.productName}</h4>
 
               <div className="item-variants">
-                {item.selectedModel && (
-                  <span className="variant-chip">{item.selectedModel.modelName}</span>
+                {/* {item.selectedModel && (
+                  <span className="variant-chip">
+                    <FiShoppingBag size={12} /> {item.selectedModel.modelName}
+                  </span>
                 )}
                 {item.selectedColor && (
-                  <span className="variant-chip">{item.selectedColor.colorName}</span>
-                )}
-                {/* ADDED FRAGRANCE DISPLAY */}
+                  <span className="variant-chip">
+                    <FiTag size={12} /> {item.selectedColor.colorName}
+                  </span>
+                )} */}
                 {item.selectedFragrance && (
-                  <span className="variant-chip fragrance">🍃 {item.selectedFragrance}</span>
+                  <span className="variant-chip fragrance">
+                    Fragrance : {item.selectedFragrance}
+                  </span>
                 )}
                 {item.selectedSize && (
                   <span className="variant-chip">Size: {item.selectedSize}</span>
@@ -417,21 +564,44 @@ const Checkout = () => {
               </div>
 
               <div className="item-quantity-price">
-                <span className="quantity">Qty: {item.quantity}</span>
-                <span className="price">
-                  ₹{(item.finalPrice * item.quantity).toLocaleString()}
+                <div className="quantity-controls">
+                  <button
+                    className="quantity-btn minus"
+                    onClick={() => decrementQuantity(item._id)}
+                    disabled={item.quantity <= 1 || updatingQuantity[item._id]}
+                  >
+                    <FiMinus size={14} />
+                  </button>
+                  <span className="quantity-display">
+                    {updatingQuantity[item._id] ? (
+                      <span className="quantity-loading"></span>
+                    ) : (
+                      item.quantity
+                    )}
+                  </span>
+                  <button
+                    className="quantity-btn plus"
+                    onClick={() => incrementQuantity(item._id)}
+                    disabled={updatingQuantity[item._id]}
+                  >
+                    <FiPlus size={14} />
+                  </button>
+                </div>
+                <div className="price-wrapper">
+                  <span className="price">
+                    ₹{(item.finalPrice * item.quantity).toLocaleString()}
+                  </span>
                   {item.hasOffer && (
                     <span className="original-price">
                       ₹{(item.unitPrice * item.quantity).toLocaleString()}
                     </span>
                   )}
-                </span>
+                </div>
               </div>
 
-              {/* Offer label */}
               {item.hasOffer && item.offerDetails && (
                 <div className="offer-label">
-                  🎁 {item.offerDetails.offerLabel} ({item.offerDetails.offerPercentage}% OFF)
+                  <FiTag size={14} /> {item.offerDetails.offerLabel} ({item.offerDetails.offerPercentage}% OFF)
                 </div>
               )}
             </div>
@@ -439,171 +609,165 @@ const Checkout = () => {
         ))}
       </div>
 
-      {/* Order Summary */}
       <div className="order-summary">
-        <h3>Order Summary</h3>
+        <h3 className="summary-title">Order Summary</h3>
 
-        <div className="summary-row">
-          <span>Subtotal ({cartSummary.totalItems} items)</span>
-          <span>₹{cartSummary.subtotal.toLocaleString()}</span>
-        </div>
-
-        {cartSummary.totalSavings > 0 && (
-          <div className="summary-row discount">
-            <span>Total Savings</span>
-            <span className="savings">-₹{cartSummary.totalSavings.toLocaleString()}</span>
+        <div className="summary-content">
+          <div className="summary-row">
+            <span>Subtotal ({cartSummary.totalItems} items)</span>
+            <span>₹{cartSummary.subtotal.toLocaleString()}</span>
           </div>
-        )}
 
-        <div className="summary-row">
-          <span>Shipping</span>
-          <span className={cartSummary.shipping === 0 ? 'free' : ''}>
-            {cartSummary.shipping === 0 ? 'FREE' : `₹${cartSummary.shipping}`}
-          </span>
-        </div>
+          {cartSummary.totalSavings > 0 && (
+            <div className="summary-row discount">
+              <span>Total Savings</span>
+              <span className="savings">-₹{cartSummary.totalSavings.toLocaleString()}</span>
+            </div>
+          )}
 
-        <div className="summary-row">
-          <span>Tax (GST 18%)</span>
-          <span>₹{cartSummary.tax.toLocaleString()}</span>
-        </div>
-
-        <div className="summary-row total">
-          <span>Total Amount</span>
-          <span className="total-amount">₹{cartSummary.total.toLocaleString()}</span>
-        </div>
-
-        {cartSummary.subtotal < 1000 && (
-          <div className="free-shipping-note">
-            🚚 Add ₹{(1000 - cartSummary.subtotal).toLocaleString()} more for FREE shipping!
+          <div className="summary-row">
+            <span>Shipping</span>
+            <span className={cartSummary.shipping === 0 ? 'free' : ''}>
+              {cartSummary.shipping === 0 ? 'FREE' : `₹${cartSummary.shipping}`}
+            </span>
           </div>
-        )}
+
+          <div className="summary-row">
+            <span>Tax (GST 18%)</span>
+            <span>₹{cartSummary.tax.toLocaleString()}</span>
+          </div>
+
+          <div className="summary-row total">
+            <span>Total Amount</span>
+            <span className="total-amount">₹{cartSummary.total.toLocaleString()}</span>
+          </div>
+
+          {cartSummary.subtotal < 1000 && (
+            <div className="free-shipping-note">
+              <MdOutlineLocalShipping size={16} /> Add ₹{(1000 - cartSummary.subtotal).toLocaleString()} more for FREE shipping!
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 
   // Render Address Selection Step
   const renderAddressStep = () => (
-    <div className="checkout-step">
-      <h2>Select Delivery Address</h2>
-
-      {/* Current Selected Address Preview */}
-      {selectedAddress && (
-        <div className="selected-address-preview">
-          <h3>✅ Currently Selected Address:</h3>
-          <div className="address-preview">
-            <div className="address-header">
-              <p><strong>{selectedAddress.fullName}</strong> | 📱 {selectedAddress.mobile}</p>
-              {selectedAddress.isDefault && (
-                <span className="default-badge">Default</span>
-              )}
-            </div>
-            <div className="address-details">
-              <p>{selectedAddress.addressLine1}</p>
-              {selectedAddress.addressLine2 && <p>{selectedAddress.addressLine2}</p>}
-              {selectedAddress.landmark && <p><strong>Landmark:</strong> {selectedAddress.landmark}</p>}
-              <p>{selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}</p>
-              <p>{selectedAddress.country}</p>
-              {selectedAddress.instructions && (
-                <div className="address-instructions">
-                  <p><strong>Delivery Instructions:</strong> {selectedAddress.instructions}</p>
-                </div>
-              )}
-            </div>
-          </div>
+    <div className="checkout-step address-step" ref={stepRef}>
+      <div className="step-header">
+        <div className="step-icon-wrapper">
+          <FiMapPin className="step-icon" />
         </div>
-      )}
+        <h2>Select Delivery Address</h2>
+      </div>
 
-      {/* Address Options */}
-      <div className="address-options-section">
-        <h3>Choose from saved addresses:</h3>
-
-        {addresses.length === 0 ? (
-          <div className="no-addresses">
-            <div className="empty-state">
-              <span className="empty-icon">📍</span>
-              <p>No addresses saved. Please add a delivery address.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="address-options-list">
-            {addresses.map(address => (
-              <div
-                key={address.addressId}
-                className={`address-option-card ${selectedAddress?.addressId === address.addressId ? 'selected' : ''}`}
-                onClick={() => handleSelectAddress(address)}
-              >
-                <div className="address-option-header">
-                  <div className="address-radio">
-                    <input
-                      type="radio"
-                      name="selectedAddress"
-                      checked={selectedAddress?.addressId === address.addressId}
-                      onChange={() => handleSelectAddress(address)}
-                    />
-                  </div>
-                  <div className="address-option-title">
-                    <h4>{address.fullName}</h4>
-                    {address.isDefault && (
-                      <span className="default-badge">Default</span>
-                    )}
-                    <span className="address-type-badge">
-                      {address.addressType === 'home' ? '🏠 Home' :
-                        address.addressType === 'work' ? '💼 Work' : '📌 Other'}
-                    </span>
-                  </div>
+      <div className="address-step-container">
+        {/* Left Side - Selected Address Preview */}
+        {selectedAddress && (
+          <div className="selected-address-section">
+            <h3 className="section-subtitle">
+              <FiCheck className="check-icon" /> Selected Address
+            </h3>
+            <div className="address-preview compact">
+              <div className="address-header">
+                <div className="address-name-mobile">
+                  <p><strong>{selectedAddress.fullName}</strong></p>
+                  <p>📱 {selectedAddress.mobile}</p>
                 </div>
-
-                <div className="address-option-content">
-                  <p className="address-contact">
-                    📱 {address.mobile}
-                    {address.email && ` | ✉️ ${address.email}`}
-                  </p>
-
-                  <div className="address-details">
-                    <p>{address.addressLine1}</p>
-                    {address.addressLine2 && <p>{address.addressLine2}</p>}
-                    {address.landmark && <p><strong>Landmark:</strong> {address.landmark}</p>}
-                    <p>{address.city}, {address.state} - {address.pincode}</p>
-                    <p>{address.country}</p>
-                  </div>
-
-                  {address.instructions && (
-                    <div className="address-instructions">
-                      <p><strong>Delivery Instructions:</strong> {address.instructions}</p>
-                    </div>
-                  )}
-
-                  <div className="address-actions">
-                    <button
-                      className="edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditAddress(address);
-                      }}
-                    >
-                      ✏️ Edit
-                    </button>
-                  </div>
-                </div>
+                {selectedAddress.isDefault && (
+                  <span className="default-badge">Default</span>
+                )}
               </div>
-            ))}
+              <div className="address-details">
+                <p>{selectedAddress.addressLine1}</p>
+                {selectedAddress.addressLine2 && <p>{selectedAddress.addressLine2}</p>}
+                <p>{selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}</p>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Add New Address Button */}
-        <div className="add-address-section">
-          <button
-            className="add-address-btn"
-            onClick={() => setShowAddressForm(true)}
-            disabled={saving}
-          >
-            ＋ Add New Address
-          </button>
-          <p className="add-address-note">
-            {addresses.length === 0 ?
-              "Add your first delivery address" :
-              "Can't find your address? Add a new one"}
-          </p>
+        {/* Right Side - Address Options */}
+        <div className="address-options-section">
+          <h3 className="section-subtitle">Choose from saved addresses:</h3>
+
+          {addresses.length === 0 ? (
+            <div className="no-addresses">
+              <div className="empty-state">
+                <FiMap size={32} className="empty-icon" />
+                <p>No addresses saved. Please add a delivery address.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="address-options-list compact">
+              {addresses.map(address => (
+                <div
+                  key={address.addressId}
+                  className={`address-option-card ${selectedAddress?.addressId === address.addressId ? 'selected' : ''}`}
+                  onClick={() => handleSelectAddress(address)}
+                >
+                  <div className="address-option-header">
+                    <div className="address-radio">
+                      <input
+                        type="radio"
+                        name="selectedAddress"
+                        checked={selectedAddress?.addressId === address.addressId}
+                        onChange={() => handleSelectAddress(address)}
+                      />
+                    </div>
+                    <div className="address-option-title">
+                      <h4>{address.fullName}</h4>
+                      <div className="address-badges">
+                        {address.isDefault && (
+                          <span className="default-badge">Default</span>
+                        )}
+                        <span className="address-type-badge">
+                          {address.addressType === 'home' ? <FiHome size={10} /> :
+                            address.addressType === 'work' ? <FiBriefcase size={10} /> :
+                              <FiMap size={10} />}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="address-option-content">
+                    <p className="address-contact">📱 {address.mobile}</p>
+                    <div className="address-details">
+                      <p>{address.addressLine1}</p>
+                      <p>{address.city}, {address.state}</p>
+                    </div>
+                    <div className="address-actions">
+                      <button
+                        className="edit-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditAddress(address);
+                        }}
+                      >
+                        <FiEdit2 size={12} /> Edit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="add-address-section">
+            <button
+              className="add-address-btn"
+              onClick={() => setShowAddressForm(true)}
+              disabled={saving}
+            >
+              <FiMapPin size={14} /> Add New Address
+            </button>
+            <p className="add-address-note">
+              {addresses.length === 0
+                ? "Add your first delivery address"
+                : "Add a new address"}
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -611,101 +775,89 @@ const Checkout = () => {
 
   // Render Payment Step
   const renderPaymentStep = () => (
-    <div className="checkout-step">
-      <h2>Payment Method</h2>
+    <div className="checkout-step payment-step" ref={stepRef}>
+      <div className="step-header">
+        <div className="step-icon-wrapper">
+          <FiCreditCard className="step-icon" />
+        </div>
+        <h2>Payment Method</h2>
+      </div>
 
-      <div className="payment-methods">
-        <div className="payment-method selected">
-          <input
-            type="radio"
-            id="cod"
-            name="payment"
-            defaultChecked
-            readOnly
-          />
-          <label htmlFor="cod">
-            <span className="method-icon">💵</span>
-            <div className="method-info">
-              <span className="method-name">Cash on Delivery</span>
-              <span className="method-desc">Pay when you receive your order</span>
-            </div>
-          </label>
+      <div className="payment-methods-grid">
+        <div className="payment-method-card selected">
+          <div className="method-header">
+            <input
+              type="radio"
+              id="cod"
+              name="payment"
+              defaultChecked
+              readOnly
+            />
+            <label htmlFor="cod">
+              <div className="method-icon-wrapper">
+                <IoCashOutline className="method-icon" />
+              </div>
+              <div className="method-info">
+                <span className="method-name">Cash on Delivery</span>
+                <span className="method-desc">Pay when you receive</span>
+              </div>
+            </label>
+          </div>
+          <div className="method-features">
+            <span>✅ No online payment required</span>
+            <span>✅ Pay to delivery executive</span>
+          </div>
         </div>
 
-        <div className="payment-method disabled">
-          <input type="radio" id="card" name="payment" disabled />
-          <label htmlFor="card">
-            <span className="method-icon">💳</span>
-            <div className="method-info">
-              <span className="method-name">Credit/Debit Card</span>
-              <span className="method-desc">Coming Soon</span>
-            </div>
-          </label>
+        <div className="payment-method-card disabled">
+          <div className="method-header">
+            <input type="radio" id="card" name="payment" disabled />
+            <label htmlFor="card">
+              <div className="method-icon-wrapper">
+                <IoCardOutline className="method-icon" />
+              </div>
+              <div className="method-info">
+                <span className="method-name">Credit/Debit Card</span>
+                <span className="method-desc">Coming Soon</span>
+              </div>
+            </label>
+          </div>
         </div>
 
-        <div className="payment-method disabled">
-          <input type="radio" id="upi" name="payment" disabled />
-          <label htmlFor="upi">
-            <span className="method-icon">📱</span>
-            <div className="method-info">
-              <span className="method-name">UPI</span>
-              <span className="method-desc">Coming Soon</span>
-            </div>
-          </label>
+        <div className="payment-method-card disabled">
+          <div className="method-header">
+            <input type="radio" id="upi" name="payment" disabled />
+            <label htmlFor="upi">
+              <div className="method-icon-wrapper">
+                <span className="method-icon">📱</span>
+              </div>
+              <div className="method-info">
+                <span className="method-name">UPI</span>
+                <span className="method-desc">Coming Soon</span>
+              </div>
+            </label>
+          </div>
         </div>
       </div>
 
       <div className="order-confirmation">
-        <h3>Order Confirmation</h3>
-        <div className="confirmation-details">
-          <div className="delivery-address">
-            <p><strong>Delivery Address:</strong></p>
+        <h3 className="confirmation-title">Order Confirmation</h3>
+
+        <div className="confirmation-content">
+          <div className="delivery-address-section">
+            <p className="section-label"><strong>Delivery Address:</strong></p>
             {selectedAddress ? (
-              <div className="selected-address">
-                <div className="address-header">
-                  <p><strong>{selectedAddress.fullName}</strong> | 📱 {selectedAddress.mobile}</p>
-                  {selectedAddress.isDefault && (
-                    <span className="default-badge">Default</span>
-                  )}
+              <div className="selected-address-summary">
+                <div className="address-summary-header">
+                  <p><strong>{selectedAddress.fullName}</strong></p>
+                  <p>📱 {selectedAddress.mobile}</p>
                 </div>
                 <p>{selectedAddress.addressLine1}</p>
-                {selectedAddress.addressLine2 && <p>{selectedAddress.addressLine2}</p>}
                 <p>{selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}</p>
-                {selectedAddress.instructions && (
-                  <p><strong>Instructions:</strong> {selectedAddress.instructions}</p>
-                )}
               </div>
             ) : (
               <p className="error">⚠️ No address selected</p>
             )}
-          </div>
-
-          {/* Order Items Summary */}
-          <div className="order-items-summary">
-            <p><strong>Order Items:</strong></p>
-            {cartItems.map((item, index) => (
-              <div key={index} className="order-item-summary">
-                <div className="item-summary-details">
-                  <span className="item-name">{item.productName}</span>
-                  <div className="item-variants-summary">
-                    {item.selectedModel && (
-                      <span className="variant-chip-small">{item.selectedModel.modelName}</span>
-                    )}
-                    {item.selectedColor && (
-                      <span className="variant-chip-small">{item.selectedColor.colorName}</span>
-                    )}
-                    {item.selectedFragrance && (
-                      <span className="variant-chip-small fragrance">🍃 {item.selectedFragrance}</span>
-                    )}
-                    {item.selectedSize && (
-                      <span className="variant-chip-small">Size: {item.selectedSize}</span>
-                    )}
-                    <span className="quantity-chip">Qty: {item.quantity}</span>
-                  </div>
-                </div>
-                <span className="item-price">₹{(item.finalPrice * item.quantity).toLocaleString()}</span>
-              </div>
-            ))}
           </div>
 
           <div className="order-summary-final">
@@ -729,9 +881,9 @@ const Checkout = () => {
             </div>
           </div>
 
-          <div className="payment-note">
-            <p>💰 <strong>Cash on Delivery:</strong> Pay ₹{cartSummary.total.toLocaleString()} when your order arrives.</p>
-            <p>📦 <strong>Delivery:</strong> 3-7 business days</p>
+          <div className="payment-info">
+            <p><IoCashOutline size={16} /> <strong>Payment on Delivery:</strong> ₹{cartSummary.total.toLocaleString()}</p>
+            <p><FiTruck size={16} /> <strong>Delivery:</strong> 3-7 business days</p>
           </div>
         </div>
       </div>
@@ -741,7 +893,8 @@ const Checkout = () => {
   // ==================== MAIN RENDER ====================
   if (!token || !userId) {
     return (
-      <div className="checkout-container">
+      <div className="checkout-page">
+        <ToastContainer position="top-right" />
         <div className="login-required">
           <h2>Login Required</h2>
           <p>Please login to proceed with checkout.</p>
@@ -755,7 +908,8 @@ const Checkout = () => {
 
   if (loading) {
     return (
-      <div className="checkout-container">
+      <div className="checkout-page">
+        <ToastContainer position="top-right" />
         <div className="loading-container">
           <div className="spinner"></div>
           <p>Loading checkout...</p>
@@ -766,8 +920,10 @@ const Checkout = () => {
 
   if (cartItems.length === 0) {
     return (
-      <div className="checkout-container">
-        <div className="empty-cart">
+      <div className="checkout-page">
+        <ToastContainer position="top-right" />
+        <div className="empty-checkout">
+          <div className="empty-icon">🛒</div>
           <h2>Your cart is empty</h2>
           <p>Add some items to your cart before checkout.</p>
           <button onClick={() => navigate('/products')} className="continue-shopping-btn">
@@ -779,19 +935,56 @@ const Checkout = () => {
   }
 
   return (
-    <div className="checkout-container">
-      {/* Progress Indicator */}
+    <div className="checkout-page">
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+
+      {/* Progress Indicator - UPDATED WITH ANIMATED LINES */}
       <div className="checkout-progress">
-        {steps.map(step => (
-          <div
-            key={step.number}
-            className={`progress-step ${currentStep >= step.number ? 'active' : ''}`}
-          >
-            <div className="step-number">{step.number}</div>
-            <div className="step-name">{step.name}</div>
-            {step.number < 3 && <div className="step-connector"></div>}
-          </div>
-        ))}
+        {steps.map(step => {
+          const isFilled = filledSteps.includes(step.number);
+          const isActive = currentStep >= step.number;
+
+          return (
+            <div
+              key={step.number}
+              className={`progress-step ${isActive ? 'active' : ''} ${currentStep === step.number ? 'current' : ''}`}
+              onClick={() => currentStep > step.number && setCurrentStep(step.number)}
+            >
+              <div className="step-circle">
+                <div className="step-number">
+                  {currentStep > step.number ? <FiCheck size={16} /> : step.number}
+                </div>
+                <div className="step-icon">{step.icon}</div>
+              </div>
+              <div className="step-info">
+                <div className="step-name">{step.name}</div>
+                <div className="step-full-name">{step.fullName}</div>
+              </div>
+              {step.number < 3 && (
+                <div className="step-connector">
+                  <div
+                    className={`connector-fill ${isFilled ? 'filled' : ''}`}
+                    style={{
+                      transitionDelay: `${step.number * 0.1}s`,
+                      width: isFilled ? '100%' : '0%'
+                    }}
+                  ></div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Main Content */}
@@ -804,6 +997,7 @@ const Checkout = () => {
       {/* Navigation Buttons */}
       <div className="checkout-navigation">
         <button className="back-btn" onClick={goToPrevStep}>
+          <FiChevronLeft size={18} />
           {currentStep === 1 ? 'Back to Cart' : 'Back'}
         </button>
 
@@ -814,6 +1008,7 @@ const Checkout = () => {
         {currentStep < 3 ? (
           <button className="next-btn" onClick={goToNextStep}>
             Continue to {currentStep === 1 ? 'Address' : 'Payment'}
+            <FiChevronRight size={18} />
           </button>
         ) : (
           <button

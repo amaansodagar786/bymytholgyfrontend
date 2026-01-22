@@ -614,6 +614,10 @@ const Profile = () => {
                             <span className="nav-icon"><FaBox /></span>
                             <span className="nav-text">My Orders</span>
                         </button>
+                        <button className="nav-btn" onClick={() => navigate("/my-reviews")}>
+                            <span className="nav-icon"><FaStar  /></span>
+                            <span className="nav-text">My Reviews</span>
+                        </button>
                     </nav>
                 </div>
 

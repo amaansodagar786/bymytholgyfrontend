@@ -1,6 +1,27 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import "./ProductOffers.scss";
+import {
+  FiPackage,
+  FiPercent,
+  FiCalendar,
+  FiTag,
+  FiPlus,
+  FiEdit,
+  FiTrash2,
+  FiRefreshCw,
+  FiChevronDown,
+  FiChevronUp,
+  FiX,
+  FiCheck,
+  FiAlertCircle,
+  FiDollarSign,
+  FiSquare,
+  FiType
+} from "react-icons/fi";
+import AdminLayout from "../AdminLayout/AdminLayout";
 
 const ProductOffers = () => {
   const [products, setProducts] = useState([]);
@@ -17,20 +38,21 @@ const ProductOffers = () => {
     hasEndDate: false
   });
 
-  // Fetch products with color offers
+  // ✅ KEEPING ORIGINAL API - Fetch products with color offers
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("adminToken");
       const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/productoffers/products-with-color-offers`,
+        `${import.meta.env.VITE_API_URL}/productoffers/products-with-color-offers`, // ✅ ORIGINAL API
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setProducts(res.data);
-      setExpandedProduct(null); // Reset expanded state
+      setExpandedProduct(null);
+      toast.success("✅ Products with color offers loaded!");
     } catch (err) {
-      console.error("Error fetching products:", err);
-      alert("Failed to load products");
+      console.error("❌ Error fetching products:", err);
+      toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
@@ -45,7 +67,7 @@ const ProductOffers = () => {
     setExpandedProduct(expandedProduct === productId ? null : productId);
   };
 
-  // Open add offer form for a color
+  // ✅ KEEPING ORIGINAL - Open add offer form for a color
   const openAddOffer = (product, color, modelName = "", variableModelId = "") => {
     setSelectedProduct(product);
     setSelectedColor({
@@ -85,7 +107,7 @@ const ProductOffers = () => {
     }));
   };
 
-  // Add/Update offer for a color
+  // ✅ KEEPING ORIGINAL API - Add/Update offer for a color
   const handleAddColorOffer = async () => {
     try {
       if (!selectedProduct || !selectedColor) return;
@@ -93,7 +115,7 @@ const ProductOffers = () => {
       // Validate offer percentage
       const percentage = parseFloat(offerForm.offerPercentage);
       if (isNaN(percentage) || percentage < 0 || percentage > 100) {
-        alert("Please enter a valid offer percentage between 0 and 100");
+        toast.warning("⚠️ Please enter a valid offer percentage between 0 and 100");
         return;
       }
 
@@ -115,40 +137,43 @@ const ProductOffers = () => {
       }
 
       const token = localStorage.getItem("adminToken");
+      
+      // ✅ KEEPING ORIGINAL API CALL
       await axios.post(
-        `${import.meta.env.VITE_API_URL}/productoffers/add-color-offer`,
+        `${import.meta.env.VITE_API_URL}/productoffers/add-color-offer`, // ✅ ORIGINAL API
         offerData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("Color offer saved successfully!");
+      toast.success(`✅ Color offer saved for ${selectedColor.colorName}!`);
       setShowAddOffer(false);
       setSelectedColor(null);
       setSelectedProduct(null);
-      fetchProducts(); // Refresh list
+      fetchProducts();
     } catch (err) {
-      console.error("Error saving color offer:", err);
-      alert(err.response?.data?.error || "Failed to save offer");
+      console.error("❌ Error saving color offer:", err);
+      toast.error(err.response?.data?.error || "Failed to save offer");
     }
   };
 
-  // Remove offer from a color
+  // ✅ KEEPING ORIGINAL API - Remove offer from a color
   const handleRemoveColorOffer = async (productId, colorId, offerId, variableModelId = "") => {
-    if (!confirm("Are you sure you want to remove this color offer?")) return;
+    if (!window.confirm("Are you sure you want to remove this color offer?")) return;
 
     try {
       const token = localStorage.getItem("adminToken");
+      // ✅ KEEPING ORIGINAL API CALL
       await axios.put(
-        `${import.meta.env.VITE_API_URL}/productoffers/deactivate-color-offer/${offerId}`,
+        `${import.meta.env.VITE_API_URL}/productoffers/deactivate-color-offer/${offerId}`, // ✅ ORIGINAL API
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("Color offer removed successfully!");
-      fetchProducts(); // Refresh list
+      toast.success("✅ Color offer removed successfully!");
+      fetchProducts();
     } catch (err) {
-      console.error("Error removing color offer:", err);
-      alert(err.response?.data?.error || "Failed to remove offer");
+      console.error("❌ Error removing color offer:", err);
+      toast.error(err.response?.data?.error || "Failed to remove offer");
     }
   };
 
@@ -156,14 +181,14 @@ const ProductOffers = () => {
   const formatDate = (dateString) => {
     if (!dateString) return "No end date";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-IN', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: '2-digit'
     });
   };
 
-  // Get all colors with offers count
+  // Get all colors with offers count - KEEPING ORIGINAL
   const getColorStats = () => {
     let totalColors = 0;
     let colorsWithOffers = 0;
@@ -203,405 +228,631 @@ const ProductOffers = () => {
   const colorStats = getColorStats();
 
   return (
-    <div className="product-offers">
-      {/* HEADER */}
-      <div className="header">
-        <h2>Color-Level Offers Management</h2>
-        <p className="subtitle">Manage discounts and special offers for specific colors</p>
-      </div>
+    <AdminLayout>
+      <div className="product-offers-container">
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
 
-      {/* STATS */}
-      <div className="stats">
-        <div className="stat-card">
-          <div className="stat-value">{products.length}</div>
-          <div className="stat-label">Total Products</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{colorStats.totalColors}</div>
-          <div className="stat-label">Total Colors</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{colorStats.colorsWithOffers}</div>
-          <div className="stat-label">Colors with Offers</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{colorStats.activeOffers}</div>
-          <div className="stat-label">Active Offers</div>
-        </div>
-      </div>
+        {/* Header */}
+        <header className="offers-header">
+          <div className="header-content">
+            <div className="header-title">
+              <FiTag className="header-icon" />
+              <h1>Offers Management</h1>
+              <span className="offers-badge">{products.length}</span>
+            </div>
 
-      {/* PRODUCTS LIST */}
-      <div className="products-list">
-        {loading ? (
-          <div className="loading">Loading products with color offers...</div>
-        ) : products.length === 0 ? (
-          <div className="no-products">
-            <p>No products found</p>
+            <div className="header-actions">
+              <button
+                className="refresh-offers-btn"
+                onClick={fetchProducts}
+                disabled={loading}
+              >
+                <FiRefreshCw className={loading ? "spinning" : ""} />
+                Refresh
+              </button>
+            </div>
           </div>
-        ) : (
-          <div className="products-container">
-            {products.map(product => {
-              const isExpanded = expandedProduct === product.productId;
-              
-              // Count offers for this product
-              let productOffersCount = 0;
-              if (product.type === "simple" && product.colors) {
-                productOffersCount = product.colors.filter(c => c.hasOffer).length;
-              } else if (product.type === "variable" && product.models) {
-                product.models.forEach(model => {
-                  if (model.colors) {
-                    productOffersCount += model.colors.filter(c => c.hasOffer).length;
-                  }
-                });
-              }
+        </header>
 
-              return (
-                <div key={product.productId} className="product-card">
-                  {/* PRODUCT HEADER */}
-                  <div 
-                    className="product-header"
-                    onClick={() => toggleProductExpansion(product.productId)}
-                  >
-                    <div className="product-header-left">
-                      <div className="product-image">
-                        {product.thumbnailImage ? (
-                          <img
-                            src={product.thumbnailImage}
-                            alt={product.productName}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = "https://via.placeholder.com/60x60?text=No+Image";
-                            }}
-                          />
-                        ) : (
-                          <div className="no-image">No Image</div>
-                        )}
+        {/* Stats Cards - Showing color stats */}
+        <div className="offers-stats-grid">
+          <div className="offers-stat-card">
+            <div className="stat-icon-card total-products">
+              <FiPackage />
+            </div>
+            <div className="stat-card-content">
+              <h3>{products.length || 0}</h3>
+              <p>Total Products</p>
+            </div>
+          </div>
+
+          {/* <div className="offers-stat-card">
+            <div className="stat-icon-card total-colors">
+              <FiSquare />
+            </div>
+            <div className="stat-card-content">
+              <h3>{colorStats.totalColors || 0}</h3>
+              <p>Total Colors</p>
+            </div>
+          </div> */}
+
+          <div className="offers-stat-card">
+            <div className="stat-icon-card colors-with-offers">
+              <FiTag />
+            </div>
+            <div className="stat-card-content">
+              <h3>{colorStats.colorsWithOffers || 0}</h3>
+              <p>Products with Offers</p>
+            </div>
+          </div>
+
+          <div className="offers-stat-card">
+            <div className="stat-icon-card active-offers">
+              <FiPercent />
+            </div>
+            <div className="stat-card-content">
+              <h3>{colorStats.activeOffers || 0}</h3>
+              <p>Active Offers</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Products List - KEEPING COLOR LEVEL STRUCTURE */}
+        <div className="offers-table-wrapper">
+          {loading && products.length === 0 ? (
+            <div className="offers-loading-overlay">
+              <div className="offers-loading-spinner"></div>
+              <p>Loading products with color offers...</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="offers-no-data">
+              <div className="offers-empty-state">
+                <FiTag />
+                <p>No products found</p>
+              </div>
+            </div>
+          ) : (
+            <div className="offers-list-container">
+              {products.map(product => {
+                const isExpanded = expandedProduct === product.productId;
+                
+                // Count offers for this product - ORIGINAL LOGIC
+                let productOffersCount = 0;
+                if (product.type === "simple" && product.colors) {
+                  productOffersCount = product.colors.filter(c => c.hasOffer).length;
+                } else if (product.type === "variable" && product.models) {
+                  product.models.forEach(model => {
+                    if (model.colors) {
+                      productOffersCount += model.colors.filter(c => c.hasOffer).length;
+                    }
+                  });
+                }
+
+                return (
+                  <div key={product.productId} className="product-offer-card">
+                    {/* PRODUCT HEADER */}
+                    <div 
+                      className="product-offer-header"
+                      onClick={() => toggleProductExpansion(product.productId)}
+                    >
+                      <div className="product-offer-info">
+                        <div className="product-image-container">
+                          {product.thumbnailImage ? (
+                            <img
+                              src={product.thumbnailImage}
+                              alt={product.productName}
+                              className="product-thumbnail"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://via.placeholder.com/50x50?text=No+Image";
+                              }}
+                            />
+                          ) : (
+                            <div className="product-image-placeholder">
+                              <FiPackage />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="product-details">
+                          <div className="product-name-row">
+                            <h3 className="product-name">{product.productName}</h3>
+                            <span className="product-type-badge">
+                              {product.type === "simple" ? "Simple Product" : "Variable Product"}
+                            </span>
+                            <span className="offers-count-badge">
+                              {productOffersCount} Offer(s)
+                            </span>
+                          </div>
+
+                          <div className="product-meta-row">
+                            <span className="product-category">
+                              {product.categoryName || "Uncategorized"}
+                            </span>
+                            {/* <span className="product-id">
+                              ID: {product.productId}
+                            </span> */}
+                          </div>
+                        </div>
                       </div>
-                      <div className="product-info">
-                        <h3 className="product-name">{product.productName}</h3>
-                        <div className="product-meta">
-                          <span className={`product-type ${product.type}`}>
-                            {product.type.toUpperCase()} PRODUCT
-                          </span>
-                          <span className="product-category">
-                            {product.categoryName || "Uncategorized"}
-                          </span>
-                          <span className="product-offers-count">
-                            {productOffersCount} color offer(s)
-                          </span>
+
+                      <div className="product-offer-actions">
+                        <div className="expand-icon">
+                          {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
                         </div>
                       </div>
                     </div>
-                    <div className="product-header-right">
-                      <button className="expand-btn">
-                        {isExpanded ? "▲" : "▼"}
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* EXPANDED CONTENT - COLOR LIST */}
-                  {isExpanded && (
-                    <div className="product-colors">
-                      {product.type === "simple" && product.colors ? (
-                        <div className="simple-product-colors">
-                          <h4>Color Variants ({product.colors.length})</h4>
-                          <div className="colors-grid">
-                            {product.colors.map(color => (
-                              <div key={color.colorId} className="color-card">
-                                <div className="color-header">
-                                  <div className="color-info">
-                                    <span className="color-name">{color.colorName}</span>
-                                    <span className="color-price">
-                                      {color.hasOffer && color.offerPrice ? (
-                                        <>
-                                          <span className="original-price">
-                                            ₹{color.originalPriceDisplay?.toFixed(2) || color.currentPrice?.toFixed(2)}
-                                          </span>
-                                          <span className="offer-price">
-                                            ₹{color.offerPrice.toFixed(2)}
-                                          </span>
-                                          <span className="discount-badge">
-                                            {color.offer.offerPercentage}% OFF
-                                          </span>
-                                        </>
-                                      ) : (
-                                        <span className="regular-price">
-                                          ₹{color.currentPrice?.toFixed(2) || "0.00"}
-                                        </span>
-                                      )}
-                                    </span>
-                                  </div>
-                                  <div className="color-actions">
-                                    <button
-                                      className={color.hasOffer ? "edit-offer-btn" : "add-offer-btn"}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openAddOffer(product, color, product.modelName || "Default");
-                                      }}
-                                    >
-                                      {color.hasOffer ? "✏️ Edit" : "+ Add Offer"}
-                                    </button>
-                                    {color.hasOffer && color.offer && (
-                                      <button
-                                        className="remove-offer-btn"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRemoveColorOffer(
-                                            product.productId,
-                                            color.colorId,
-                                            color.offer.offerId
-                                          );
-                                        }}
-                                      >
-                                        🗑️
-                                      </button>
+                    {/* EXPANDED CONTENT - COLOR LIST - KEEPING ORIGINAL STRUCTURE */}
+                    {isExpanded && (
+                      <div className="product-colors-section">
+                        {/* SIMPLE PRODUCT COLORS */}
+                        {product.type === "simple" && product.colors && (
+                          <div className="simple-colors-container">
+                            <h4 className="section-title">
+                              <FiSquare />
+                              Product ({product.colors.length})
+                            </h4>
+                            <div className="colors-grid">
+                              {product.colors.map(color => {
+                                const hasOffer = color.hasOffer;
+                                const isActive = hasOffer && color.offer?.isCurrentlyValid;
+
+                                return (
+                                  <div key={color.colorId} className="color-card">
+                                    <div className="color-card-header">
+                                      <div className="color-info">
+                                        <div className="color-name-row">
+                                          {/* <span className="color-name">{color.colorName}</span> */}
+                                          {hasOffer && (
+                                            <span className={`color-offer-status ${isActive ? 'active' : 'inactive'}`}>
+                                              {isActive ? (
+                                                <>
+                                                  <FiCheck className="status-icon" />
+                                                  Active
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <FiAlertCircle className="status-icon" />
+                                                  Inactive
+                                                </>
+                                              )}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="color-pricing">
+                                          {hasOffer && color.offerPrice ? (
+                                            <div className="offer-pricing">
+                                              <span className="original-price">
+                                                ₹{color.originalPriceDisplay?.toFixed(2) || color.currentPrice?.toFixed(2)}
+                                              </span>
+                                              <span className="current-price">
+                                                ₹{color.offerPrice.toFixed(2)}
+                                              </span>
+                                              <span className="discount-badge">
+                                                {color.offer.offerPercentage}% OFF
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <span className="regular-price">
+                                              ₹{color.currentPrice?.toFixed(2) || "0.00"}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="color-actions">
+                                        <button
+                                          className={`offer-action-btn ${hasOffer ? 'edit' : 'add'}`}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openAddOffer(product, color, product.modelName || "Default");
+                                          }}
+                                        >
+                                          {hasOffer ? (
+                                            <>
+                                              <FiEdit />
+                                              Edit Offer
+                                            </>
+                                          ) : (
+                                            <>
+                                              <FiPlus />
+                                              Add Offer
+                                            </>
+                                          )}
+                                        </button>
+                                        {hasOffer && color.offer && (
+                                          <button
+                                            className="remove-offer-btn"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleRemoveColorOffer(
+                                                product.productId,
+                                                color.colorId,
+                                                color.offer.offerId
+                                              );
+                                            }}
+                                            title="Remove Offer"
+                                          >
+                                            <FiTrash2 />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Offer Details */}
+                                    {hasOffer && color.offer && (
+                                      <div className="offer-details">
+                                        <div className="offer-details-grid">
+                                          <div className="offer-detail-item">
+                                            <span className="offer-label">Label:</span>
+                                            <span>{color.offer.offerLabel}</span>
+                                          </div>
+                                          {/* <div className="offer-detail-item">
+                                            <span className="offer-label">Model:</span>
+                                            <span>{color.offer.modelName}</span>
+                                          </div> */}
+                                          <div className="offer-detail-item">
+                                            <span className="offer-label">Start Date:</span>
+                                            <span>{formatDate(color.offer.startDate)}</span>
+                                          </div>
+                                          <div className="offer-detail-item">
+                                            <span className="offer-label">End Date:</span>
+                                            <span>{formatDate(color.offer.endDate)}</span>
+                                          </div>
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* VARIABLE PRODUCT MODELS */}
+                        {product.type === "variable" && product.models && (
+                          <div className="variable-models-container">
+                            {product.models.map((model, modelIndex) => (
+                              <div key={modelIndex} className="model-section">
+                                <h4 className="section-title">
+                                  <FiType />
+                                  {model.modelName} 
+                                  <span className="model-sku"> ({model.SKU})</span>
+                                </h4>
+                                <div className="model-colors">
+                                  {model.colors && model.colors.length > 0 ? (
+                                    <div className="colors-grid">
+                                      {model.colors.map(color => {
+                                        const hasOffer = color.hasOffer;
+                                        const isActive = hasOffer && color.offer?.isCurrentlyValid;
+
+                                        return (
+                                          <div key={color.colorId} className="color-card">
+                                            <div className="color-card-header">
+                                              <div className="color-info">
+                                                <div className="color-name-row">
+                                                  <span className="color-name">{color.colorName}</span>
+                                                  {hasOffer && (
+                                                    <span className={`color-offer-status ${isActive ? 'active' : 'inactive'}`}>
+                                                      {isActive ? (
+                                                        <>
+                                                          <FiCheck className="status-icon" />
+                                                          Active
+                                                        </>
+                                                      ) : (
+                                                        <>
+                                                          <FiAlertCircle className="status-icon" />
+                                                          Inactive
+                                                        </>
+                                                      )}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                                <div className="color-pricing">
+                                                  {hasOffer && color.offerPrice ? (
+                                                    <div className="offer-pricing">
+                                                      <span className="original-price">
+                                                        ₹{color.originalPriceDisplay?.toFixed(2) || color.currentPrice?.toFixed(2)}
+                                                      </span>
+                                                      <span className="current-price">
+                                                        ₹{color.offerPrice.toFixed(2)}
+                                                      </span>
+                                                      <span className="discount-badge">
+                                                        {color.offer.offerPercentage}% OFF
+                                                      </span>
+                                                    </div>
+                                                  ) : (
+                                                    <span className="regular-price">
+                                                      ₹{color.currentPrice?.toFixed(2) || "0.00"}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              <div className="color-actions">
+                                                <button
+                                                  className={`offer-action-btn ${hasOffer ? 'edit' : 'add'}`}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openAddOffer(
+                                                      product, 
+                                                      color, 
+                                                      model.modelName,
+                                                      model._id || model.modelId || ""
+                                                    );
+                                                  }}
+                                                >
+                                                  {hasOffer ? (
+                                                    <>
+                                                      <FiEdit />
+                                                      Edit Offer
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      <FiPlus />
+                                                      Add Offer
+                                                    </>
+                                                  )}
+                                                </button>
+                                                {hasOffer && color.offer && (
+                                                  <button
+                                                    className="remove-offer-btn"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleRemoveColorOffer(
+                                                        product.productId,
+                                                        color.colorId,
+                                                        color.offer.offerId,
+                                                        model._id || model.modelId || ""
+                                                      );
+                                                    }}
+                                                    title="Remove Offer"
+                                                  >
+                                                    <FiTrash2 />
+                                                  </button>
+                                                )}
+                                              </div>
+                                            </div>
+                                            
+                                            {/* Offer Details */}
+                                            {hasOffer && color.offer && (
+                                              <div className="offer-details">
+                                                <div className="offer-details-grid">
+                                                  <div className="offer-detail-item">
+                                                    <span className="offer-label">Label:</span>
+                                                    <span>{color.offer.offerLabel}</span>
+                                                  </div>
+                                                  <div className="offer-detail-item">
+                                                    <span className="offer-label">Model:</span>
+                                                    <span>{color.offer.modelName}</span>
+                                                  </div>
+                                                  <div className="offer-detail-item">
+                                                    <span className="offer-label">Start Date:</span>
+                                                    <span>{formatDate(color.offer.startDate)}</span>
+                                                  </div>
+                                                  <div className="offer-detail-item">
+                                                    <span className="offer-label">End Date:</span>
+                                                    <span>{formatDate(color.offer.endDate)}</span>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <p className="no-colors-text">No colors available for this model</p>
+                                  )}
                                 </div>
-                                
-                                {color.hasOffer && color.offer && (
-                                  <div className="offer-details">
-                                    <div className="offer-row">
-                                      <span className="offer-label">Label:</span>
-                                      <span>{color.offer.offerLabel}</span>
-                                    </div>
-                                    <div className="offer-row">
-                                      <span className="offer-label">Model:</span>
-                                      <span>{color.offer.modelName}</span>
-                                    </div>
-                                    <div className="offer-row">
-                                      <span className="offer-label">Start:</span>
-                                      <span>{formatDate(color.offer.startDate)}</span>
-                                    </div>
-                                    <div className="offer-row">
-                                      <span className="offer-label">End:</span>
-                                      <span>{formatDate(color.offer.endDate)}</span>
-                                    </div>
-                                    <div className="offer-row">
-                                      <span className="offer-label">Status:</span>
-                                      <span className={`offer-status ${color.offer.isCurrentlyValid ? 'active' : 'inactive'}`}>
-                                        {color.offer.isCurrentlyValid ? 'Active' : 'Inactive'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
                               </div>
                             ))}
                           </div>
-                        </div>
-                      ) : product.type === "variable" && product.models ? (
-                        <div className="variable-product-models">
-                          {product.models.map((model, modelIndex) => (
-                            <div key={modelIndex} className="model-section">
-                              <h4>
-                                {model.modelName} 
-                                <span className="model-sku"> ({model.SKU})</span>
-                              </h4>
-                              <div className="model-colors">
-                                {model.colors && model.colors.length > 0 ? (
-                                  <div className="colors-grid">
-                                    {model.colors.map(color => (
-                                      <div key={color.colorId} className="color-card">
-                                        <div className="color-header">
-                                          <div className="color-info">
-                                            <span className="color-name">{color.colorName}</span>
-                                            <span className="color-price">
-                                              {color.hasOffer && color.offerPrice ? (
-                                                <>
-                                                  <span className="original-price">
-                                                    ₹{color.originalPriceDisplay?.toFixed(2) || color.currentPrice?.toFixed(2)}
-                                                  </span>
-                                                  <span className="offer-price">
-                                                    ₹{color.offerPrice.toFixed(2)}
-                                                  </span>
-                                                  <span className="discount-badge">
-                                                    {color.offer.offerPercentage}% OFF
-                                                  </span>
-                                                </>
-                                              ) : (
-                                                <span className="regular-price">
-                                                  ₹{color.currentPrice?.toFixed(2) || "0.00"}
-                                                </span>
-                                              )}
-                                            </span>
-                                          </div>
-                                          <div className="color-actions">
-                                            <button
-                                              className={color.hasOffer ? "edit-offer-btn" : "add-offer-btn"}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                openAddOffer(
-                                                  product, 
-                                                  color, 
-                                                  model.modelName,
-                                                  model._id || model.modelId || ""
-                                                );
-                                              }}
-                                            >
-                                              {color.hasOffer ? "✏️ Edit" : "+ Add Offer"}
-                                            </button>
-                                            {color.hasOffer && color.offer && (
-                                              <button
-                                                className="remove-offer-btn"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleRemoveColorOffer(
-                                                    product.productId,
-                                                    color.colorId,
-                                                    color.offer.offerId,
-                                                    model._id || model.modelId || ""
-                                                  );
-                                                }}
-                                              >
-                                                🗑️
-                                              </button>
-                                            )}
-                                          </div>
-                                        </div>
-                                        
-                                        {color.hasOffer && color.offer && (
-                                          <div className="offer-details">
-                                            <div className="offer-row">
-                                              <span className="offer-label">Label:</span>
-                                              <span>{color.offer.offerLabel}</span>
-                                            </div>
-                                            <div className="offer-row">
-                                              <span className="offer-label">Model:</span>
-                                              <span>{color.offer.modelName}</span>
-                                            </div>
-                                            <div className="offer-row">
-                                              <span className="offer-label">Start:</span>
-                                              <span>{formatDate(color.offer.startDate)}</span>
-                                            </div>
-                                            <div className="offer-row">
-                                              <span className="offer-label">End:</span>
-                                              <span>{formatDate(color.offer.endDate)}</span>
-                                            </div>
-                                            <div className="offer-row">
-                                              <span className="offer-label">Status:</span>
-                                              <span className={`offer-status ${color.offer.isCurrentlyValid ? 'active' : 'inactive'}`}>
-                                                {color.offer.isCurrentlyValid ? 'Active' : 'Inactive'}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="no-colors">No colors available for this model</p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="no-colors">No colors available for this product</p>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ADD/EDIT OFFER MODAL - COLOR LEVEL */}
+        {showAddOffer && selectedProduct && selectedColor && (
+          <div className="offers-modal-overlay">
+            <div className="modal-backdrop" onClick={() => setShowAddOffer(false)}></div>
+            <div className="offers-modal-content">
+              <div className="modal-header-section">
+                <div className="modal-title-section">
+                  <FiTag />
+                  <h2>
+                    {selectedColor.hasOffer ? 'Edit Offer' : 'Add Offer'}
+                  </h2>
                 </div>
-              );
-            })}
+                <button
+                  className="modal-close-btn"
+                  onClick={() => setShowAddOffer(false)}
+                  disabled={loading}
+                >
+                  <FiX />
+                </button>
+              </div>
+
+              <div className="modal-body-section">
+                {/* Product & Color Info */}
+                <div className="modal-section-item">
+                  <h3 className="section-title-item">
+                    <FiPackage />
+                    Product & Color Details
+                  </h3>
+                  <div className="product-info-grid-section">
+                    <div className="info-item-section">
+                      <span className="info-label-section">Product Name</span>
+                      <span className="info-value-section">{selectedProduct.productName}</span>
+                    </div>
+                    {/* <div className="info-item-section">
+                      <span className="info-label-section">Color Name</span>
+                      <span className="info-value-section color-name-value">{selectedColor.colorName}</span>
+                    </div> */}
+                    {/* <div className="info-item-section">
+                      <span className="info-label-section">Model</span>
+                      <span className="info-value-section">{selectedColor.modelName || selectedProduct.modelName || "Default"}</span>
+                    </div> */}
+                    <div className="info-item-section">
+                      <span className="info-label-section">Current Price</span>
+                      <span className="info-value-section">
+                        ₹{selectedColor.currentPrice?.toFixed(2) || "0.00"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Offer Form */}
+                <div className="modal-section-item">
+                  <h3 className="section-title-item">
+                    <FiPercent />
+                    Offer Details
+                  </h3>
+                  <div className="form-section">
+                    <div className="form-group-section">
+                      <label>Discount Percentage *</label>
+                      <div className="percentage-input-section">
+                        <input
+                          type="number"
+                          name="offerPercentage"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={offerForm.offerPercentage}
+                          onChange={handleFormChange}
+                          placeholder="e.g., 20"
+                          disabled={loading}
+                          className="form-input-section"
+                        />
+                        <span className="percent-symbol-section">%</span>
+                      </div>
+                      <small className="input-hint">Enter discount percentage (0-100)</small>
+                    </div>
+
+                    <div className="form-group-section">
+                      <label>Offer Label</label>
+                      <input
+                        type="text"
+                        name="offerLabel"
+                        value={offerForm.offerLabel}
+                        onChange={handleFormChange}
+                        placeholder="e.g., Summer Sale, Clearance, etc."
+                        disabled={loading}
+                        className="form-input-section"
+                      />
+                    </div>
+
+                    <div className="form-group-section">
+                      <label>Start Date</label>
+                      <input
+                        type="date"
+                        name="startDate"
+                        value={offerForm.startDate}
+                        onChange={handleFormChange}
+                        disabled={loading}
+                        className="form-input-section"
+                      />
+                    </div>
+
+                    <div className="form-group-section">
+                      <label className="checkbox-label-section">
+                        <input
+                          type="checkbox"
+                          name="hasEndDate"
+                          checked={offerForm.hasEndDate}
+                          onChange={handleFormChange}
+                          disabled={loading}
+                        />
+                        Set End Date
+                        <span className="checkbox-hint">(Leave unchecked for ongoing offer)</span>
+                      </label>
+                    </div>
+
+                    {offerForm.hasEndDate && (
+                      <div className="form-group-section">
+                        <label>End Date</label>
+                        <input
+                          type="date"
+                          name="endDate"
+                          value={offerForm.endDate}
+                          onChange={handleFormChange}
+                          min={offerForm.startDate}
+                          disabled={loading}
+                          className="form-input-section"
+                        />
+                        <small className="input-hint">Leave blank if no end date</small>
+                      </div>
+                    )}
+
+                    {/* Price Preview */}
+                    {selectedColor.currentPrice && offerForm.offerPercentage && (
+                      <div className="price-preview-section">
+                        <div className="preview-row-section">
+                          <span>Original Price:</span>
+                          <span>₹{selectedColor.currentPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="preview-row-section">
+                          <span>Discount ({offerForm.offerPercentage}%):</span>
+                          <span className="discount-preview">
+                            -₹{(selectedColor.currentPrice * (parseFloat(offerForm.offerPercentage) / 100)).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="preview-row-section total-section">
+                          <span>Offer Price:</span>
+                          <strong className="final-price">
+                            ₹{(selectedColor.currentPrice - (selectedColor.currentPrice * (parseFloat(offerForm.offerPercentage) / 100))).toFixed(2)}
+                          </strong>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer-section">
+                <button
+                  className="btn-secondary-section"
+                  onClick={() => setShowAddOffer(false)}
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn-primary-section"
+                  onClick={handleAddColorOffer}
+                  disabled={loading || !offerForm.offerPercentage}
+                >
+                  {loading ? (
+                    <>
+                      <FiRefreshCw className="spinning" />
+                      {selectedColor.hasOffer ? 'Updating...' : 'Adding...'}
+                    </>
+                  ) : (
+                    selectedColor.hasOffer ? 'Update Color Offer' : 'Add Color Offer'
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {/* ADD/EDIT OFFER MODAL */}
-      {showAddOffer && selectedProduct && selectedColor && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h3>
-                {selectedColor.hasOffer ? 'Edit Offer' : 'Add Offer'} - {selectedColor.colorName}
-              </h3>
-              <p className="modal-subtitle">
-                {selectedProduct.productName} • {selectedColor.modelName}
-              </p>
-              <button className="close-btn" onClick={() => setShowAddOffer(false)}>
-                ×
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Offer Percentage *</label>
-                <div className="percentage-input">
-                  <input
-                    type="number"
-                    name="offerPercentage"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={offerForm.offerPercentage}
-                    onChange={handleFormChange}
-                    placeholder="e.g., 20"
-                  />
-                  <span className="percent-symbol">%</span>
-                </div>
-                <small>Enter discount percentage (0-100)</small>
-              </div>
-
-              <div className="form-group">
-                <label>Offer Label</label>
-                <input
-                  type="text"
-                  name="offerLabel"
-                  value={offerForm.offerLabel}
-                  onChange={handleFormChange}
-                  placeholder="e.g., Summer Sale, Clearance, etc."
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Start Date</label>
-                <input
-                  type="date"
-                  name="startDate"
-                  value={offerForm.startDate}
-                  onChange={handleFormChange}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="hasEndDate"
-                    checked={offerForm.hasEndDate}
-                    onChange={handleFormChange}
-                  />
-                  Set End Date (Leave unchecked for ongoing offer)
-                </label>
-              </div>
-
-              {offerForm.hasEndDate && (
-                <div className="form-group">
-                  <label>End Date</label>
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={offerForm.endDate}
-                    onChange={handleFormChange}
-                    min={offerForm.startDate}
-                  />
-                  <small>Leave blank if no end date</small>
-                </div>
-              )}
-            </div>
-
-            <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowAddOffer(false)}>
-                Cancel
-              </button>
-              <button className="save-btn" onClick={handleAddColorOffer}>
-                {selectedColor.hasOffer ? 'Update Offer' : 'Add Offer'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </AdminLayout>
   );
 };
 

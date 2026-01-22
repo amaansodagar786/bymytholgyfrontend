@@ -1,7 +1,17 @@
-// AdminDashboard.jsx
 import React, { useEffect, useState } from "react";
 import "./AdminDashboard.scss";
-
+import {
+  FiDollarSign,
+  FiShoppingBag,
+  FiUsers,
+  FiTrendingUp,
+  FiClock,
+  FiPackage,
+  FiStar,
+  FiAlertCircle,
+  FiRefreshCw,
+  FiChevronDown
+} from "react-icons/fi";
 import {
   ResponsiveContainer,
   BarChart,
@@ -9,12 +19,18 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid
+  CartesianGrid,
+  Legend
 } from "recharts";
 
-// small currency formatter
+// Currency formatter
 const fmt = (n) =>
-  n == null ? "-" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(n);
+  n == null ? "₹0" : new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(n);
 
 export default function AdminDashboard() {
   const [kpis, setKpis] = useState(null);
@@ -26,7 +42,36 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("7d");
 
-  // convert range key to start/end ISO strings
+  // Status configuration matching Admin Orders
+  const statusConfig = {
+    'pending': {
+      label: 'Pending',
+      color: '#f39c12',
+      bgColor: '#fef5e6'
+    },
+    'processing': {
+      label: 'Processing',
+      color: '#17a2b8',
+      bgColor: '#e8f4f8'
+    },
+    'shipped': {
+      label: 'Shipped',
+      color: '#3498db',
+      bgColor: '#e8f4fc'
+    },
+    'delivered': {
+      label: 'Delivered',
+      color: '#2ecc71',
+      bgColor: '#e8f8ef'
+    },
+    'cancelled': {
+      label: 'Cancelled',
+      color: '#e74c3c',
+      bgColor: '#fdedec'
+    }
+  };
+
+  // Convert range key to start/end ISO strings
   function rangeToDates(rangeKey) {
     const end = new Date();
     let start = new Date();
@@ -80,12 +125,12 @@ export default function AdminDashboard() {
         const l = await lowRes.json();
         const rv = await reviewsRes.json();
 
-        // 🔥 FIX: Add label for chart before setting state
+        // Process revenue data for chart
         const processedRevenue = Array.isArray(r)
           ? r.map((d) => ({
-              ...d,
-              label: `${d._id.day}/${d._id.month}`,
-            }))
+            ...d,
+            label: `${d._id.day}/${d._id.month}`,
+          }))
           : [];
 
         setKpis(k);
@@ -96,7 +141,7 @@ export default function AdminDashboard() {
         setReviews(Array.isArray(rv) ? rv : []);
 
       } catch (err) {
-        console.error("Failed to load dashboard data", err);
+        console.error("❌ Failed to load dashboard data", err);
       } finally {
         setLoading(false);
       }
@@ -105,209 +150,447 @@ export default function AdminDashboard() {
     loadAll();
   }, [range]);
 
-  return (
-    <div className="admin-dashboard">
-      <header className="ad-header">
-        <h1 className="ad-title">Admin Dashboard</h1>
+  // Refresh dashboard
+  const handleRefresh = () => {
+    setLoading(true);
+    const { startDate, endDate } = rangeToDates(range);
+    const qs = `?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
 
-        <div className="ad-controls">
-          <label className="range-select">
-            Range
-            <select value={range} onChange={(e) => setRange(e.target.value)}>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
-              <option value="all">All time</option>
-            </select>
-          </label>
+    async function refreshData() {
+      try {
+        const base = import.meta.env.VITE_API_URL;
+        const token = localStorage.getItem("adminToken");
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        };
+
+        const res = await fetch(`${base}/admin/dashboard/kpis${qs}`, { method: "GET", headers });
+        const data = await res.json();
+        setKpis(data);
+      } catch (err) {
+        console.error("❌ Failed to refresh dashboard", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    refreshData();
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  return (
+    <div className="admin-dashboard-container">
+      {/* Header */}
+      <header className="dashboard-header">
+        <div className="header-content">
+          <div className="header-title">
+            <div className="header-icon-wrapper">
+              <FiTrendingUp className="header-icon" />
+            </div>
+            <h1>Dashboard Overview</h1>
+            <span className="dashboard-badge">Live</span>
+          </div>
+
+          <div className="header-actions">
+            <div className="range-selector">
+              <label>Time Range:</label>
+              <select
+                value={range}
+                onChange={(e) => setRange(e.target.value)}
+                className="range-select-input"
+                disabled={loading}
+              >
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="all">All time</option>
+              </select>
+            </div>
+
+            <button
+              className="refresh-dashboard-btn"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <FiRefreshCw className={loading ? "spinning" : ""} />
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="ad-main">
-        
-        {/* KPI row */}
-        <section className="kpi-row">
-          {loading && <div className="kpi-loading">Loading KPIs...</div>}
-
-          {!loading && kpis && (
-            <>
-              <div className="kpi-card">
-                <div className="kpi-title">Total Revenue</div>
-                <div className="kpi-value">{fmt(kpis.totalRevenue)}</div>
-                <div className="kpi-meta">Period revenue</div>
+      {/* KPI Stats Grid */}
+      <section className="dashboard-stats-grid">
+        {loading && !kpis ? (
+          <div className="kpi-loading-overlay">
+            <div className="loading-spinner"></div>
+            <p>Loading dashboard data...</p>
+          </div>
+        ) : (
+          <>
+            <div className="dashboard-stat-card">
+              <div className="stat-icon-card revenue-stat">
+                <FiDollarSign />
               </div>
-
-              <div className="kpi-card">
-                <div className="kpi-title">Total Orders</div>
-                <div className="kpi-value">{kpis.totalOrders}</div>
-                <div className="kpi-meta">Orders in range</div>
+              <div className="stat-card-content">
+                <h3>{kpis?.totalRevenue ? fmt(kpis.totalRevenue) : "₹0"}</h3>
+                <p>Total Revenue</p>
+                <span className="stat-meta">Period revenue</span>
               </div>
-
-              <div className="kpi-card">
-                <div className="kpi-title">New Users</div>
-                <div className="kpi-value">{kpis.newUsers}</div>
-                <div className="kpi-meta">Signups in range</div>
-              </div>
-
-              <div className="kpi-card">
-                <div className="kpi-title">AOV</div>
-                <div className="kpi-value">{fmt(kpis.aov)}</div>
-                <div className="kpi-meta">Average Order Value</div>
-              </div>
-
-              <div className="kpi-card">
-                <div className="kpi-title">Pending Payments</div>
-                <div className="kpi-value">{kpis.pendingPayments}</div>
-                <div className="kpi-meta">Awaiting payment</div>
-              </div>
-
-              <div className="kpi-card">
-                <div className="kpi-title">Low Stock SKUs</div>
-                <div className="kpi-value">{kpis.lowStock}</div>
-                <div className="kpi-meta">Stock ≤ threshold</div>
-              </div>
-            </>
-          )}
-        </section>
-
-        {/* mid row */}
-        <section className="mid-row">
-          
-          {/* Orders by Status */}
-          <div className="card status-card">
-            <h3>Orders by Status</h3>
-            <div className="status-list">
-              {ordersByStatus.length === 0 && <div className="muted">No data</div>}
-
-              {ordersByStatus.map((s) => {
-                const pct = Math.min(100, (s.count / (kpis?.totalOrders || 1)) * 100);
-                return (
-                  <div key={s._id} className="status-item">
-                    <div className="status-left">
-                      <div className="status-label">{s._id}</div>
-                      <div className="status-value">{s.count}</div>
-                    </div>
-                    <div className="status-bar-wrap">
-                      <div className="status-bar" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
             </div>
+
+            <div className="dashboard-stat-card">
+              <div className="stat-icon-card orders-stat">
+                <FiShoppingBag />
+              </div>
+              <div className="stat-card-content">
+                <h3>{kpis?.totalOrders || 0}</h3>
+                <p>Total Orders</p>
+                <span className="stat-meta">Orders in range</span>
+              </div>
+            </div>
+
+            <div className="dashboard-stat-card">
+              <div className="stat-icon-card users-stat">
+                <FiUsers />
+              </div>
+              <div className="stat-card-content">
+                <h3>{kpis?.newUsers || 0}</h3>
+                <p>New Users</p>
+                <span className="stat-meta">Signups in range</span>
+              </div>
+            </div>
+
+            <div className="dashboard-stat-card">
+              <div className="stat-icon-card aov-stat">
+                <FiTrendingUp />
+              </div>
+              <div className="stat-card-content">
+                <h3>{kpis?.aov ? fmt(kpis.aov) : "₹0"}</h3>
+                <p>Average Order Value</p>
+                <span className="stat-meta">AOV</span>
+              </div>
+            </div>
+
+            <div className="dashboard-stat-card">
+              <div className="stat-icon-card pending-stat">
+                <FiClock />
+              </div>
+              <div className="stat-card-content">
+                <h3>{kpis?.pendingPayments || 0}</h3>
+                <p>Pending Payments</p>
+                <span className="stat-meta">Awaiting payment</span>
+              </div>
+            </div>
+
+            <div className="dashboard-stat-card">
+              <div className="stat-icon-card lowstock-stat">
+                <FiAlertCircle />
+              </div>
+              <div className="stat-card-content">
+                <h3>{kpis?.lowStock || 0}</h3>
+                <p>Low Stock Items</p>
+                <span className="stat-meta">Stock ≤ threshold</span>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* Mid Row Charts */}
+      <section className="dashboard-mid-row">
+        {/* Orders by Status Card */}
+        <div className="dashboard-card">
+          <div className="card-header-section">
+            <div className="card-title-section">
+              <FiShoppingBag />
+              <h3>Orders by Status</h3>
+            </div>
+            <span className="card-badge">{ordersByStatus.length} statuses</span>
           </div>
 
-          {/* Revenue Over Time */}
-          <div className="card revenue-card">
-            <h3>Revenue Over Time</h3>
+          <div className="card-body-section">
+            {ordersByStatus.length === 0 ? (
+              <div className="empty-data-state">
+                <p>No order data available</p>
+              </div>
+            ) : (
+              <div className="status-distribution-list">
+                {ordersByStatus.map((s) => {
+                  const config = statusConfig[s._id] || statusConfig.pending;
+                  const pct = Math.min(100, (s.count / (kpis?.totalOrders || 1)) * 100);
 
-            <div className="revenue-chart">
-              {revenueOverTime.length === 0 && (
-                <div className="muted">No revenue data</div>
-              )}
+                  return (
+                    <div key={s._id} className="status-distribution-item">
+                      <div className="status-info-row">
+                        <div className="status-label-cell">
+                          <span
+                            className="status-color-indicator"
+                            style={{ backgroundColor: config.color }}
+                          />
+                          <span className="status-label-text">{config.label}</span>
+                        </div>
+                        <div className="status-count-cell">{s.count}</div>
+                      </div>
 
-              {revenueOverTime.length > 0 && (
+                      <div className="status-progress-container">
+                        <div
+                          className="status-progress-bar"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: config.bgColor,
+                            borderColor: config.color
+                          }}
+                        >
+                          <span className="progress-percentage">{pct.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Revenue Chart Card */}
+        <div className="dashboard-card">
+          <div className="card-header-section">
+            <div className="card-title-section">
+              <FiTrendingUp />
+              <h3>Revenue Over Time</h3>
+            </div>
+            <span className="card-badge">
+              {revenueOverTime.length} {range === "7d" ? "days" : range === "30d" ? "days" : "periods"}
+            </span>
+          </div>
+
+          <div className="card-body-section">
+            {revenueOverTime.length === 0 ? (
+              <div className="empty-data-state">
+                <p>No revenue data available</p>
+              </div>
+            ) : (
+              <div className="revenue-chart-container">
                 <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={revenueOverTime}>
-                    <CartesianGrid strokeDasharray="3 3" />
-
-                    {/* 🔥 FIX: use precomputed label */}
-                    <XAxis dataKey="label" />
-
-                    <YAxis />
-
+                  <BarChart
+                    data={revenueOverTime}
+                    margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#e5e5e5"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="label"
+                      stroke="#666"
+                      fontSize={12}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      stroke="#666"
+                      fontSize={12}
+                      tickLine={false}
+                      tickFormatter={(value) => `₹${value}`}
+                    />
                     <Tooltip
-                      formatter={(value) => fmt(value)}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e5e5',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                      }}
+                      formatter={(value) => [fmt(value), 'Revenue']}
                       labelFormatter={(label, payload) => {
                         if (!payload || !payload[0] || !payload[0].payload)
                           return label;
                         const row = payload[0].payload;
-                        return `${row._id.day}/${row._id.month} - ${row.orderCount} orders`;
+                        return `${row._id.day}/${row._id.month}`;
                       }}
                     />
-
-                    <Bar dataKey="revenue" fill="#6c5ce7" radius={[6, 6, 0, 0]} />
+                    <Bar
+                      dataKey="revenue"
+                      fill="#000"
+                      radius={[6, 6, 0, 0]}
+                      name="Revenue"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
-              )}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Bottom Row Tables */}
+      <section className="dashboard-bottom-row">
+        {/* Top Products Card */}
+        <div className="dashboard-card">
+          <div className="card-header-section">
+            <div className="card-title-section">
+              <FiStar />
+              <h3>Top Selling Products</h3>
             </div>
-          </div>
-        </section>
-
-        {/* bottom row */}
-        <section className="bottom-row">
-
-          {/* Top Products */}
-          <div className="card top-products">
-            <h3>Top Selling Products</h3>
-            {topProducts.length === 0 && <div className="muted">No sales yet</div>}
-            <ol className="product-list">
-              {topProducts.map((p) => (
-                <li key={p._id} className="product-item">
-                  <div className="p-left">
-                    <div className="p-name">{p.productName || p._id}</div>
-                    <div className="p-qty">Qty: {p.totalQuantity}</div>
-                  </div>
-                  <div className="p-right">{fmt(p.totalRevenue)}</div>
-                </li>
-              ))}
-            </ol>
+            <span className="card-badge">{topProducts.length} products</span>
           </div>
 
-          {/* Low Stock */}
-          <div className="card low-stock-card">
-            <h3>Low Stock Items</h3>
-            {lowStock.length === 0 && <div className="muted">All good</div>}
-            <div className="table-wrap">
-              <table className="low-stock-table">
-                <thead>
-                  <tr>
-                    <th>Inventory ID</th>
-                    <th>Product</th>
-                    <th>Model</th>
-                    <th>Color</th>
-                    <th>Stock</th>
-                    <th>Threshold</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lowStock.map((it) => (
-                    <tr key={it.inventoryId || it._id}>
-                      <td>{it.inventoryId || it._id}</td>
-                      <td>{it.productName}</td>
-                      <td>{it.modelName || it.variableModelName || "Default"}</td>
-                      <td>{it.colorName}</td>
-                      <td>{it.stock}</td>
-                      <td>{it.threshold}</td>
+          <div className="card-body-section">
+            {topProducts.length === 0 ? (
+              <div className="empty-data-state">
+                <p>No sales data available</p>
+              </div>
+            ) : (
+              <div className="products-table-container">
+                <table className="data-table-section">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Quantity</th>
+                      <th>Revenue</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {topProducts.slice(0, 5).map((p, index) => (
+                      <tr key={p._id}>
+                        <td className="product-cell-section">
+                          <div className="product-info-mini">
+                            <div className="product-rank">{index + 1}</div>
+                            <div className="product-details-mini">
+                              <div className="product-name-mini">{p.productName || p._id}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="quantity-cell-section">
+                          <span className="quantity-badge">{p.totalQuantity}</span>
+                        </td>
+                        <td className="revenue-cell-section">
+                          <strong>{fmt(p.totalRevenue)}</strong>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Low Stock Card */}
+        <div className="dashboard-card">
+          <div className="card-header-section">
+            <div className="card-title-section">
+              <FiAlertCircle />
+              <h3>Low Stock Items</h3>
             </div>
+            <span className="card-badge alert">{lowStock.length} items</span>
           </div>
 
-          {/* Reviews */}
-          <div className="card reviews-card">
-            <h3>Recent Reviews</h3>
-            {reviews.length === 0 && <div className="muted">No reviews yet</div>}
-            <ul className="reviews-list">
-              {reviews.map((r) => (
-                <li key={r.reviewId || r._id} className="review-item">
-                  <div className="rev-left">
-                    <div className="rev-meta">
-                      {r.userName} • {new Date(r.createdAt).toLocaleDateString()}
-                    </div>
-                    <div className="rev-text">
-                      {r.reviewText || <em>No comment</em>}
-                    </div>
-                  </div>
-                  <div className="rev-right">{r.rating} ★</div>
-                </li>
-              ))}
-            </ul>
+          <div className="card-body-section">
+            {lowStock.length === 0 ? (
+              <div className="empty-data-state">
+                <p>All stock levels are good</p>
+              </div>
+            ) : (
+              <div className="lowstock-table-container">
+                <table className="data-table-section">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      {/* <th>Model</th>  */}
+                      {/* <th>Color</th>  */}
+                      <th>Stock</th>
+                      <th>Threshold</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lowStock.slice(0, 5).map((it) => (
+                      <tr key={it.inventoryId || it._id}>
+                        <td className="product-cell-section">
+                          <div className="product-info-mini">
+                            <div className="product-name-mini">{it.productName}</div>
+                          </div>
+                        </td>
+                        {/* <td className="model-cell-section">
+                          {it.modelName || it.variableModelName || "Default"}
+                        </td>
+                        <td className="color-cell-section">
+                          <span className="color-badge">{it.colorName}</span>
+                        </td> */}
+                        <td className="stock-cell-section">
+                          <span className={`stock-badge ${it.stock === 0 ? 'out-stock' : 'low-stock'}`}>
+                            {it.stock}
+                          </span>
+                        </td>
+                        <td className="threshold-cell-section">
+                          {it.threshold}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </section>
+        </div>
 
-      </main>
+        {/* Reviews Card */}
+        <div className="dashboard-card">
+          <div className="card-header-section">
+            <div className="card-title-section">
+              <FiStar />
+              <h3>Recent Reviews</h3>
+            </div>
+            <span className="card-badge">{reviews.length} reviews</span>
+          </div>
+
+          <div className="card-body-section">
+            {reviews.length === 0 ? (
+              <div className="empty-data-state">
+                <p>No reviews yet</p>
+              </div>
+            ) : (
+              <div className="reviews-list-container">
+                <div className="reviews-scroll-container">
+                  {reviews.slice(0, 5).map((r) => (
+                    <div key={r.reviewId || r._id} className="review-item-card">
+                      <div className="review-header-section">
+                        <div className="reviewer-info">
+                          <div className="reviewer-name">{r.userName}</div>
+                          <div className="review-date">{formatDate(r.createdAt)}</div>
+                        </div>
+                        <div className="review-rating">
+                          <span className="rating-stars">
+                            {'★'.repeat(Math.floor(r.rating))}
+                            {'☆'.repeat(5 - Math.floor(r.rating))}
+                          </span>
+                          <span className="rating-number">{r.rating}</span>
+                        </div>
+                      </div>
+
+                      <div className="review-content-section">
+                        <p className="review-text">
+                          {r.reviewText || <em className="muted-text">No comment provided</em>}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
