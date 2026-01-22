@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import "./Inventories.scss";
+import { FaSearch, FaFileExcel, FaRedoAlt, FaPlus, FaTimes, FaHistory } from "react-icons/fa";
 
 const Inventories = () => {
   const [inventory, setInventory] = useState([]);
@@ -10,22 +13,30 @@ const Inventories = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // Fixed: Renamed setStockForm to stockAdjustmentForm
   const [stockForm, setStockForm] = useState({
     quantity: "",
-    reason: "Stock added manually",
-    notes: ""
+    reason: "Stock added manually"
   });
 
   const [stockAdjustmentForm, setStockAdjustmentForm] = useState({
     stock: "",
-    reason: "Stock adjusted manually",
-    notes: ""
+    reason: "Stock adjusted manually"
   });
 
   const [stockHistory, setStockHistory] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim().toLowerCase());
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   // Fetch inventory
   const fetchInventory = async () => {
@@ -35,12 +46,13 @@ const Inventories = () => {
       const res = await axios.get(
         `${import.meta.env.VITE_API_URL}/inventory/all`,
         { headers: { Authorization: `Bearer ${token}` } }
-
       );
       setInventory(res.data);
+      setCurrentPage(1);
+      toast.success("Inventory refreshed successfully!");
     } catch (err) {
       console.error("Error fetching inventory:", err);
-      alert("Failed to load inventory");
+      toast.error(err.response?.data?.error || "Failed to load inventory");
     } finally {
       setLoading(false);
     }
@@ -55,8 +67,7 @@ const Inventories = () => {
     setSelectedItem(item);
     setStockForm({
       quantity: "",
-      reason: "Stock added manually",
-      notes: ""
+      reason: "Stock added manually"
     });
     setShowAddStock(true);
   };
@@ -66,8 +77,7 @@ const Inventories = () => {
     setSelectedItem(item);
     setStockAdjustmentForm({
       stock: item.stock.toString(),
-      reason: "Stock adjusted manually",
-      notes: ""
+      reason: "Stock adjusted manually"
     });
     setShowSetStock(true);
   };
@@ -85,7 +95,7 @@ const Inventories = () => {
       setShowHistory(true);
     } catch (err) {
       console.error("Error fetching stock history:", err);
-      alert("Failed to load stock history");
+      toast.error("Failed to load stock history");
     }
   };
 
@@ -98,7 +108,7 @@ const Inventories = () => {
     }));
   };
 
-  // Handle set stock form changes - UPDATED
+  // Handle set stock form changes
   const handleSetStockFormChange = (e) => {
     const { name, value } = e.target;
     setStockAdjustmentForm(prev => ({
@@ -114,7 +124,7 @@ const Inventories = () => {
 
       const quantity = parseFloat(stockForm.quantity);
       if (isNaN(quantity) || quantity <= 0) {
-        alert("Please enter a valid positive quantity");
+        toast.warning("Please enter a valid positive quantity");
         return;
       }
 
@@ -125,41 +135,41 @@ const Inventories = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert(`Successfully added ${quantity} stock to ${selectedItem.colorName}`);
+      toast.success(`Added ${quantity} stock to ${selectedItem.fragrance} fragrance`);
       setShowAddStock(false);
       setSelectedItem(null);
-      fetchInventory(); // Refresh list
+      fetchInventory();
     } catch (err) {
       console.error("Error adding stock:", err);
-      alert(err.response?.data?.error || "Failed to add stock");
+      toast.error(err.response?.data?.error || "Failed to add stock");
     }
   };
 
-  // Set stock to specific value - UPDATED
+  // Set stock to specific value
   const handleSetStock = async () => {
     try {
       if (!selectedItem) return;
 
-      const stock = parseFloat(stockAdjustmentForm.stock); // Updated
+      const stock = parseFloat(stockAdjustmentForm.stock);
       if (isNaN(stock) || stock < 0) {
-        alert("Please enter a valid stock value (0 or positive)");
+        toast.warning("Please enter a valid stock value (0 or positive)");
         return;
       }
 
       const token = localStorage.getItem("adminToken");
       await axios.put(
         `${import.meta.env.VITE_API_URL}/inventory/set-stock/${selectedItem._id}`,
-        stockAdjustmentForm, // Updated
+        stockAdjustmentForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert(`Stock set to ${stock} for ${selectedItem.colorName}`);
+      toast.success(`Stock set to ${stock} for ${selectedItem.fragrance} fragrance`);
       setShowSetStock(false);
       setSelectedItem(null);
-      fetchInventory(); // Refresh list
+      fetchInventory();
     } catch (err) {
       console.error("Error setting stock:", err);
-      alert(err.response?.data?.error || "Failed to set stock");
+      toast.error(err.response?.data?.error || "Failed to set stock");
     }
   };
 
@@ -168,7 +178,7 @@ const Inventories = () => {
     try {
       const threshold = parseFloat(newThreshold);
       if (isNaN(threshold) || threshold < 0) {
-        alert("Please enter a valid threshold value");
+        toast.warning("Please enter a valid threshold value");
         return;
       }
 
@@ -179,36 +189,53 @@ const Inventories = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Update local state
       setInventory(prev => prev.map(i =>
         i._id === item._id ? { ...i, threshold } : i
       ));
 
-      alert("Threshold updated successfully!");
+      toast.success("Threshold updated successfully!");
     } catch (err) {
       console.error("Error updating threshold:", err);
-      alert(err.response?.data?.error || "Failed to update threshold");
+      toast.error(err.response?.data?.error || "Failed to update threshold");
     }
   };
 
-  // Filter inventory
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch = searchTerm === "" ||
-      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.colorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.modelName && item.modelName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (item.variableModelName && item.variableModelName.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Filter inventory with debounced search
+  const filteredInventory = useMemo(() => {
+    return inventory.filter(item => {
+      // Apply search filter
+      if (debouncedSearch) {
+        const matchesSearch = 
+          item.productName?.toLowerCase().includes(debouncedSearch) ||
+          item.fragrance?.toLowerCase().includes(debouncedSearch);
+        
+        if (!matchesSearch) return false;
+      }
 
-    const productType = item.productDetails?.type;
-    const matchesType = filterType === "all" ||
-      (filterType === "simple" && productType === "simple") ||
-      (filterType === "variable" && productType === "variable");
+      // Apply stock status filter
+      const threshold = item.threshold || 10;
+      
+      switch (filterType) {
+        case "low":
+          return item.stock > 0 && item.stock < threshold;
+        case "out":
+          return item.stock === 0;
+        case "in":
+          return item.stock >= threshold;
+        case "all":
+        default:
+          return true;
+      }
+    });
+  }, [debouncedSearch, inventory, filterType]);
 
-    const isLowStock = item.stock < (item.threshold || 10);
-    const matchesLowStock = filterType !== "low" || isLowStock;
+  // Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredInventory.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
 
-    return matchesSearch && matchesType && matchesLowStock;
-  });
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Get stock status
   const getStockStatus = (stock, threshold) => {
@@ -248,118 +275,158 @@ const Inventories = () => {
     let outOfStock = 0;
     let lowStock = 0;
     let inStock = 0;
+    let totalItems = filteredInventory.length;
 
     filteredInventory.forEach(item => {
+      const threshold = item.threshold || 10;
       totalStock += item.stock;
-      const status = getStockStatus(item.stock, item.threshold || 10);
-      if (status.class === "out-of-stock") outOfStock++;
-      else if (status.class === "low-stock") lowStock++;
+      
+      if (item.stock === 0) outOfStock++;
+      else if (item.stock < threshold) lowStock++;
       else inStock++;
     });
 
-    return { totalStock, outOfStock, lowStock, inStock };
+    return { totalStock, outOfStock, lowStock, inStock, totalItems };
   };
 
   const stats = getStats();
 
+  // Export to CSV
+  const exportToCSV = () => {
+    if (filteredInventory.length === 0) {
+      toast.warning("No inventory to export");
+      return;
+    }
+
+    const headers = ["Product Name", "Fragrance", "Stock", "Threshold", "Status"];
+    const csvData = filteredInventory.map(item => {
+      const status = getStockStatus(item.stock, item.threshold || 10);
+      return [
+        `"${item.productName}"`,
+        `"${item.fragrance}"`,
+        item.stock,
+        item.threshold || 10,
+        status.text
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...csvData.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inventory_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success("Inventory exported successfully!");
+  };
+
   return (
     <div className="inventories">
+      <ToastContainer position="top-right" autoClose={3000} />
+
       {/* HEADER */}
-      <div className="header">
-        <div className="title-section">
-          <h2>Inventory Management</h2>
-          <span className="count">({filteredInventory.length} items)</span>
-        </div>
-        <div className="actions">
-          <button
-            className="refresh-btn"
-            onClick={fetchInventory}
-            disabled={loading}
-          >
-            ⟳ Refresh
-          </button>
+      <div className="page-header">
+        <h2>Inventory Management ({filteredInventory.length})</h2>
+        <div className="right-section">
+          <div className="search-container mobile-left">
+            <FaSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search by product or fragrance..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="action-buttons-group">
+            <button className="export-all-btn" onClick={exportToCSV} disabled={loading}>
+              <FaFileExcel /> Export
+            </button>
+            <button className="add-btn" onClick={fetchInventory} disabled={loading}>
+              <FaRedoAlt /> Refresh
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* STATS */}
-      <div className="stats">
+      {/* STATS CARDS - Hide on mobile */}
+      <div className="stats-cards">
         <div className="stat-card">
-          <div className="stat-value">{filteredInventory.length}</div>
+          <div className="stat-value">{stats.totalItems}</div>
           <div className="stat-label">Total Items</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats.outOfStock}</div>
-          <div className="stat-label">Out of Stock</div>
+          <div className="stat-value in-stock-value">{stats.inStock}</div>
+          <div className="stat-label">In Stock</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats.lowStock}</div>
+          <div className="stat-value low-stock-value">{stats.lowStock}</div>
           <div className="stat-label">Low Stock</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats.totalStock}</div>
+          <div className="stat-value out-stock-value">{stats.outOfStock}</div>
+          <div className="stat-label">Out of Stock</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value total-stock-value">{stats.totalStock}</div>
           <div className="stat-label">Total Stock</div>
         </div>
       </div>
 
-      {/* FILTERS & SEARCH */}
-      <div className="filters">
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="Search by product, color, or model..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button className="clear-search" onClick={() => setSearchTerm("")}>
-              ×
-            </button>
-          )}
-        </div>
-
-        <div className="filter-buttons">
-          <button
-            className={filterType === "all" ? "active" : ""}
-            onClick={() => setFilterType("all")}
-          >
-            All Items
-          </button>
-          <button
-            className={filterType === "simple" ? "active" : ""}
-            onClick={() => setFilterType("simple")}
-          >
-            Simple Products
-          </button>
-          <button
-            className={filterType === "variable" ? "active" : ""}
-            onClick={() => setFilterType("variable")}
-          >
-            Variable Products
-          </button>
-          <button
-            className={filterType === "low" ? "active low" : ""}
-            onClick={() => setFilterType("low")}
-          >
-            ⚠️ Low Stock
-          </button>
-        </div>
+      {/* FILTER BUTTONS - Updated filters */}
+      <div className="filter-buttons-group">
+        <button
+          className={`filter-btn ${filterType === "all" ? "active" : ""}`}
+          onClick={() => setFilterType("all")}
+        >
+          All Items
+        </button>
+        <button
+          className={`filter-btn in-stock-btn ${filterType === "in" ? "active" : ""}`}
+          onClick={() => setFilterType("in")}
+        >
+          ✅ In Stock
+        </button>
+        <button
+          className={`filter-btn low-stock-btn ${filterType === "low" ? "active" : ""}`}
+          onClick={() => setFilterType("low")}
+        >
+          ⚠️ Low Stock
+        </button>
+        <button
+          className={`filter-btn out-stock-btn ${filterType === "out" ? "active" : ""}`}
+          onClick={() => setFilterType("out")}
+        >
+          ❌ Out of Stock
+        </button>
       </div>
 
       {/* INVENTORY TABLE */}
-      {loading ? (
-        <div className="loading">Loading inventory...</div>
-      ) : filteredInventory.length === 0 ? (
-        <div className="no-items">
-          <p>No inventory items found</p>
-        </div>
-      ) : (
-        <div className="inventory-table-container">
-          <table className="inventory-table">
+      <div className="data-table">
+        {loading && filteredInventory.length === 0 ? (
+          <div className="loading-container">
+            <div className="loading-spinner large"></div>
+            <p>Loading inventory...</p>
+          </div>
+        ) : filteredInventory.length === 0 ? (
+          <div className="no-products">
+            <p>No inventory items found</p>
+            {searchTerm && (
+              <button className="clear-search-btn" onClick={() => setSearchTerm("")}>
+                Clear search
+              </button>
+            )}
+          </div>
+        ) : (
+          <table>
             <thead>
               <tr>
-                <th>Image</th>
-                <th>Product Details</th>
-                <th>Color</th>
+                <th>Product</th>
+                <th>Fragrance</th>
                 <th>Stock</th>
                 <th>Threshold</th>
                 <th>Status</th>
@@ -367,54 +434,40 @@ const Inventories = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredInventory.map((item) => {
+              {currentItems.map((item) => {
                 const stockStatus = getStockStatus(item.stock, item.threshold || 10);
 
                 return (
-                  <tr key={item._id} className={stockStatus.class}>
-                    <td className="image-cell">
-                      {item.productImage ? (
-                        <img
-                          src={item.productImage}
-                          alt={`${item.productName} - ${item.colorName}`}
-                          className="product-image"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "https://via.placeholder.com/60x60?text=No+Image";
-                          }}
-                        />
-                      ) : (
-                        <div className="no-image">No Image</div>
-                      )}
-                    </td>
-
-                    <td className="product-details">
-                      <div className="product-name">{item.productName}</div>
-                      <div className="model-info">
-                        {item.variableModelName ? (
-                          <>
-                            <span className="model-type">Variable:</span>
-                            <span className="model-name">{item.variableModelName}</span>
-                          </>
+                  <tr key={item._id}>
+                    <td>
+                      <div className="product-cell">
+                        {item.productImage ? (
+                          <img
+                            src={item.productImage}
+                            alt={item.productName}
+                            className="thumbnail"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "https://via.placeholder.com/50x50?text=No+Image";
+                            }}
+                          />
                         ) : (
-                          <>
-                            <span className="model-type">Simple:</span>
-                            <span className="model-name">{item.modelName || "Default"}</span>
-                          </>
+                          <div className="no-image">No Image</div>
                         )}
+                        <div className="product-info">
+                          <div className="product-name">{item.productName}</div>
+                        </div>
                       </div>
-                      <div className="product-id">ID: {item.productId}</div>
                     </td>
-
-                    <td className="color-cell">
-                      <div className="color-name">{item.colorName}</div>
-                      <div className="color-id">Color ID: {item.colorId}</div>
+                    <td>
+                      <div className="fragrance-info">
+                        <div className="fragrance-name">{item.fragrance}</div>
+                      </div>
                     </td>
-
-                    <td className="stock-cell">
+                    <td>
                       <div className="stock-display">
                         <span className="stock-value">{item.stock}</span>
-                        <div className="stock-buttons">
+                        <div className="stock-actions">
                           <button
                             className="add-stock-btn"
                             onClick={() => openAddStock(item)}
@@ -427,65 +480,117 @@ const Inventories = () => {
                             onClick={() => openSetStock(item)}
                             title="Set Stock"
                           >
-                            📝 Set
+                            Set
                           </button>
                         </div>
                       </div>
                     </td>
-
-                    <td className="threshold-cell">
-                      <div className="threshold-display">
-                        <input
-                          type="number"
-                          min="0"
-                          value={item.threshold || 10}
-                          onChange={(e) => handleUpdateThreshold(item, e.target.value)}
-                          className="threshold-input"
-                        />
-                        <span className="threshold-label">Alert when below</span>
-                      </div>
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        value={item.threshold || 10}
+                        onChange={(e) => handleUpdateThreshold(item, e.target.value)}
+                        className="threshold-input"
+                      />
                     </td>
-
-                    <td className="status-cell">
-                      <span className={`status-badge ${stockStatus.class}`}>
+                    <td>
+                      <span className={`status ${stockStatus.class}`}>
                         {stockStatus.icon} {stockStatus.text}
                       </span>
                     </td>
-
-                    <td className="actions-cell">
-                      <div className="action-buttons">
-                        <button
-                          className="history-btn"
-                          onClick={() => openStockHistory(item)}
-                          title="View Stock History"
-                        >
-                          📊 History
-                        </button>
-                      </div>
+                    <td className="actions">
+                      <button
+                        className="history-btn"
+                        onClick={() => openStockHistory(item)}
+                        title="View Stock History"
+                      >
+                        <FaHistory />
+                      </button>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* PAGINATION */}
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button
+            className="pagination-btn"
+            onClick={() => paginate(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            ← Previous
+          </button>
+          
+          <div className="page-numbers">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(page => {
+                if (page === 1 || page === totalPages) return true;
+                if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                return false;
+              })
+              .map((page, index, array) => {
+                const prevPage = array[index - 1];
+                if (prevPage && page - prevPage > 1) {
+                  return (
+                    <React.Fragment key={`ellipsis-${page}`}>
+                      <span className="ellipsis">...</span>
+                      <button
+                        className={`page-btn ${page === currentPage ? 'active' : ''}`}
+                        onClick={() => paginate(page)}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  );
+                }
+                return (
+                  <button
+                    key={page}
+                    className={`page-btn ${page === currentPage ? 'active' : ''}`}
+                    onClick={() => paginate(page)}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+          </div>
+
+          <button
+            className="pagination-btn"
+            onClick={() => paginate(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next →
+          </button>
         </div>
       )}
 
       {/* ADD STOCK MODAL */}
       {showAddStock && selectedItem && (
-        <div className="modal-overlay">
-          <div className="modal">
+        <div className="modal-overlay" onClick={() => setShowAddStock(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Add Stock - {selectedItem.colorName}</h3>
-              <p className="modal-subtitle">
-                {selectedItem.productName} • Current Stock: {selectedItem.stock}
-              </p>
-              <button className="close-btn" onClick={() => setShowAddStock(false)}>
-                ×
+              <h3>Add Stock</h3>
+              <button className="modal-close" onClick={() => setShowAddStock(false)}>
+                <FaTimes />
               </button>
             </div>
 
             <div className="modal-body">
+              <div className="product-info-summary">
+                <div className="product-name">{selectedItem.productName}</div>
+                <div className="product-details">
+                  <span className="fragrance">{selectedItem.fragrance}</span>
+                  <span className="stock">Current: {selectedItem.stock}</span>
+                </div>
+              </div>
+
               <div className="form-group">
                 <label>Quantity to Add *</label>
                 <input
@@ -498,7 +603,6 @@ const Inventories = () => {
                   placeholder="Enter quantity"
                   autoFocus
                 />
-                <small>Enter the quantity you want to add to current stock</small>
               </div>
 
               <div className="form-group">
@@ -516,25 +620,14 @@ const Inventories = () => {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label>Notes (Optional)</label>
-                <textarea
-                  name="notes"
-                  value={stockForm.notes}
-                  onChange={handleStockFormChange}
-                  placeholder="Add any additional notes..."
-                  rows={3}
-                />
-              </div>
-
               <div className="stock-preview">
                 <div className="preview-row">
                   <span>Current Stock:</span>
-                  <strong>{selectedItem.stock}</strong>
+                  <span>{selectedItem.stock}</span>
                 </div>
                 <div className="preview-row">
                   <span>Adding:</span>
-                  <strong>+{stockForm.quantity || 0}</strong>
+                  <span className="positive">+{stockForm.quantity || 0}</span>
                 </div>
                 <div className="preview-row total">
                   <span>New Stock:</span>
@@ -544,32 +637,37 @@ const Inventories = () => {
             </div>
 
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowAddStock(false)}>
+              <button className="cancel-btn" onClick={() => setShowAddStock(false)} disabled={loading}>
                 Cancel
               </button>
-              <button className="save-btn" onClick={handleAddStock}>
-                Add Stock
+              <button className="save-btn" onClick={handleAddStock} disabled={loading}>
+                {loading ? "Adding..." : "Add Stock"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* SET STOCK MODAL - UPDATED */}
+      {/* SET STOCK MODAL */}
       {showSetStock && selectedItem && (
-        <div className="modal-overlay">
-          <div className="modal">
+        <div className="modal-overlay" onClick={() => setShowSetStock(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Set Stock - {selectedItem.colorName}</h3>
-              <p className="modal-subtitle">
-                {selectedItem.productName} • Current Stock: {selectedItem.stock}
-              </p>
-              <button className="close-btn" onClick={() => setShowSetStock(false)}>
-                ×
+              <h3>Set Stock</h3>
+              <button className="modal-close" onClick={() => setShowSetStock(false)}>
+                <FaTimes />
               </button>
             </div>
 
             <div className="modal-body">
+              <div className="product-info-summary">
+                <div className="product-name">{selectedItem.productName}</div>
+                <div className="product-details">
+                  <span className="fragrance">{selectedItem.fragrance}</span>
+                  <span className="stock">Current: {selectedItem.stock}</span>
+                </div>
+              </div>
+
               <div className="form-group">
                 <label>Set Stock To *</label>
                 <input
@@ -582,7 +680,6 @@ const Inventories = () => {
                   placeholder="Enter stock value"
                   autoFocus
                 />
-                <small>Set the exact stock quantity (for corrections)</small>
               </div>
 
               <div className="form-group">
@@ -600,42 +697,31 @@ const Inventories = () => {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label>Notes (Optional)</label>
-                <textarea
-                  name="notes"
-                  value={stockAdjustmentForm.notes}
-                  onChange={handleSetStockFormChange}
-                  placeholder="Add any additional notes..."
-                  rows={3}
-                />
-              </div>
-
               <div className="stock-preview">
                 <div className="preview-row">
                   <span>Current Stock:</span>
-                  <strong>{selectedItem.stock}</strong>
+                  <span>{selectedItem.stock}</span>
                 </div>
                 <div className="preview-row">
                   <span>Setting to:</span>
-                  <strong>{stockAdjustmentForm.stock || 0}</strong> {/* Updated */}
+                  <span>{stockAdjustmentForm.stock || 0}</span>
                 </div>
                 <div className="preview-row total">
                   <span>Difference:</span>
-                  <strong className={parseFloat(stockAdjustmentForm.stock || 0) >= selectedItem.stock ? "positive" : "negative"}>
+                  <span className={parseFloat(stockAdjustmentForm.stock || 0) >= selectedItem.stock ? "positive" : "negative"}>
                     {parseFloat(stockAdjustmentForm.stock || 0) >= selectedItem.stock ? "+" : ""}
                     {(parseFloat(stockAdjustmentForm.stock || 0) - selectedItem.stock)}
-                  </strong>
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowSetStock(false)}>
+              <button className="cancel-btn" onClick={() => setShowSetStock(false)} disabled={loading}>
                 Cancel
               </button>
-              <button className="save-btn" onClick={handleSetStock}>
-                Set Stock
+              <button className="save-btn" onClick={handleSetStock} disabled={loading}>
+                {loading ? "Setting..." : "Set Stock"}
               </button>
             </div>
           </div>
@@ -644,19 +730,24 @@ const Inventories = () => {
 
       {/* STOCK HISTORY MODAL */}
       {showHistory && selectedItem && (
-        <div className="modal-overlay">
-          <div className="modal large">
+        <div className="modal-overlay" onClick={() => setShowHistory(false)}>
+          <div className="modal-content large" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Stock History - {selectedItem.colorName}</h3>
-              <p className="modal-subtitle">
-                {selectedItem.productName} • Current Stock: {selectedItem.stock}
-              </p>
-              <button className="close-btn" onClick={() => setShowHistory(false)}>
-                ×
+              <h3>Stock History</h3>
+              <button className="modal-close" onClick={() => setShowHistory(false)}>
+                <FaTimes />
               </button>
             </div>
 
             <div className="modal-body">
+              <div className="product-info-summary">
+                <div className="product-name">{selectedItem.productName}</div>
+                <div className="product-details">
+                  <span className="fragrance">{selectedItem.fragrance}</span>
+                  <span className="stock">Current Stock: {selectedItem.stock}</span>
+                </div>
+              </div>
+
               {stockHistory.length === 0 ? (
                 <div className="no-history">
                   <p>No stock history available</p>
@@ -673,7 +764,6 @@ const Inventories = () => {
                         <th>New</th>
                         <th>Difference</th>
                         <th>Reason</th>
-                        <th>Added By</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -708,9 +798,6 @@ const Inventories = () => {
                             <td className="reason-cell">
                               {history.reason}
                             </td>
-                            <td className="addedby-cell">
-                              {history.addedBy}
-                            </td>
                           </tr>
                         );
                       })}
@@ -721,7 +808,7 @@ const Inventories = () => {
             </div>
 
             <div className="modal-footer">
-              <button className="close-btn" onClick={() => setShowHistory(false)}>
+              <button className="close-btn" onClick={() => setShowHistory(false)} disabled={loading}>
                 Close
               </button>
             </div>

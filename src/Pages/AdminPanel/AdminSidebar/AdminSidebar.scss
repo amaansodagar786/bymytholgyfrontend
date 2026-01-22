@@ -1,61 +1,433 @@
-.sidebar {
-  width: 70px;
-  height: 100vh;
-  background: #1f2f61;
-  color: #fff;
-  padding-top: 20px;
-  transition: 0.3s;
+@font-face {
+  font-family: "Heading";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Medium.ttf") format("truetype");
+  font-style: normal;
+}
+@font-face {
+  font-family: "LightHeading";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Light.ttf") format("truetype");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Content";
+  src: url("../../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Regular.ttf") format("truetype");
+  font-style: normal;
+}
+
+// Variables
+$sidebar-bg: #5a3ec8;
+$page-bg: #f4f6ff;
+$active-text: #4b37c4;
+$inactive-text: #ffffff;
+$red: #e74c3c;
+
+// Mobile Hamburger Button
+.mobile-hamburger {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1500;
+  background: $sidebar-bg;
+  color: white;
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: darken($sidebar-bg, 10%);
+    transform: scale(1.05);
+  }
+
+  svg {
+    font-size: 24px;
+  }
+}
+
+// Admin Sidebar Styles
+.admin-sidebar {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 101;
+  width: 220px;
+  height: 100%;
+  background: $sidebar-bg;
+  border-top-right-radius: 22px;
+  border-bottom-right-radius: 22px;
+  z-index: 2000;
+  transition: width 0.3s ease, left 0.3s ease;
+  overflow: hidden;
+  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
 
-  &.open {
-    width: 230px;
-  }
+  // Collapsed state (Desktop)
+  &.collapsed {
+    width: 63px;
 
-  .top {
-    display: flex;
-    justify-content: center;
-
-    .toggle-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 24px;
-      color: #fff;
+    .sidebar-header {
+      justify-content: center;
+      padding: 15px 0;
     }
   }
 
-  .menu {
-    margin-top: 30px;
+  // Mobile open state
+  &.mobile-open {
+    left: 0 !important;
+    width: 280px !important;
+    border-radius: 0;
+    box-shadow: 3px 0 20px rgba(0, 0, 0, 0.3);
+    z-index: 2001;
+  }
+
+  // Header/Logo area
+  .sidebar-header {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 60px;
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .logo-text {
+      color: #fff;
+      font-weight: 700;
+      font-size: 18px;
+      margin: 0;
+      white-space: nowrap;
+      letter-spacing: 0.5px;
+      font-family: "Heading";
+    }
+  }
+
+  // Toggle button
+  .toggle-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 16px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.05);
+    }
+
+    &.collapsed {
+      margin: 0 auto;
+    }
+  }
+
+  // Menu list
+  .sidebar-menu {
+    margin: 10px 0;
+    padding: 0 0 20px 0;
     list-style: none;
-    padding-left: 0;
+    max-height: calc(100% - 80px);
+    overflow-y: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
 
     li {
-      margin: 18px 0;
+      margin: 4px 0;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+  }
 
-      a {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 20px;
-        color: #fff;
-        text-decoration: none;
-        transition: 0.3s;
+  // Menu links
+  .menu-link {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 8px 14px;
+    height: 36px;
+    text-decoration: none;
+    color: $inactive-text;
+    font-size: 15px;
+    font-weight: 500;
+    background: none;
+    transition: all 0.2s ease;
+    border-radius: 0;
+    width: 100%;
+    font-family: "Content";
 
-        &:hover {
-          background: rgba(255,255,255,0.1);
-        }
+    &:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
 
-        .icon {
-          font-size: 22px;
-        }
+    .menu-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      transition: all 0.2s ease;
+    }
 
-        span {
-          font-size: 16px;
+    .menu-title {
+      white-space: nowrap;
+      transition: opacity 0.2s ease;
+    }
+
+    // Active state for EXPANDED sidebar
+    &.active {
+      background: #dfeafb;
+      color: $active-text;
+      margin-left: 10px;
+      padding-left: 18px;
+      font-weight: 600;
+      border-radius: 25px 0 0 25px;
+      position: relative;
+      width: calc(100% - 10px);
+
+      .menu-icon {
+        background: #fff;
+        color: $active-text;
+        border-radius: 50%;
+        padding: 4px;
+        width: 24px;
+        height: 24px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+
+  // Collapsed state styles (Desktop only)
+  &.collapsed {
+    .menu-link {
+      justify-content: center;
+      padding: 8px;
+      margin: 0 auto;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+
+      .menu-icon {
+        font-size: 18px;
+        width: 24px;
+        height: 24px;
+      }
+
+      .menu-title {
+        display: none;
+      }
+
+      // Active state for COLLAPSED sidebar
+      &.active {
+        background: #fff;
+        border: 2px solid $active-text;
+        margin: 0 auto;
+        padding: 8px;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+
+        .menu-icon {
+          background: transparent;
+          color: $active-text;
+          padding: 0;
+          width: 24px;
+          height: 24px;
+          border-radius: 0;
         }
       }
     }
+  }
+}
+
+// Mobile Sidebar Overlay
+.mobile-sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  animation: fadeIn 0.3s ease;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+// ==================== RESPONSIVE STYLES ====================
+
+// Tablet and Mobile (768px and below)
+@media (max-width: 768px) {
+  .mobile-hamburger {
+    display: flex;
+  }
+
+  .admin-sidebar {
+    width: 280px;
+    left: -280px; // Hidden by default on mobile
+    border-radius: 0;
+    transition: left 0.3s ease;
+
+    // When mobile sidebar is open
+    &.mobile-open {
+      left: 0 !important;
+      width: 280px !important;
+    }
+
+    // Remove collapsed styles on mobile
+    &.collapsed {
+      left: -280px;
+      width: 280px;
+
+      .menu-link {
+        width: auto !important;
+        height: 44px !important;
+        padding: 10px 16px !important;
+        justify-content: flex-start !important;
+        border-radius: 0 !important;
+
+        .menu-title {
+          display: inline !important;
+        }
+
+        &.active {
+          width: auto !important;
+          height: 44px !important;
+          margin-left: 10px !important;
+          padding-left: 20px !important;
+          background: #dfeafb !important;
+          border: none !important;
+          border-radius: 25px 0 0 25px !important;
+
+          .menu-icon {
+            background: #fff !important;
+            color: $active-text !important;
+            border-radius: 50% !important;
+            padding: 4px !important;
+            width: 24px !important;
+            height: 24px !important;
+          }
+        }
+      }
+    }
+
+    // Header adjustments for mobile
+    .sidebar-header {
+      padding: 18px 20px;
+
+      .logo-text {
+        font-size: 20px;
+      }
+    }
+
+    // Menu adjustments for mobile
+    .menu-link {
+      height: 44px;
+      padding: 10px 20px;
+      font-size: 15px;
+
+      .menu-icon {
+        font-size: 18px;
+        width: 22px;
+        height: 22px;
+      }
+
+      &.active {
+        margin-left: 10px;
+        padding-left: 20px;
+        width: calc(100% - 20px);
+
+        .menu-icon {
+          width: 26px;
+          height: 26px;
+        }
+      }
+    }
+  }
+}
+
+// Small Mobile (480px and below)
+@media (max-width: 480px) {
+  .mobile-hamburger {
+    top: 15px;
+    left: 15px;
+    width: 45px;
+    height: 45px;
+
+    svg {
+      font-size: 20px;
+    }
+  }
+
+  .admin-sidebar {
+    width: 250px;
+    left: -250px;
+
+    &.mobile-open {
+      width: 250px !important;
+    }
+
+    &.collapsed {
+      left: -250px;
+      width: 250px;
+    }
+
+    .sidebar-header {
+      padding: 15px 18px;
+
+      .logo-text {
+        font-size: 18px;
+      }
+    }
+
+    .menu-link {
+      height: 42px;
+      padding: 10px 18px;
+      font-size: 14px;
+    }
+  }
+}
+
+// ==================== DESKTOP ONLY STYLES ====================
+@media (min-width: 769px) {
+
+  .mobile-hamburger,
+  .mobile-sidebar-overlay {
+    display: none !important;
+  }
+
+  .admin-sidebar.mobile-open {
+    width: 220px !important;
+    border-radius: 0 22px 22px 0 !important;
   }
 }

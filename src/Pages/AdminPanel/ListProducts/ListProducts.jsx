@@ -1,6 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import "./ListProducts.scss";
+import AdminLayout from "../AdminLayout/AdminLayout";
+import { FaSearch, FaPlus, FaFileExcel, FaEdit, FaTrash, FaUpload, FaTimes } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ListProducts = () => {
   const [products, setProducts] = useState([]);
@@ -9,6 +13,8 @@ const ListProducts = () => {
   const [formMode, setFormMode] = useState("add");
   const [deleteId, setDeleteId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // Form states
   const [formData, setFormData] = useState({
@@ -18,12 +24,10 @@ const ListProducts = () => {
     categoryName: "",
     hsnCode: "",
     type: "simple",
-    // Simple product fields
     modelName: "",
     SKU: "",
-    specifications: [],
+    specifications: [{ key: "", value: "" }, { key: "", value: "" }],
     colors: [],
-    // Variable product fields
     models: []
   });
 
@@ -31,7 +35,26 @@ const ListProducts = () => {
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [existingThumbnail, setExistingThumbnail] = useState("");
 
-  // Fetch products and categories
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim().toLowerCase());
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Filtered products
+  const filteredProducts = useMemo(() => {
+    if (!debouncedSearch) return products;
+    return products.filter((p) =>
+      p.productName?.toLowerCase().includes(debouncedSearch) ||
+      p.SKU?.toLowerCase().includes(debouncedSearch) ||
+      p.categoryName?.toLowerCase().includes(debouncedSearch) ||
+      p.hsnCode?.toLowerCase().includes(debouncedSearch)
+    );
+  }, [debouncedSearch, products]);
+
+  // Fetch data
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -39,7 +62,7 @@ const ListProducts = () => {
       setProducts(res.data);
     } catch (err) {
       console.error("Error fetching products:", err);
-      alert("Failed to load products");
+      toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
@@ -49,9 +72,17 @@ const ListProducts = () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/categories/get`);
       setCategories(res.data);
+      if (res.data?.length === 1) {
+        const singleCategory = res.data[0];
+        setFormData(prev => ({
+          ...prev,
+          categoryId: singleCategory.categoryId,
+          categoryName: singleCategory.name
+        }));
+      }
     } catch (err) {
       console.error("Error fetching categories:", err);
-      alert("Failed to load categories");
+      toast.error("Failed to load categories");
     }
   };
 
@@ -60,65 +91,12 @@ const ListProducts = () => {
     fetchCategories();
   }, []);
 
-  // Handle input changes
+  // Form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    if (name === "categoryId") {
-      const selectedCat = categories.find(cat => cat.categoryId === value);
-      setFormData({
-        ...formData,
-        categoryId: value,
-        categoryName: selectedCat ? selectedCat.name : ""
-      });
-    } else if (name === "type") {
-      if (value === "simple") {
-        setFormData({
-          ...formData,
-          type: value,
-          models: [],
-          colors: formData.colors.length > 0 ? formData.colors : [{
-            colorId: `temp_${Date.now()}_1`,
-            colorName: "",
-            sizes: [],
-            images: [],
-            originalPrice: "",
-            currentPrice: "",
-            colorSpecifications: []
-          }]
-        });
-      } else {
-        setFormData({
-          ...formData,
-          type: value,
-          SKU: "",
-          specifications: [],
-          colors: [],
-          models: formData.models.length > 0 ? formData.models : [{
-            modelName: "",
-            description: "",
-            SKU: "",
-            modelSpecifications: [],
-            colors: [{
-              colorId: `temp_${Date.now()}_1`,
-              colorName: "",
-              sizes: [],
-              images: [],
-              originalPrice: "",
-              currentPrice: "",
-              colorSpecifications: []
-            }]
-          }]
-        });
-      }
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData({ ...formData, [name]: value });
   };
 
-  // ========== SIMPLE PRODUCT HANDLERS ==========
-
-  // GLOBAL SPECIFICATIONS
   const handleSpecChange = (index, field, value) => {
     const updatedSpecs = [...formData.specifications];
     updatedSpecs[index][field] = value;
@@ -133,272 +111,100 @@ const ListProducts = () => {
   };
 
   const removeSpecField = (index) => {
+    if (formData.specifications.length <= 2) {
+      toast.warning("Minimum 2 specification fields are required");
+      return;
+    }
     const updatedSpecs = formData.specifications.filter((_, i) => i !== index);
     setFormData({ ...formData, specifications: updatedSpecs });
   };
 
-  // COLORS for simple products
-  const addColor = () => {
-    setFormData({
-      ...formData,
-      colors: [
-        ...formData.colors,
-        {
-          colorId: `temp_${Date.now()}_${formData.colors.length + 1}`,
-          colorName: "",
-          sizes: [],
-          images: [],
-          originalPrice: "",
-          currentPrice: "",
-          colorSpecifications: []
-        }
-      ]
-    });
-  };
-
-  const removeColor = (colorIndex) => {
-    const updatedColors = formData.colors.filter((_, i) => i !== colorIndex);
-    setFormData({ ...formData, colors: updatedColors });
-  };
-
-  const handleColorChange = (colorIndex, field, value) => {
+  const addFragrance = () => {
     const updatedColors = [...formData.colors];
-    updatedColors[colorIndex][field] = value;
-    setFormData({ ...formData, colors: updatedColors });
-  };
-
-  // SIZES for colors
-  const addSizeToColor = (colorIndex) => {
-    const updatedColors = [...formData.colors];
-    const currentSizes = updatedColors[colorIndex].sizes || [];
-    updatedColors[colorIndex].sizes = [...currentSizes, ""];
-    setFormData({ ...formData, colors: updatedColors });
-  };
-
-  const removeSizeFromColor = (colorIndex, sizeIndex) => {
-    const updatedColors = [...formData.colors];
-    updatedColors[colorIndex].sizes = updatedColors[colorIndex].sizes.filter((_, i) => i !== sizeIndex);
-    setFormData({ ...formData, colors: updatedColors });
-  };
-
-  const handleSizeChange = (colorIndex, sizeIndex, value) => {
-    const updatedColors = [...formData.colors];
-    updatedColors[colorIndex].sizes[sizeIndex] = value;
-    setFormData({ ...formData, colors: updatedColors });
-  };
-
-  // COLOR SPECIFICATIONS
-  const addColorSpecField = (colorIndex) => {
-    const updatedColors = [...formData.colors];
-    updatedColors[colorIndex].colorSpecifications = [
-      ...(updatedColors[colorIndex].colorSpecifications || []),
-      { key: "", value: "" }
-    ];
-    setFormData({ ...formData, colors: updatedColors });
-  };
-
-  const removeColorSpecField = (colorIndex, specIndex) => {
-    const updatedColors = [...formData.colors];
-    updatedColors[colorIndex].colorSpecifications =
-      updatedColors[colorIndex].colorSpecifications.filter((_, i) => i !== specIndex);
-    setFormData({ ...formData, colors: updatedColors });
-  };
-
-  const handleColorSpecChange = (colorIndex, specIndex, field, value) => {
-    const updatedColors = [...formData.colors];
-    updatedColors[colorIndex].colorSpecifications[specIndex][field] = value;
-    setFormData({ ...formData, colors: updatedColors });
-  };
-
-  // COLOR IMAGES
-  const handleColorImagesChange = (colorIndex, e) => {
-    if (e.target.files.length > 0) {
-      const updatedColors = [...formData.colors];
-      const newFiles = Array.from(e.target.files);
-
-      // Store file objects with color reference
-      const newImages = newFiles.map(file => file);
-
-      updatedColors[colorIndex].images = [...(updatedColors[colorIndex].images || []), ...newImages];
-      setFormData({ ...formData, colors: updatedColors });
-    }
-  };
-
-  const removeColorImage = (colorIndex, imageIndex) => {
-    const updatedColors = [...formData.colors];
-    updatedColors[colorIndex].images =
-      updatedColors[colorIndex].images.filter((_, i) => i !== imageIndex);
-    setFormData({ ...formData, colors: updatedColors });
-  };
-
-  // ========== VARIABLE PRODUCT HANDLERS ==========
-
-  // MODELS for variable products
-  const addModel = () => {
-    setFormData({
-      ...formData,
-      models: [
-        ...formData.models,
-        {
-          modelName: "",
-          description: "",
-          SKU: "",
-          modelSpecifications: [],
-          colors: [{
-            colorId: `temp_${Date.now()}_${formData.models.length + 1}_1`,
-            colorName: "",
-            sizes: [],
-            images: [],
-            originalPrice: "",
-            currentPrice: "",
-            colorSpecifications: []
-          }]
-        }
-      ]
-    });
-  };
-
-  const removeModel = (modelIndex) => {
-    const updatedModels = formData.models.filter((_, i) => i !== modelIndex);
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  const handleModelChange = (modelIndex, field, value) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex][field] = value;
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  // MODEL SPECIFICATIONS
-  const handleModelSpecChange = (modelIndex, specIndex, field, value) => {
-    const updatedModels = [...formData.models];
-    if (!updatedModels[modelIndex].modelSpecifications) {
-      updatedModels[modelIndex].modelSpecifications = [];
-    }
-    updatedModels[modelIndex].modelSpecifications[specIndex][field] = value;
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  const addModelSpecField = (modelIndex) => {
-    const updatedModels = [...formData.models];
-    if (!updatedModels[modelIndex].modelSpecifications) {
-      updatedModels[modelIndex].modelSpecifications = [];
-    }
-    updatedModels[modelIndex].modelSpecifications = [
-      ...updatedModels[modelIndex].modelSpecifications,
-      { key: "", value: "" }
-    ];
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  const removeModelSpecField = (modelIndex, specIndex) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex].modelSpecifications =
-      updatedModels[modelIndex].modelSpecifications.filter((_, i) => i !== specIndex);
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  // COLORS for models
-  const addColorToModel = (modelIndex) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex].colors = [
-      ...(updatedModels[modelIndex].colors || []),
-      {
-        colorId: `temp_${Date.now()}_${modelIndex}_${updatedModels[modelIndex].colors.length + 1}`,
-        colorName: "",
-        sizes: [],
+    if (updatedColors.length === 0) {
+      updatedColors.push({
+        colorId: `temp_${Date.now()}_1`,
+        colorName: "Default",
+        fragrances: [""],
         images: [],
         originalPrice: "",
         currentPrice: "",
         colorSpecifications: []
+      });
+    } else {
+      updatedColors[0].fragrances = [...(updatedColors[0].fragrances || []), ""];
+    }
+    setFormData({ ...formData, colors: updatedColors });
+  };
+
+  const removeFragrance = (fragranceIndex) => {
+    const updatedColors = [...formData.colors];
+    if (updatedColors.length > 0) {
+      const currentFragrances = updatedColors[0].fragrances || [];
+      const nonEmptyFragrances = currentFragrances.filter(f => f?.trim() !== "");
+      if (nonEmptyFragrances.length <= 1 && currentFragrances[fragranceIndex]?.trim() !== "") {
+        toast.warning("Cannot remove the last fragrance. Product must have at least 1 fragrance.");
+        return;
       }
-    ];
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  const removeColorFromModel = (modelIndex, colorIndex) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex].colors = updatedModels[modelIndex].colors.filter((_, i) => i !== colorIndex);
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  const handleModelColorChange = (modelIndex, colorIndex, field, value) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex].colors[colorIndex][field] = value;
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  // SIZES for colors in models
-  const addSizeToModelColor = (modelIndex, colorIndex) => {
-    const updatedModels = [...formData.models];
-    const currentSizes = updatedModels[modelIndex].colors[colorIndex].sizes || [];
-    updatedModels[modelIndex].colors[colorIndex].sizes = [...currentSizes, ""];
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  const removeSizeFromModelColor = (modelIndex, colorIndex, sizeIndex) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex].colors[colorIndex].sizes =
-      updatedModels[modelIndex].colors[colorIndex].sizes.filter((_, i) => i !== sizeIndex);
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  const handleModelSizeChange = (modelIndex, colorIndex, sizeIndex, value) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex].colors[colorIndex].sizes[sizeIndex] = value;
-    setFormData({ ...formData, models: updatedModels });
-  };
-
-  // COLOR SPECIFICATIONS for colors in models
-  const addModelColorSpecField = (modelIndex, colorIndex) => {
-    const updatedModels = [...formData.models];
-    if (!updatedModels[modelIndex].colors[colorIndex].colorSpecifications) {
-      updatedModels[modelIndex].colors[colorIndex].colorSpecifications = [];
+      updatedColors[0].fragrances = currentFragrances.filter((_, i) => i !== fragranceIndex);
+      setFormData({ ...formData, colors: updatedColors });
     }
-    updatedModels[modelIndex].colors[colorIndex].colorSpecifications = [
-      ...updatedModels[modelIndex].colors[colorIndex].colorSpecifications,
-      { key: "", value: "" }
-    ];
-    setFormData({ ...formData, models: updatedModels });
   };
 
-  const removeModelColorSpecField = (modelIndex, colorIndex, specIndex) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex].colors[colorIndex].colorSpecifications =
-      updatedModels[modelIndex].colors[colorIndex].colorSpecifications.filter((_, i) => i !== specIndex);
-    setFormData({ ...formData, models: updatedModels });
+  const handleFragranceChange = (fragranceIndex, value) => {
+    const updatedColors = [...formData.colors];
+    if (updatedColors.length > 0) {
+      updatedColors[0].fragrances[fragranceIndex] = value;
+      setFormData({ ...formData, colors: updatedColors });
+    }
   };
 
-  const handleModelColorSpecChange = (modelIndex, colorIndex, specIndex, field, value) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex].colors[colorIndex].colorSpecifications[specIndex][field] = value;
-    setFormData({ ...formData, models: updatedModels });
+  const handlePriceChange = (field, value) => {
+    const updatedColors = [...formData.colors];
+    if (updatedColors.length === 0) {
+      updatedColors.push({
+        colorId: `temp_${Date.now()}_1`,
+        colorName: "Default",
+        fragrances: [],
+        images: [],
+        originalPrice: field === "originalPrice" ? value : "",
+        currentPrice: field === "currentPrice" ? value : "",
+        colorSpecifications: []
+      });
+    } else {
+      updatedColors[0][field] = value;
+    }
+    setFormData({ ...formData, colors: updatedColors });
   };
 
-  // COLOR IMAGES for colors in models
-  const handleModelColorImagesChange = (modelIndex, colorIndex, e) => {
+  const handleProductImagesChange = (e) => {
     if (e.target.files.length > 0) {
-      const updatedModels = [...formData.models];
+      const updatedColors = [...formData.colors];
       const newFiles = Array.from(e.target.files);
-
-      const newImages = newFiles.map(file => file);
-
-      updatedModels[modelIndex].colors[colorIndex].images = [
-        ...(updatedModels[modelIndex].colors[colorIndex].images || []),
-        ...newImages
-      ];
-      setFormData({ ...formData, models: updatedModels });
+      if (updatedColors.length === 0) {
+        updatedColors.push({
+          colorId: `temp_${Date.now()}_1`,
+          colorName: "Default",
+          fragrances: [],
+          images: newFiles,
+          originalPrice: "",
+          currentPrice: "",
+          colorSpecifications: []
+        });
+      } else {
+        updatedColors[0].images = [...(updatedColors[0].images || []), ...newFiles];
+      }
+      setFormData({ ...formData, colors: updatedColors });
     }
   };
 
-  const removeModelColorImage = (modelIndex, colorIndex, imageIndex) => {
-    const updatedModels = [...formData.models];
-    updatedModels[modelIndex].colors[colorIndex].images =
-      updatedModels[modelIndex].colors[colorIndex].images.filter((_, i) => i !== imageIndex);
-    setFormData({ ...formData, models: updatedModels });
+  const removeProductImage = (imageIndex) => {
+    const updatedColors = [...formData.colors];
+    if (updatedColors.length > 0) {
+      updatedColors[0].images = updatedColors[0].images.filter((_, i) => i !== imageIndex);
+      setFormData({ ...formData, colors: updatedColors });
+    }
   };
-
-  // ========== IMAGE HANDLING ==========
 
   const handleThumbnailChange = (e) => {
     if (e.target.files[0]) {
@@ -406,183 +212,100 @@ const ListProducts = () => {
     }
   };
 
-  // ========== PRODUCT OPERATIONS ==========
-
-  // ADD PRODUCT
+  // Product operations
   const addProduct = async () => {
     try {
-      // Validation
       if (!formData.productName.trim()) {
-        alert("Product name is required");
+        toast.error("Product name is required");
         return;
       }
-      if (!formData.categoryId) {
-        alert("Please select a category");
+      if (!formData.SKU?.trim()) {
+        toast.error("SKU is required");
         return;
       }
 
-      // Validation based on product type
-      if (formData.type === "simple") {
-        if (!formData.SKU?.trim()) {
-          alert("SKU is required for simple products");
-          return;
-        }
-        if (!formData.colors || formData.colors.length === 0) {
-          alert("At least one color variant is required for simple products");
-          return;
-        }
-        const invalidColors = formData.colors.filter(
-          color => !color.colorName?.trim() || !color.currentPrice || color.currentPrice <= 0
-        );
-        if (invalidColors.length > 0) {
-          alert("All colors must have a name and valid current price");
-          return;
-        }
-      } else {
-        if (!formData.models || formData.models.length === 0) {
-          alert("At least one model is required for variable products");
-          return;
-        }
-        const invalidModels = formData.models.filter(
-          model => !model.modelName?.trim() || !model.SKU?.trim()
-        );
-        if (invalidModels.length > 0) {
-          alert("All models must have both Model Name and SKU");
-          return;
-        }
-        for (const model of formData.models) {
-          if (!model.colors || model.colors.length === 0) {
-            alert(`Model "${model.modelName}" must have at least one color variant`);
-            return;
-          }
-          const invalidColors = model.colors.filter(
-            color => !color.colorName?.trim() || !color.currentPrice || color.currentPrice <= 0
-          );
-          if (invalidColors.length > 0) {
-            alert(`All colors in model "${model.modelName}" must have a name and valid current price`);
-            return;
-          }
-        }
+      const colors = [...formData.colors];
+      if (colors.length === 0) {
+        colors.push({
+          colorId: `temp_${Date.now()}_1`,
+          colorName: "Default",
+          fragrances: [],
+          images: [],
+          originalPrice: "",
+          currentPrice: "",
+          colorSpecifications: []
+        });
+      }
+
+      const fragrances = colors[0]?.fragrances || [];
+      const validFragrances = fragrances.filter(f => f?.trim() !== "");
+      if (validFragrances.length === 0) {
+        toast.warning("At least 1 fragrance is required");
+        return;
+      }
+
+      if (!colors[0].currentPrice || colors[0].currentPrice <= 0) {
+        toast.error("Current price is required and must be greater than 0");
+        return;
       }
 
       if (!thumbnailFile && formMode === "add") {
-        alert("Thumbnail image is required");
+        toast.error("Thumbnail image is required");
         return;
       }
 
       const token = localStorage.getItem("adminToken");
       if (!token) {
-        alert("Please login first");
+        toast.error("Please login first");
         return;
       }
 
       const formDataToSend = new FormData();
 
-      // Append basic data
       Object.keys(formData).forEach(key => {
-        if (key === 'specifications' && formData.type === "simple") {
+        if (key === 'specifications') {
           const nonEmptySpecs = formData.specifications.filter(
             spec => spec.key?.trim() !== "" && spec.value?.trim() !== ""
           );
           if (nonEmptySpecs.length > 0) {
             formDataToSend.append(key, JSON.stringify(nonEmptySpecs));
           }
-        } else if (key === 'colors' && formData.type === "simple") {
-          // Process colors WITHOUT images (images will be sent as files)
-          const colorsWithoutImages = formData.colors
-            .filter(color => color.colorName?.trim() !== "")
-            .map(color => ({
-              colorId: color.colorId,
-              colorName: color.colorName,
-              sizes: color.sizes || [],
-              images: [], // Empty array - images will be added by backend
-              originalPrice: color.originalPrice || 0,
-              currentPrice: color.currentPrice || 0,
-              colorSpecifications: color.colorSpecifications?.filter(
-                spec => spec.key?.trim() !== "" && spec.value?.trim() !== ""
-              ) || []
-            }));
-
-          if (colorsWithoutImages.length > 0) {
-            formDataToSend.append(key, JSON.stringify(colorsWithoutImages));
+        } else if (key === 'colors') {
+          const colorsData = colors.map(color => ({
+            colorId: color.colorId,
+            colorName: "Default",
+            fragrances: (color.fragrances || [])
+              .filter(f => f?.trim() !== "")
+              .map(f => f.toLowerCase()),
+            images: [],
+            originalPrice: color.originalPrice || 0,
+            currentPrice: color.currentPrice || 0,
+            colorSpecifications: []
+          }));
+          if (colorsData.length > 0) {
+            formDataToSend.append(key, JSON.stringify(colorsData));
           }
-        } else if (key === 'models' && formData.type === "variable") {
-          // Process models WITHOUT images
-          const modelsWithoutImages = formData.models
-            .filter(model => model.modelName?.trim() !== "" && model.SKU?.trim() !== "")
-            .map(model => ({
-              modelName: model.modelName,
-              description: model.description || "",
-              SKU: model.SKU,
-              modelSpecifications: model.modelSpecifications?.filter(
-                spec => spec.key?.trim() !== "" && spec.value?.trim() !== ""
-              ) || [],
-              colors: (model.colors || [])
-                .filter(color => color.colorName?.trim() !== "")
-                .map(color => ({
-                  colorId: color.colorId,
-                  colorName: color.colorName,
-                  sizes: color.sizes || [],
-                  images: [], // Empty array
-                  originalPrice: color.originalPrice || 0,
-                  currentPrice: color.currentPrice || 0,
-                  colorSpecifications: color.colorSpecifications?.filter(
-                    spec => spec.key?.trim() !== "" && spec.value?.trim() !== ""
-                  ) || []
-                }))
-                .filter(color => color.colorName?.trim() !== "")
-            }))
-            .filter(model => model.colors.length > 0);
-
-          if (modelsWithoutImages.length > 0) {
-            formDataToSend.append(key, JSON.stringify(modelsWithoutImages));
-          }
+        } else if (key === 'models') {
+          formDataToSend.append(key, JSON.stringify([]));
         } else if (formData[key] !== null && formData[key] !== '' && formData[key] !== undefined) {
           formDataToSend.append(key, formData[key]);
         }
       });
 
-      // Append thumbnail file
-      if (thumbnailFile) {
-        formDataToSend.append("thumbnail", thumbnailFile);
-      }
+      formDataToSend.append("type", "simple");
+      if (thumbnailFile) formDataToSend.append("thumbnail", thumbnailFile);
 
-      // Append color images for simple products WITH COLOR INDEX
-      if (formData.type === "simple" && formData.colors && formData.colors.length > 0) {
-        formData.colors.forEach((color, colorIndex) => {
-          if (color.images && color.images.length > 0) {
-            color.images.forEach((imgFile, imgIndex) => {
-              if (imgFile instanceof File) {
-                // Send color index and colorId with each image
-                formDataToSend.append(`colorImages[${colorIndex}]`, imgFile);
-                formDataToSend.append(`colorIds[${colorIndex}]`, color.colorId);
-              }
-            });
-          }
-        });
-      }
-
-      // Append color images for variable products WITH INDEXES
-      if (formData.type === "variable" && formData.models) {
-        formData.models.forEach((model, modelIndex) => {
-          if (model.colors) {
-            model.colors.forEach((color, colorIndex) => {
-              if (color.images && color.images.length > 0) {
-                color.images.forEach((imgFile, imgIndex) => {
-                  if (imgFile instanceof File) {
-                    // Send model index, color index, and colorId
-                    formDataToSend.append(`modelImages[${modelIndex}][${colorIndex}]`, imgFile);
-                    formDataToSend.append(`modelColorIds[${modelIndex}][${colorIndex}]`, color.colorId);
-                  }
-                });
-              }
-            });
+      if (colors.length > 0 && colors[0].images && colors[0].images.length > 0) {
+        colors[0].images.forEach((imgFile) => {
+          if (imgFile instanceof File) {
+            formDataToSend.append(`colorImages[0]`, imgFile);
+            formDataToSend.append(`colorIds[0]`, colors[0].colorId);
           }
         });
       }
 
       setLoading(true);
-      const response = await axios.post(
+      await axios.post(
         `${import.meta.env.VITE_API_URL}/products/add`,
         formDataToSend,
         {
@@ -593,131 +316,81 @@ const ListProducts = () => {
         }
       );
 
-      alert("Product added successfully!");
+      toast.success("Product added successfully!");
       resetForm();
       fetchProducts();
     } catch (err) {
       console.error("Error adding product:", err);
-      alert(err.response?.data?.error || "Failed to add product");
+      toast.error(err.response?.data?.error || "Failed to add product");
     } finally {
       setLoading(false);
     }
   };
 
-  // UPDATE PRODUCT
   const updateProduct = async () => {
     try {
       if (!formData.productId) {
-        alert("Product ID is missing");
+        toast.error("Product ID is missing");
+        return;
+      }
+
+      const productColors = formData.colors || [];
+      const fragrances = productColors.length > 0 ? (productColors[0]?.fragrances || []) : [];
+      const validFragrances = fragrances.filter(f => f?.trim() !== "");
+
+      if (validFragrances.length === 0) {
+        toast.warning("At least 1 fragrance is required");
         return;
       }
 
       const token = localStorage.getItem("adminToken");
       if (!token) {
-        alert("Please login first");
+        toast.error("Please login first");
         return;
       }
 
       const formDataToSend = new FormData();
 
-      // Append basic data
       Object.keys(formData).forEach(key => {
         if (key === 'specifications') {
-          if (formData.type === "simple") {
-            const nonEmptySpecs = formData.specifications.filter(
-              spec => spec.key?.trim() !== "" && spec.value?.trim() !== ""
-            );
-            formDataToSend.append(key, JSON.stringify(nonEmptySpecs));
-          } else {
-            formDataToSend.append(key, JSON.stringify([]));
-          }
+          const nonEmptySpecs = formData.specifications.filter(
+            spec => spec.key?.trim() !== "" && spec.value?.trim() !== ""
+          );
+          formDataToSend.append(key, JSON.stringify(nonEmptySpecs));
         } else if (key === 'colors') {
-          if (formData.type === "simple") {
-            const validColors = formData.colors
-              .filter(color => color.colorName?.trim() !== "")
-              .map(color => ({
-                colorId: color.colorId || "",
-                colorName: color.colorName,
-                sizes: color.sizes || [],
-                images: color.images ? color.images.filter(img => typeof img === 'string') : [],
-                originalPrice: color.originalPrice || 0,
-                currentPrice: color.currentPrice || 0,
-                colorSpecifications: color.colorSpecifications?.filter(
-                  spec => spec.key?.trim() !== "" && spec.value?.trim() !== ""
-                ) || []
-              }));
-
-            if (validColors.length > 0) {
-              formDataToSend.append(key, JSON.stringify(validColors));
-            }
+          const colorsData = productColors
+            .filter(color => color.colorName?.trim() !== "")
+            .map(color => ({
+              colorId: color.colorId || "",
+              colorName: "Default",
+              fragrances: (color.fragrances || [])
+                .filter(f => f?.trim() !== "")
+                .map(f => f.toLowerCase()),
+              images: color.images ? color.images.filter(img => typeof img === 'string') : [],
+              originalPrice: color.originalPrice || 0,
+              currentPrice: color.currentPrice || 0,
+              colorSpecifications: []
+            }));
+          if (colorsData.length > 0) {
+            formDataToSend.append(key, JSON.stringify(colorsData));
           }
         } else if (key === 'models') {
-          if (formData.type === "variable") {
-            const validModels = formData.models
-              .filter(model => model.modelName?.trim() !== "" && model.SKU?.trim() !== "")
-              .map(model => ({
-                ...model,
-                modelSpecifications: model.modelSpecifications?.filter(
-                  spec => spec.key?.trim() !== "" && spec.value?.trim() !== ""
-                ) || [],
-                colors: (model.colors || [])
-                  .filter(color => color.colorName?.trim() !== "")
-                  .map(color => ({
-                    colorId: color.colorId || "",
-                    colorName: color.colorName,
-                    sizes: color.sizes || [],
-                    images: color.images ? color.images.filter(img => typeof img === 'string') : [],
-                    originalPrice: color.originalPrice || 0,
-                    currentPrice: color.currentPrice || 0,
-                    colorSpecifications: color.colorSpecifications?.filter(
-                      spec => spec.key?.trim() !== "" && spec.value?.trim() !== ""
-                    ) || []
-                  }))
-              }))
-              .filter(model => model.colors.length > 0);
-
-            if (validModels.length > 0) {
-              formDataToSend.append(key, JSON.stringify(validModels));
-            }
-          } else {
-            formDataToSend.append(key, JSON.stringify([]));
-          }
+          formDataToSend.append(key, JSON.stringify([]));
         } else if (key !== 'productId' && formData[key] !== null && formData[key] !== undefined) {
           formDataToSend.append(key, formData[key]);
         }
       });
 
-      // Append thumbnail file
-      if (thumbnailFile) {
-        formDataToSend.append("thumbnail", thumbnailFile);
-      }
+      formDataToSend.append("type", "simple");
+      if (thumbnailFile) formDataToSend.append("thumbnail", thumbnailFile);
 
-      // Append new images for simple products
-      if (formData.type === "simple" && formData.colors) {
-        formData.colors.forEach((color, colorIndex) => {
+      if (productColors.length > 0) {
+        productColors.forEach((color, colorIndex) => {
           if (color.images && color.images.length > 0) {
-            color.images.forEach((img, imgIndex) => {
+            color.images.forEach((img) => {
               if (img instanceof File) {
                 formDataToSend.append(`colorImages[${colorIndex}]`, img);
                 formDataToSend.append(`colorIds[${colorIndex}]`, color.colorId || "");
-              }
-            });
-          }
-        });
-      }
-
-      // Append new images for variable products
-      if (formData.type === "variable" && formData.models) {
-        formData.models.forEach((model, modelIndex) => {
-          if (model.colors) {
-            model.colors.forEach((color, colorIndex) => {
-              if (color.images && color.images.length > 0) {
-                color.images.forEach((img, imgIndex) => {
-                  if (img instanceof File) {
-                    formDataToSend.append(`modelImages[${modelIndex}][${colorIndex}]`, img);
-                    formDataToSend.append(`modelColorIds[${modelIndex}][${colorIndex}]`, color.colorId || "");
-                  }
-                });
               }
             });
           }
@@ -736,25 +409,30 @@ const ListProducts = () => {
         }
       );
 
-      alert("Product updated successfully!");
+      toast.success("Product updated successfully!");
       resetForm();
       fetchProducts();
     } catch (err) {
       console.error("Error updating product:", err);
-      alert(err.response?.data?.error || "Failed to update product");
+      toast.error(err.response?.data?.error || "Failed to update product");
     } finally {
       setLoading(false);
     }
   };
 
-  // DELETE PRODUCT
   const deleteProduct = async () => {
     try {
       if (!deleteId) return;
 
       const token = localStorage.getItem("adminToken");
       if (!token) {
-        alert("Please login first");
+        toast.error("Please login first");
+        return;
+      }
+
+      const shouldDelete = window.confirm("Are you sure you want to delete this product?");
+      if (!shouldDelete) {
+        setDeleteId(null);
         return;
       }
 
@@ -763,65 +441,49 @@ const ListProducts = () => {
         `${import.meta.env.VITE_API_URL}/products/delete/${deleteId}`,
         {
           headers: {
-            Authorization: `Bearer ${token}`  // ✅ FIXED: Added "Bearer " prefix
+            Authorization: `Bearer ${token}`
           }
         }
       );
 
-      alert("Product deactivated successfully!");
+      toast.success("Product deactivated successfully!");
       setDeleteId(null);
       fetchProducts();
     } catch (err) {
       console.error("Error deleting product:", err);
-      alert(err.response?.data?.error || "Failed to delete product");
+      toast.error(err.response?.data?.error || "Failed to delete product");
     } finally {
       setLoading(false);
     }
   };
 
-  // OPEN UPDATE FORM
   const openUpdateForm = (product) => {
     setFormMode("update");
-
     const preparedData = {
       ...product,
-      specifications: product.specifications || [],
-      colors: product.type === "simple" ? (product.colors || []) : [],
-      models: product.type === "variable" ? (product.models || []).map(model => ({
-        ...model,
-        modelSpecifications: model.modelSpecifications || [],
-        colors: model.colors || []
-      })) : [],
+      specifications: product.specifications?.length > 0 ? product.specifications : [{ key: "", value: "" }, { key: "", value: "" }],
+      colors: product.colors || [],
+      models: [],
       hsnCode: product.hsnCode || ""
     };
-
     setFormData(preparedData);
     setExistingThumbnail(product.thumbnailImage || "");
     setThumbnailFile(null);
     setShowForm(true);
   };
 
-  // RESET FORM
   const resetForm = () => {
     setFormData({
       productName: "",
       description: "",
-      categoryId: "",
-      categoryName: "",
+      categoryId: formData.categoryId,
+      categoryName: formData.categoryName,
       hsnCode: "",
       type: "simple",
       modelName: "",
       SKU: "",
-      specifications: [],
-      colors: [{
-        colorId: `temp_${Date.now()}_1`,
-        colorName: "",
-        sizes: [],
-        images: [],
-        originalPrice: "",
-        currentPrice: "",
-        colorSpecifications: []
-      }],
+      specifications: [{ key: "", value: "" }, { key: "", value: "" }],
+      colors: [],
       models: []
     });
     setThumbnailFile(null);
@@ -829,51 +491,30 @@ const ListProducts = () => {
     setShowForm(false);
   };
 
-  // Format price
+  // Helper functions
   const formatPrice = (price) => {
     return price ? parseFloat(price).toFixed(2) : "0.00";
   };
 
-  // Get display price
   const getDisplayPrice = (product) => {
-    if (product.type === "simple") {
-      if (product.colors && product.colors.length > 0) {
-        const prices = product.colors.map(c => c.currentPrice).filter(p => p);
-        if (prices.length > 0) {
-          const minPrice = Math.min(...prices);
-          const maxPrice = Math.max(...prices);
-          return minPrice === maxPrice ?
-            `₹${formatPrice(minPrice)}` :
-            `₹${formatPrice(minPrice)} - ₹${formatPrice(maxPrice)}`;
-        }
-      }
-      return "₹0.00";
-    } else {
-      return "Variable Pricing";
+    if (product.colors && product.colors.length > 0) {
+      const color = product.colors[0];
+      return `₹${formatPrice(color.currentPrice)}`;
     }
+    return "₹0.00";
   };
 
-  // Get color count
-  const getColorCount = (product) => {
-    if (product.type === "simple") {
-      return product.colors?.length || 0;
-    } else {
-      let total = 0;
-      if (product.models) {
-        product.models.forEach(model => {
-          total += model.colors?.length || 0;
-        });
-      }
-      return total;
+  const getFragranceCount = (product) => {
+    if (product.colors && product.colors.length > 0) {
+      return product.colors[0].fragrances?.length || 0;
     }
+    return 0;
   };
 
-  // Helper to check if image is a URL
   const isImageUrl = (img) => {
     return typeof img === 'string' && (img.startsWith('http') || img.startsWith('/'));
   };
 
-  // Helper to get image source
   const getImageSrc = (img) => {
     if (isImageUrl(img)) {
       return img;
@@ -883,655 +524,453 @@ const ListProducts = () => {
     return "";
   };
 
-  // Helper to get image name
-  const getImageName = (img) => {
-    if (isImageUrl(img)) {
-      return img.split('/').pop();
-    } else if (img instanceof File) {
-      return img.name;
+  const exportAllAsExcel = () => {
+    if (filteredProducts.length === 0) {
+      toast.warning("No products to export");
+      return;
     }
-    return "Image";
+
+    const data = filteredProducts.map(p => ({
+      "Product Name": p.productName,
+      "Category": p.categoryName,
+      "SKU": p.SKU || "-",
+      "Fragrances": getFragranceCount(p),
+      "HSN Code": p.hsnCode || "-",
+      "Price": getDisplayPrice(p),
+      "Status": p.isActive ? 'Active' : 'Inactive'
+    }));
+
+    const XLSX = window.XLSX;
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+    XLSX.writeFile(workbook, "products_list.xlsx");
+    
+    toast.success("Excel file downloaded successfully!");
   };
 
-  // RENDER SIMPLE PRODUCT FORM
-  const renderSimpleProductForm = () => (
-    <>
-      <div className="form-section">
-        <h4>Product Details</h4>
-        <div className="row">
-          <div className="form-group">
-            <label>SKU *</label>
-            <input
-              name="SKU"
-              placeholder="Enter SKU"
-              value={formData.SKU}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Model Name (Optional)</label>
-            <input
-              name="modelName"
-              placeholder="Enter model name"
-              value={formData.modelName}
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="form-section">
-        <div className="section-header">
-          <h4>Product Specifications</h4>
-          <button type="button" onClick={addSpecField} className="add-btn small">
-            + Add
-          </button>
-        </div>
-
-        {formData.specifications.length === 0 ? (
-          <p className="no-items">No specifications added yet.</p>
-        ) : (
-          formData.specifications.map((spec, index) => (
-            <div key={index} className="spec-row">
+  return (
+    <AdminLayout>
+      <ToastContainer 
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+      <div className="list-products">
+        {/* HEADER */}
+        <div className="page-header">
+          <h2>Products ({filteredProducts.length})</h2>
+          <div className="right-section">
+            <div className="search-container">
+              <FaSearch className="search-icon" />
               <input
-                placeholder="Key"
-                value={spec.key}
-                onChange={(e) => handleSpecChange(index, 'key', e.target.value)}
-                className="spec-input"
+                type="text"
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <input
-                placeholder="Value"
-                value={spec.value}
-                onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
-                className="spec-input"
-              />
-              <button
-                type="button"
-                className="remove-btn small"
-                onClick={() => removeSpecField(index)}
+            </div>
+            <div className="action-buttons-group">
+              <button className="export-all-btn" onClick={exportAllAsExcel}>
+                <FaFileExcel /> Export
+              </button>
+              <button className="add-btn" 
+                onClick={() => {
+                  setFormMode("add");
+                  resetForm();
+                  setShowForm(true);
+                }}
+                disabled={loading}
               >
-                ×
+                <FaPlus /> Add
               </button>
             </div>
-          ))
-        )}
-      </div>
-
-      <div className="form-section">
-        <div className="section-header">
-          <h4>Color Variants</h4>
-          <button type="button" onClick={addColor} className="add-btn small">
-            + Add Color
-          </button>
+          </div>
         </div>
 
-        {formData.colors.length === 0 ? (
-          <p className="no-items">No color variants added yet.</p>
-        ) : (
-          formData.colors.map((color, colorIndex) => (
-            <div key={color.colorId || colorIndex} className="color-section">
-              <div className="color-header">
-                <h5>Color Variant {colorIndex + 1}</h5>
-                <button
-                  type="button"
-                  className="remove-btn small"
-                  onClick={() => removeColor(colorIndex)}
-                >
-                  ×
+        {/* DATA TABLE */}
+        <div className="data-table">
+          {loading && filteredProducts.length === 0 ? (
+            <div className="loading-container">
+              <div className="loading-spinner large"></div>
+              <p>Loading products...</p>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="no-products">
+              <p>No products found. Add your first product!</p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>SKU</th>
+                  <th>Fragrances</th>
+                  <th>HSN</th>
+                  <th>Price</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((p) => (
+                  <tr key={p.productId}>
+                    <td>
+                      {p.thumbnailImage ? (
+                        <img
+                          src={p.thumbnailImage}
+                          alt={p.productName}
+                          className="thumbnail"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://via.placeholder.com/50x50?text=No+Image";
+                          }}
+                        />
+                      ) : (
+                        <div className="no-image">No Image</div>
+                      )}
+                    </td>
+                    <td>{p.productName}</td>
+                    <td>{p.SKU || "-"}</td>
+                    <td>
+                      <span className="variant-count">
+                        {getFragranceCount(p)} fragrance(s)
+                      </span>
+                    </td>
+                    <td>{p.hsnCode || "-"}</td>
+                    <td>{getDisplayPrice(p)}</td>
+                    <td>
+                      <span className={`status ${p.isActive ? 'active' : 'inactive'}`}>
+                        {p.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="actions">
+                      <button
+                        className="edit-btn"
+                        onClick={() => openUpdateForm(p)}
+                        disabled={loading}
+                        title="Edit"
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
+                        className="delete-btn"
+                        onClick={() => setDeleteId(p.productId)}
+                        disabled={loading}
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* PRODUCT FORM MODAL - SIMPLE STACK LAYOUT */}
+        {showForm && (
+          <div className="modal-overlay" onClick={resetForm}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{formMode === "add" ? "Add New Product" : "Update Product"}</h3>
+                <button className="modal-close" onClick={resetForm}>
+                  <FaTimes />
                 </button>
               </div>
 
-              <div className="row">
-                <div className="form-group">
-                  <label>Color Name *</label>
-                  <input
-                    placeholder="Enter color name"
-                    value={color.colorName}
-                    onChange={(e) => handleColorChange(colorIndex, 'colorName', e.target.value)}
-                    required
-                  />
-                </div>
+              <div className="modal-body">
+                <div className="product-form">
+                  {/* BASIC INFORMATION - STACKED */}
+                  <div className="form-section">
+                    <h4>Basic Information</h4>
+                    
+                    <div className="form-group">
+                      <label>Product Name *</label>
+                      <input
+                        name="productName"
+                        placeholder="Enter product name"
+                        value={formData.productName}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group category-name">
+                      <label className="category-display">Category</label>
+                      <div className="category-display">
+                        {formData.categoryName || "Select a category"}
+                      </div>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>SKU *</label>
+                      <input
+                        name="SKU"
+                        placeholder="Enter SKU"
+                        value={formData.SKU}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>HSN Code</label>
+                      <input
+                        name="hsnCode"
+                        placeholder="Enter HSN Code"
+                        value={formData.hsnCode}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>Product Description</label>
+                      <textarea
+                        name="description"
+                        placeholder="Enter product description"
+                        value={formData.description}
+                        onChange={handleChange}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
 
-                <div className="form-group">
-                  <label>Original Price</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={color.originalPrice}
-                    onChange={(e) => handleColorChange(colorIndex, 'originalPrice', e.target.value)}
-                  />
-                </div>
+                  {/* THUMBNAIL IMAGE */}
+                  <div className="form-section">
+                    <h4>Thumbnail Image {formMode === "add" && "*"}</h4>
+                    <div className="form-group">
+                      <div className="file-upload-area">
+                        <label className="file-upload-label">
+                          <span>Choose Thumbnail Image</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleThumbnailChange}
+                            className="file-input"
+                          />
+                        </label>
+                        
+                        {thumbnailFile && (
+                          <div className="image-preview">
+                            <img src={URL.createObjectURL(thumbnailFile)} alt="Thumbnail preview" />
+                            <span className="file-name">{thumbnailFile.name}</span>
+                          </div>
+                        )}
+                        
+                        {!thumbnailFile && existingThumbnail && (
+                          <div className="image-preview">
+                            <p>Current thumbnail:</p>
+                            <img src={existingThumbnail} alt="Current thumbnail" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="form-group">
-                  <label>Current Price *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={color.currentPrice}
-                    onChange={(e) => handleColorChange(colorIndex, 'currentPrice', e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+                  {/* PRICING - STACKED */}
+                  <div className="form-section">
+                    <h4>Pricing</h4>
+                    
+                    <div className="form-group">
+                      <label>Original Price</label>
+                      <div className="price-input-wrapper">
+                        <span className="currency">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={formData.colors[0]?.originalPrice || ""}
+                          onChange={(e) => handlePriceChange('originalPrice', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>Current Price *</label>
+                      <div className="price-input-wrapper">
+                        <span className="currency">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={formData.colors[0]?.currentPrice || ""}
+                          onChange={(e) => handlePriceChange('currentPrice', e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="form-group">
-                <label>Color Images</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => handleColorImagesChange(colorIndex, e)}
-                />
-                {color.images && color.images.length > 0 && (
-                  <div className="color-images">
-                    <p>Selected images: {color.images.length}</p>
-                    <div className="color-thumbs">
-                      {color.images.map((img, imgIndex) => (
-                        <div key={imgIndex} className="image-item">
-                          {isImageUrl(img) ? (
-                            <img
-                              src={img}
-                              alt={`Color ${colorIndex + 1}`}
-                              className="gallery-thumb"
-                            />
-                          ) : (
-                            <div className="file-info">
-                              <span className="image-name">{getImageName(img)}</span>
-                            </div>
-                          )}
+                  {/* SPECIFICATIONS */}
+                  <div className="form-section">
+                    <div className="section-header">
+                      <h4>Product Specifications</h4>
+                      <button type="button" onClick={addSpecField} className="add-spec-btn">
+                        <FaPlus /> Add Field
+                      </button>
+                    </div>
+                    
+                    <div className="specifications-container">
+                      {formData.specifications.map((spec, index) => (
+                        <div key={index} className="spec-row">
+                          <input
+                            placeholder="Key (e.g., Material, Weight)"
+                            value={spec.key}
+                            onChange={(e) => handleSpecChange(index, 'key', e.target.value)}
+                            className="spec-input"
+                          />
+                          <input
+                            placeholder="Value (e.g., Cotton, 500g)"
+                            value={spec.value}
+                            onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
+                            className="spec-input"
+                          />
                           <button
                             type="button"
-                            onClick={() => removeColorImage(colorIndex, imgIndex)}
-                            className="remove-image-btn"
-                            title="Remove this image"
+                            className="remove-spec-btn"
+                            onClick={() => removeSpecField(index)}
+                            disabled={formData.specifications.length <= 2}
                           >
-                            ×
+                            <FaTimes />
                           </button>
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </>
-  );
 
-  // RENDER VARIABLE PRODUCT FORM
-  const renderVariableProductForm = () => (
-    <div className="form-section">
-      <div className="section-header">
-        <h4>Variable Options</h4>
-        <button type="button" onClick={addModel} className="add-btn small">
-          + Add Model
-        </button>
-      </div>
-
-      {formData.models.length === 0 ? (
-        <p className="no-items">No models added yet.</p>
-      ) : (
-        formData.models.map((model, modelIndex) => (
-          <div key={modelIndex} className="model-section">
-            <div className="model-header">
-              <h5>Model {modelIndex + 1}</h5>
-              <button
-                type="button"
-                className="remove-btn small"
-                onClick={() => removeModel(modelIndex)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="row">
-              <div className="form-group">
-                <label>Model Name *</label>
-                <input
-                  placeholder="Enter model name"
-                  value={model.modelName}
-                  onChange={(e) => handleModelChange(modelIndex, 'modelName', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Model SKU *</label>
-                <input
-                  placeholder="Enter SKU for this model"
-                  value={model.SKU}
-                  onChange={(e) => handleModelChange(modelIndex, 'SKU', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* ===== HIDDEN: MODEL DESCRIPTION - COMMENTED OUT AS REQUESTED ===== */}
-            
-          <div className="form-group">
-            <label>Model Description</label>
-            <textarea
-              placeholder="Enter description for this model"
-              value={model.description || ''}
-              onChange={(e) => handleModelChange(modelIndex, 'description', e.target.value)}
-              rows={2}
-            />
-          </div>
-         
-
-            <div className="form-group">
-              <div className="section-header">
-                <label>Model Specifications</label>
-                <button
-                  type="button"
-                  onClick={() => addModelSpecField(modelIndex)}
-                  className="add-btn xsmall"
-                >
-                  + Add
-                </button>
-              </div>
-              {model.modelSpecifications && model.modelSpecifications.length > 0 ? (
-                <div className="specs-list">
-                  {model.modelSpecifications.map((spec, specIndex) => (
-                    <div key={specIndex} className="spec-row">
-                      <input
-                        placeholder="Key"
-                        value={spec.key}
-                        onChange={(e) => handleModelSpecChange(modelIndex, specIndex, 'key', e.target.value)}
-                        className="spec-input"
-                      />
-                      <input
-                        placeholder="Value"
-                        value={spec.value}
-                        onChange={(e) => handleModelSpecChange(modelIndex, specIndex, 'value', e.target.value)}
-                        className="spec-input"
-                      />
-                      <button
-                        type="button"
-                        className="remove-btn xsmall"
-                        onClick={() => removeModelSpecField(modelIndex, specIndex)}
-                      >
-                        ×
+                  {/* FRAGRANCES */}
+                  <div className="form-section">
+                    <div className="section-header">
+                      <h4>Fragrances *</h4>
+                      <button type="button" onClick={addFragrance} className="add-spec-btn">
+                        <FaPlus /> Add Fragrance
                       </button>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="no-items">No model specifications added yet.</p>
-              )}
-            </div>
-
-            <div className="colors-section">
-              <div className="section-header">
-                <h6>Color Variants</h6>
-                <button
-                  type="button"
-                  onClick={() => addColorToModel(modelIndex)}
-                  className="add-btn small"
-                >
-                  + Add Color
-                </button>
-              </div>
-
-              {model.colors && model.colors.length > 0 ? (
-                model.colors.map((color, colorIndex) => (
-                  <div key={color.colorId || colorIndex} className="color-section">
-                    <div className="color-header">
-                      <h6>Color {colorIndex + 1}</h6>
-                      <button
-                        type="button"
-                        className="remove-btn small"
-                        onClick={() => removeColorFromModel(modelIndex, colorIndex)}
-                      >
-                        ×
-                      </button>
-                    </div>
-
-                    <div className="row">
-                      <div className="form-group">
-                        <label>Color Name *</label>
-                        <input
-                          placeholder="Enter color name"
-                          value={color.colorName}
-                          onChange={(e) => handleModelColorChange(modelIndex, colorIndex, 'colorName', e.target.value)}
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Original Price</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={color.originalPrice}
-                          onChange={(e) => handleModelColorChange(modelIndex, colorIndex, 'originalPrice', e.target.value)}
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Current Price *</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={color.currentPrice}
-                          onChange={(e) => handleModelColorChange(modelIndex, colorIndex, 'currentPrice', e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="form-group">
-                      <label>Color Images</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={(e) => handleModelColorImagesChange(modelIndex, colorIndex, e)}
-                      />
-                      {color.images && color.images.length > 0 && (
-                        <div className="color-images">
-                          <p>Selected images: {color.images.length}</p>
-                          <div className="color-thumbs">
-                            {color.images.map((img, imgIndex) => (
-                              <div key={imgIndex} className="image-item">
-                                {isImageUrl(img) ? (
-                                  <img
-                                    src={img}
-                                    alt={`Color ${colorIndex + 1}`}
-                                    className="gallery-thumb"
-                                  />
-                                ) : (
-                                  <div className="file-info">
-                                    <span className="image-name">{getImageName(img)}</span>
-                                  </div>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => removeModelColorImage(modelIndex, colorIndex, imgIndex)}
-                                  className="remove-image-btn"
-                                  title="Remove this image"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
+                    
+                    <p className="section-hint">Add different fragrance options (e.g., rose, lavender, sandalwood)</p>
+                    
+                    <div className="fragrances-container">
+                      {formData.colors[0]?.fragrances?.length === 0 ? (
+                        <div className="no-items">No fragrances added yet</div>
+                      ) : (
+                        formData.colors[0]?.fragrances?.map((fragrance, index) => (
+                          <div key={index} className="fragrance-row">
+                            <input
+                              placeholder="Enter fragrance name"
+                              value={fragrance}
+                              onChange={(e) => handleFragranceChange(index, e.target.value)}
+                              className="fragrance-input"
+                            />
+                            <button
+                              type="button"
+                              className="remove-fragrance-btn"
+                              onClick={() => removeFragrance(index)}
+                            >
+                              <FaTimes />
+                            </button>
                           </div>
-                        </div>
+                        ))
                       )}
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="no-items">No color variants added yet.</p>
-              )}
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
 
-  return (
-    <div className="list-products">
-      <div className="header">
-        <h2>Products ({products.length})</h2>
-        <button
-          onClick={() => {
-            setFormMode("add");
-            resetForm();
-            setShowForm(true);
-          }}
-          disabled={loading}
-        >
-          + Add Product
-        </button>
-      </div>
-
-      {loading && products.length === 0 ? (
-        <div className="loading">Loading products...</div>
-      ) : products.length === 0 ? (
-        <div className="no-products">
-          <p>No products found. Add your first product!</p>
-        </div>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Image</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Type</th>
-              <th>SKU</th>
-              <th>Variants</th>
-              <th>HSN</th>
-              <th>Price</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => (
-              <tr key={p.productId}>
-                <td>
-                  {p.thumbnailImage && (
-                    <img
-                      src={p.thumbnailImage}
-                      alt={p.productName}
-                      className="thumbnail"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "https://via.placeholder.com/50x50?text=No+Image";
-                      }}
-                    />
-                  )}
-                </td>
-                <td>{p.productName}</td>
-                <td>{p.categoryName}</td>
-                <td>
-                  <span className={`type-badge ${p.type}`}>
-                    {p.type}
-                  </span>
-                </td>
-                <td>
-                  {p.type === "simple" ? (
-                    p.SKU || "-"
-                  ) : (
-                    <span className="variable-sku">
-                      {p.models?.length || 0} model(s)
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <span className="variant-count">
-                    {getColorCount(p)} color(s)
-                  </span>
-                </td>
-                <td>{p.hsnCode || "-"}</td>
-                <td>
-                  {getDisplayPrice(p)}
-                </td>
-                <td>
-                  <span className={`status ${p.isActive ? 'active' : 'inactive'}`}>
-                    {p.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="actions">
-                  <button
-                    className="edit"
-                    onClick={() => openUpdateForm(p)}
-                    disabled={loading}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="delete"
-                    onClick={() => setDeleteId(p.productId)}
-                    disabled={loading}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {showForm && (
-        <div className="popup">
-          <div className="popup-box xlarge">
-            <div className="popup-header">
-              <h3>{formMode === "add" ? "Add Product" : "Update Product"}</h3>
-              <button className="close-btn" onClick={resetForm}>×</button>
-            </div>
-
-            <div className="form">
-              <div className="form-section">
-                <h4>Basic Information</h4>
-                <div className="row">
-                  <div className="form-group">
-                    <label>Product Name *</label>
-                    <input
-                      name="productName"
-                      placeholder="Enter product name"
-                      value={formData.productName}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Category *</label>
-                    <select
-                      name="categoryId"
-                      value={formData.categoryId}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map(cat => (
-                        <option key={cat.categoryId} value={cat.categoryId}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
+                  {/* PRODUCT IMAGES */}
+                  <div className="form-section">
+                    <h4>Product Images</h4>
+                    <div className="form-group">
+                      <div className="file-upload-area">
+                        <label className="file-upload-label">
+                          <span>Upload Product Images</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleProductImagesChange}
+                            className="file-input"
+                          />
+                        </label>
+                        
+                        {formData.colors[0]?.images?.length > 0 && (
+                          <div className="images-preview">
+                            <p>Selected images: {formData.colors[0]?.images?.length}</p>
+                            <div className="images-grid">
+                              {formData.colors[0]?.images?.map((img, imgIndex) => (
+                                <div key={imgIndex} className="image-preview-item">
+                                  <img
+                                    src={getImageSrc(img)}
+                                    alt={`Product ${imgIndex + 1}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeProductImage(imgIndex)}
+                                    className="remove-image-btn"
+                                  >
+                                    <FaTimes />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="row">
-                  <div className="form-group">
-                    <label>HSN Code</label>
-                    <input
-                      name="hsnCode"
-                      placeholder="Enter HSN Code"
-                      value={formData.hsnCode}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Product Type</label>
-                    <select
-                      name="type"
-                      value={formData.type}
-                      onChange={handleChange}
-                    >
-                      <option value="simple">Simple Product</option>
-                      <option value="variable">Variable Product</option>
-                    </select>
-                  </div>
-                </div>
-
-                {formData.type === "simple" && (
-                  <div className="form-group">
-                    <label>Product Description</label>
-                    <textarea
-                      name="description"
-                      placeholder="Enter product description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      rows={3}
-                    />
-                  </div>
+              <div className="modal-footer">
+                <button className="cancel-btn" onClick={resetForm} disabled={loading}>
+                  Cancel
+                </button>
+                {formMode === "add" ? (
+                  <button className="save-btn" onClick={addProduct} disabled={loading}>
+                    {loading ? "Adding..." : "Add Product"}
+                  </button>
+                ) : (
+                  <button className="save-btn" onClick={updateProduct} disabled={loading}>
+                    {loading ? "Updating..." : "Update Product"}
+                  </button>
                 )}
               </div>
+            </div>
+          </div>
+        )}
 
-              <div className="form-section">
-                <h4>Thumbnail Image {formMode === "add" && "*"}</h4>
-                <div className="form-group">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleThumbnailChange}
-                  />
-                  {thumbnailFile && (
-                    <div className="file-preview">
-                      Selected: {thumbnailFile.name}
-                    </div>
-                  )}
-                  {!thumbnailFile && existingThumbnail && (
-                    <div className="existing-image">
-                      <p>Current thumbnail:</p>
-                      <img
-                        src={existingThumbnail}
-                        alt="Current thumbnail"
-                        className="thumb-preview"
-                      />
-                    </div>
-                  )}
-                </div>
+        {/* DELETE CONFIRMATION */}
+        {deleteId && (
+          <div className="modal-overlay">
+            <div className="modal-content confirm-modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Confirm Delete</h3>
               </div>
-
-              {formData.type === "simple" ? renderSimpleProductForm() : renderVariableProductForm()}
-            </div>
-
-            <div className="btns">
-              <button className="cancel" onClick={resetForm} disabled={loading}>
-                Cancel
-              </button>
-
-              {formMode === "add" ? (
-                <button className="save" onClick={addProduct} disabled={loading}>
-                  {loading ? "Adding..." : "Add Product"}
+              <div className="modal-body">
+                <p>This will deactivate the product. Are you sure?</p>
+              </div>
+              <div className="modal-footer">
+                <button className="cancel-btn" onClick={() => setDeleteId(null)} disabled={loading}>
+                  Cancel
                 </button>
-              ) : (
-                <button className="save" onClick={updateProduct} disabled={loading}>
-                  {loading ? "Updating..." : "Update Product"}
+                <button className="delete-btn" onClick={deleteProduct} disabled={loading}>
+                  {loading ? "Deleting..." : "Yes, Delete"}
                 </button>
-              )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {deleteId && (
-        <div className="popup">
-          <div className="popup-box">
-            <h3>Confirm Delete</h3>
-            <p>This will deactivate the product. Are you sure?</p>
-            <div className="btns">
-              <button className="cancel" onClick={() => setDeleteId(null)} disabled={loading}>
-                Cancel
-              </button>
-              <button className="delete" onClick={deleteProduct} disabled={loading}>
-                {loading ? "Deleting..." : "Yes, Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </AdminLayout>
   );
 };
 

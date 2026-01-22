@@ -1,46 +1,294 @@
+@font-face {
+  font-family: "Heading";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Medium.ttf") format("truetype");
+  font-style: normal;
+}
+@font-face {
+  font-family: "LightHeading";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Light.ttf") format("truetype");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Content";
+  src: url("../../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Regular.ttf") format("truetype");
+  font-style: normal;
+}
+
 .register {
-  width: 100%;
-  height: 100vh;
-  background: #eef1f6;
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f5f5 0%, #f0f0f0 100%);
+  padding: 20px;
 
-  .register-box {
-    width: 350px;
+  &__container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 1000px;
+    width: 100%;
     background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.1);
+    min-height: 600px;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      max-width: 450px;
+      margin: 20px auto;
+    }
+  }
+
+  &__left {
+    position: relative;
+    overflow: hidden;
+
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+
+  &__image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &__overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.3) 0%,
+      rgba(0, 0, 0, 0.7) 100%
+    );
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: white;
     text-align: center;
+  }
 
-    h2 {
-      margin-bottom: 20px;
-      font-size: 22px;
+  &__logo {
+    font-size: 64px;
+    margin-bottom: 20px;
+    opacity: 0.9;
+  }
+
+  &__brand {
+    font-family: "Heading";
+    font-size: 32px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+
+  &__tagline {
+    font-family: "LightHeading";
+    font-size: 16px;
+    opacity: 0.9;
+    max-width: 300px;
+    line-height: 1.5;
+  }
+
+  &__right {
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+
+    @media (max-width: 768px) {
+      padding: 40px 30px;
+    }
+  }
+
+  &__form-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  &__header {
+    margin-bottom: 40px;
+    text-align: center;
+  }
+
+  &__title {
+    font-family: "Heading";
+    font-size: 32px;
+    color: #1a1a1a;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+
+    @media (max-width: 768px) {
+      font-size: 28px;
+    }
+  }
+
+  &__subtitle {
+    font-family: "LightHeading";
+    font-size: 16px;
+    color: #666;
+    letter-spacing: 0.5px;
+  }
+
+  &__form {
+    width: 100%;
+  }
+
+  &__form-group {
+    margin-bottom: 24px;
+  }
+
+  &__input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  &__input-icon {
+    position: absolute;
+    left: 16px;
+    color: #999;
+    font-size: 18px;
+    z-index: 1;
+  }
+
+  &__input {
+    width: 100%;
+    padding: 16px 16px 16px 48px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    font-family: "Content";
+    font-size: 15px;
+    color: #333;
+    background: #fafafa;
+    transition: all 0.3s ease;
+    outline: none;
+
+    &:focus {
+      border-color: #d4a017;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.1);
+      transform: translateY(-2px);
     }
 
-    input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 15px;
-      font-size: 15px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
+    &--error {
+      border-color: #e53e3e;
+      background: #fff5f5;
     }
 
-    button {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 5px;
-      background: #1f2f61;
-      color: white;
-      cursor: pointer;
-      transition: 0.3s;
+    &::placeholder {
+      color: #999;
+      font-family: "Content";
+    }
+  }
 
-      &:hover {
-        background: #142044;
-      }
+  &__password-toggle {
+    position: absolute;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #d4a017;
+    }
+  }
+
+  &__error {
+    font-family: "Content";
+    font-size: 13px;
+    color: #e53e3e;
+    margin-top: 6px;
+    margin-left: 4px;
+  }
+
+  &__submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #d4a017 0%, #b88b14 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: "LightHeading";
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+    box-shadow: 0 4px 15px rgba(212, 160, 23, 0.2);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(212, 160, 23, 0.3);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  }
+
+  &__footer {
+    margin-top: 30px;
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+  }
+
+  &__login-text {
+    font-family: "Content";
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 12px;
+  }
+
+  &__login-link {
+    color: #d4a017;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #b88b14;
+      text-decoration: underline;
+    }
+  }
+
+  &__forgot-link {
+    font-family: "Content";
+    font-size: 14px;
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #d4a017;
+      text-decoration: underline;
     }
   }
 }

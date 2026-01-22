@@ -1,0 +1,209 @@
+@font-face {
+  font-family: "Heading";
+  src: url("../../../assets/fonts/TT Ramillas Trial Medium.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "LightHeading";
+  src: url("../../../assets/fonts/TT Ramillas Trial Light.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Content";
+  src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf")
+    format("truetype");
+}
+
+/* ROOT */
+.ramayan-nav {
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+/* TOP BAR */
+.ramayan-nav__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 100px;
+
+  @media (max-width: 768px) {
+    padding: 5px 24px;
+  }
+}
+
+.ramayan-nav__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ramayan-nav__logo {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.ramayan-nav__title {
+  font-family: "Heading";
+  font-size: 26px;
+
+  @media (max-width: 768px) {
+    font-size: 20px;
+  }
+}
+
+.ramayan-nav__right {
+  font-family: "LightHeading";
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+/* DESKTOP MENU - FIXED THIS */
+.ramayan-nav__menu {
+  display: none; /* Hide by default for mobile */
+
+  @media (min-width: 769px) {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    padding: 14px 0;
+    list-style: none;
+    margin: 0;
+  }
+}
+
+.ramayan-nav__menu-item {
+  font-family: "Heading";
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* TOGGLE */
+.ramayan-nav__toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 22px;
+}
+
+/* MOBILE MENU */
+.ramayan-nav__mobile {
+  padding: 16px;
+  border-top: 1px solid #eee;
+}
+
+.ramayan-nav__mobile-item {
+  margin-bottom: 14px;
+
+  button {
+    width: 100%;
+    background: none;
+    border: none;
+    font-family: "LightHeading";
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+}
+
+.ramayan-nav__submenu {
+  margin-top: 8px;
+  padding-left: 10px;
+}
+
+.ramayan-nav__submenu-item {
+  font-family: "Content";
+  font-size: 13px;
+  padding: 6px 0;
+  color: #555;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .ramayan-desktop-only {
+    display: none !important;
+  }
+
+  .ramayan-nav__toggle {
+    display: block;
+  }
+
+  .ramayan-nav__menu {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .ramayan-nav__toggle {
+    display: none;
+  }
+  
+  .ramayan-nav__mobile {
+    display: none;
+  }
+}
+
+
+/* VALMIKI MODEL OVERLAY STYLES */
+.valmiki-model-overlay {
+  position: absolute;
+  top: 28%; /* Position right below navbar */
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #eee;
+  animation: slideDown 0.3s ease;
+
+  .valmiki-model {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0px 20px;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Active state for Valmiki menu item */
+.ramayan-nav__menu-item.active {
+  color: #d4a017; /* Gold color for active */
+  font-weight: bold;
+
+  svg {
+    transform: rotate(180deg);
+  }
+}
+
+/* Make sure navbar has relative positioning */
+.ramayan-nav {
+  position: relative;
+  z-index: 1001;
+//   position: sticky; 
+//   top: 55px; 
+}

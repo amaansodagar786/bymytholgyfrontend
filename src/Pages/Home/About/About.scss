@@ -1,0 +1,133 @@
+@font-face {
+  font-family: "Heading";
+  src: url("../../../assets/fonts/TT Ramillas Trial Medium.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "LightHeading";
+  src: url("../../../assets/fonts/TT Ramillas Trial Light.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Content";
+  src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf")
+    format("truetype");
+}
+
+/* SECTION */
+.about-ramayan {
+  background: #f6f3ef; // 👈 same soft background as reference
+  padding: 40px 0 0; // no bottom padding (image touches bottom)
+  overflow: hidden;
+}
+
+/* LAYOUT */
+.about-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 90px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: stretch;
+}
+
+/* TEXT */
+.about-content {
+  padding-bottom: 40px;
+
+  .about-small {
+    font-family: "LightHeading";
+    font-size: 35px;
+    margin-bottom: -10px;
+  }
+
+  .about-title {
+    font-family: "Heading";
+    font-size: 48px;
+    margin-bottom: 10px;
+    margin-top: 0;
+  }
+
+  p {
+    font-family: "Content";
+    font-size: 16px;
+    line-height: 1.7;
+    margin-bottom: 18px;
+    color: #000;
+    max-width: 520px;
+  }
+
+  .about-intro {
+    margin-top: 30px;
+  }
+}
+
+/* IMAGE */
+.about-image {
+  display: flex;
+  align-items: flex-end; // 👈 touches bottom
+  justify-content: center;
+  transform-style: preserve-3d; // For 3D rotation effect
+  perspective: 1000px; // For 3D depth
+
+  img {
+    width: 100%;
+    max-height: 500px;
+    object-fit: contain;
+    display: block;
+    backface-visibility: hidden; // Smooth 3D rotation
+  }
+}
+
+/* ---------------- MOBILE ---------------- */
+@media (max-width: 768px) {
+  .about-container {
+    grid-template-columns: 1fr;
+    padding: 0 20px;
+    text-align: center;
+  }
+
+  .about-content {
+    order: 1;
+    padding-bottom: 40px;
+
+    .about-small {
+      font-size: 22px;
+      margin-top: 0px;
+    }
+
+    .about-title {
+      font-size: 34px;
+    }
+
+    p {
+      max-width: 100%;
+      text-align: center;
+    }
+  }
+
+  .about-image {
+    order: 2;
+    margin-bottom: 30px;
+    perspective: none; // Remove 3D effect on mobile for better performance
+
+    img {
+      max-height: 420px;
+    }
+  }
+}
+
+/* Animation Performance Optimizations */
+.about-container {
+  will-change: transform, opacity;
+}
+
+.about-content * {
+  will-change: transform, opacity;
+}
+
+.about-image {
+  will-change: transform, opacity;
+}

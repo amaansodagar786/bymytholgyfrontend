@@ -24,11 +24,15 @@ import AdminOrders from "./Pages/AdminPanel/AdminOrders/AdminOrders";
 import UserReviews from "./Pages/Profile/UserReviews/UserReviews";
 import AllProducts from "./Pages/AllProducts/AllProducts";
 import CategoryProducts from "./Pages/CategoryProducts/CategoryProducts";
+import Footer from "./Components/Footer/Footer";
+import ScrollToTop from "./Components/GoToTop/ScrollToTop";
+import Cart from "./Pages/Cart/Cart";
 
 function App() {
 
   return (
     <Router>
+       <ScrollToTop /> 
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
@@ -37,8 +41,9 @@ function App() {
         <Route path="/adminregister" element={<AdminRegister />} />
         <Route path="/adminlogin" element={<AdminLogin />} />
         <Route path="/product/:productId" element={<ProductPage />} />
-        <Route path="*" element={<NotFound />} /> {/* Optional: 404 page */}
+        <Route path="*" element={<NotFound />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/cart" element={<Cart />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<UserOrders />} />
@@ -69,9 +74,9 @@ function App() {
         <Route
           path="/admin/products"
           element={
-            <AdminLayout>
+            
               <ListProducts />
-            </AdminLayout>
+            
           }
         />
         <Route
@@ -101,6 +106,7 @@ function App() {
         />
 
       </Routes>
+      <Footer/>
     </Router>
   );
 }

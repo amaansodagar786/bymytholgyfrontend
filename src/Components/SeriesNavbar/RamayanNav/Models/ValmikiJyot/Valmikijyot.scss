@@ -1,0 +1,69 @@
+@font-face {
+  font-family: "Heading";
+  src: url("../../../assets/fonts/TT Ramillas Trial Medium.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Content";
+  src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf")
+    format("truetype");
+}
+
+/* ROOT SECTION */
+.valmiki-model {
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+/* INNER WRAP */
+.valmiki-model__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+/* LEFT CONTENT */
+.valmiki-model__content {
+  flex: 1;
+}
+
+.valmiki-title {
+  font-family: "Heading";
+  font-size: 30px;
+  margin-bottom: 16px;
+  margin-top: 0px;
+}
+
+/* LIST */
+.valmiki-list {
+  list-style: disc;
+  padding-left: 18px;
+  font-family: "Content";
+  font-size: 17px;
+  line-height: 1.7;
+
+  li {
+    margin-bottom: 4px;
+  }
+}
+
+/* RIGHT IMAGE */
+.valmiki-model__image {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+
+  img {
+    width: 100%;
+    max-width: 520px;
+    height: auto;
+    object-fit: cover;
+  }
+}
+
+/* ❌ NO MOBILE STYLES INTENTIONALLY */

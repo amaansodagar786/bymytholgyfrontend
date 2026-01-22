@@ -1,4 +1,3 @@
-// components/Checkout.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -34,10 +33,8 @@ const Checkout = () => {
   const token = localStorage.getItem('token');
   const userId = localStorage.getItem('userId');
 
-
   const [checkoutMode, setCheckoutMode] = useState('cart'); // 'cart' or 'buy-now'
   const [buyNowData, setBuyNowData] = useState(null);
-
 
   // Step Names
   const steps = [
@@ -58,8 +55,15 @@ const Checkout = () => {
       setCheckoutMode('buy-now');
       setBuyNowData(location.state.productData);
       processBuyNowData(location.state.productData);
+    } else if (location.state && location.state.cartMode) {
+      // Cart mode with data passed from cart
+      setCheckoutMode('cart');
+      setCartItems(location.state.cartData.items);
+      setCartSummary(location.state.cartData.summary);
+      fetchAddresses();
+      setLoading(false);
     } else {
-      // Normal cart mode
+      // Normal cart mode (fetch from API)
       setCheckoutMode('cart');
       fetchCartData();
       fetchAddresses();
@@ -71,10 +75,16 @@ const Checkout = () => {
     try {
       setLoading(true);
 
+      // Add fragrance to buy now data if not already present
+      const enhancedProductData = {
+        ...productData,
+        selectedFragrance: productData.selectedFragrance || null
+      };
+
       // Create checkout session on backend
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/buynow/create-checkout-session`,
-        productData,
+        enhancedProductData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -95,8 +105,6 @@ const Checkout = () => {
       setLoading(false);
     }
   };
-
-
 
   // Fetch cart data
   const fetchCartData = async () => {
@@ -281,7 +289,7 @@ const Checkout = () => {
     try {
       setSaving(true);
 
-      // Prepare order data based on checkout mode
+      // Prepare order data with fragrance
       const orderData = {
         userId,
         checkoutMode,
@@ -293,6 +301,7 @@ const Checkout = () => {
           finalPrice: item.finalPrice,
           totalPrice: item.totalPrice,
           selectedColor: item.selectedColor,
+          selectedFragrance: item.selectedFragrance || null, // INCLUDED FRAGRANCE
           selectedSize: item.selectedSize,
           selectedModel: item.selectedModel,
           hasOffer: item.hasOffer,
@@ -302,6 +311,8 @@ const Checkout = () => {
         address: selectedAddress,
         paymentMethod: 'cod'
       };
+
+      console.log('🚀 Order data with fragrance:', orderData);
 
       // Call backend to create order
       const response = await axios.post(
@@ -396,6 +407,10 @@ const Checkout = () => {
                 {item.selectedColor && (
                   <span className="variant-chip">{item.selectedColor.colorName}</span>
                 )}
+                {/* ADDED FRAGRANCE DISPLAY */}
+                {item.selectedFragrance && (
+                  <span className="variant-chip fragrance">🍃 {item.selectedFragrance}</span>
+                )}
                 {item.selectedSize && (
                   <span className="variant-chip">Size: {item.selectedSize}</span>
                 )}
@@ -412,6 +427,13 @@ const Checkout = () => {
                   )}
                 </span>
               </div>
+
+              {/* Offer label */}
+              {item.hasOffer && item.offerDetails && (
+                <div className="offer-label">
+                  🎁 {item.offerDetails.offerLabel} ({item.offerDetails.offerPercentage}% OFF)
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -658,6 +680,34 @@ const Checkout = () => {
             )}
           </div>
 
+          {/* Order Items Summary */}
+          <div className="order-items-summary">
+            <p><strong>Order Items:</strong></p>
+            {cartItems.map((item, index) => (
+              <div key={index} className="order-item-summary">
+                <div className="item-summary-details">
+                  <span className="item-name">{item.productName}</span>
+                  <div className="item-variants-summary">
+                    {item.selectedModel && (
+                      <span className="variant-chip-small">{item.selectedModel.modelName}</span>
+                    )}
+                    {item.selectedColor && (
+                      <span className="variant-chip-small">{item.selectedColor.colorName}</span>
+                    )}
+                    {item.selectedFragrance && (
+                      <span className="variant-chip-small fragrance">🍃 {item.selectedFragrance}</span>
+                    )}
+                    {item.selectedSize && (
+                      <span className="variant-chip-small">Size: {item.selectedSize}</span>
+                    )}
+                    <span className="quantity-chip">Qty: {item.quantity}</span>
+                  </div>
+                </div>
+                <span className="item-price">₹{(item.finalPrice * item.quantity).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+
           <div className="order-summary-final">
             <div className="summary-row">
               <span>Items Total:</span>
@@ -761,7 +811,6 @@ const Checkout = () => {
           Step {currentStep} of 3
         </div>
 
-  
         {currentStep < 3 ? (
           <button className="next-btn" onClick={goToNextStep}>
             Continue to {currentStep === 1 ? 'Address' : 'Payment'}

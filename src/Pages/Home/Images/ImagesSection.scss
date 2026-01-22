@@ -1,0 +1,310 @@
+/* ImagesSection Component Styles */
+
+.images-section {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+
+    /* CANDLES SECTION WITH SHADOWS */
+    &__candles {
+        padding: 60px 0;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+
+        @media (max-width: 768px) {
+            padding: 40px 0;
+            margin-bottom: 15px;
+        }
+    }
+
+    /* Shadow Gradients */
+    &__shadow {
+        position: absolute;
+        top: 0;
+        width: 120px;
+        height: 100%;
+        z-index: 10;
+        pointer-events: none;
+
+        @media (max-width: 768px) {
+            width: 60px;
+        }
+
+        &--left {
+            left: 0;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+        }
+
+        &--right {
+            right: 0;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
+        }
+    }
+
+    &__candles-track {
+        display: flex;
+        gap: 30px;
+        justify-content: center;
+        align-items: center;
+        padding: 0 60px;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+
+        /* Hide scrollbar */
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            animation: slideCandles 25s linear infinite;
+            padding: 0 30px;
+            justify-content: flex-start;
+        }
+    }
+
+    &__candle-item {
+        flex: 0 0 auto;
+        width: 220px;
+        height: 340px;
+        position: relative;
+        transform-style: preserve-3d; /* For 3D rotation */
+        perspective: 1000px; /* For 3D effect */
+
+        @media (max-width: 1024px) {
+            width: 200px;
+            height: 300px;
+        }
+
+        @media (max-width: 768px) {
+            width: 180px;
+            height: 260px;
+            margin-right: 20px;
+        }
+    }
+
+    &__candle-image-wrapper {
+        width: 100%;
+        height: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        transition: all 0.4s ease;
+        backface-visibility: hidden; /* For smooth 3D */
+
+        &:hover {
+            transform: scale(1.02) translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            backface-visibility: hidden; /* For smooth 3D */
+        }
+    }
+
+    /* PLATFORMS SECTION */
+    &__platforms {
+        text-align: center;
+        padding: 0 20px 80px;
+
+        @media (max-width: 768px) {
+            padding: 0 15px 60px;
+        }
+    }
+
+    &__title {
+        font-size: clamp(32px, 4.5vw, 52px);
+        margin-bottom: 14px;
+        font-weight: 700;
+        line-height: 1.2;
+        will-change: transform, opacity; /* Performance */
+
+        @media (max-width: 768px) {
+            font-size: clamp(28px, 6vw, 40px);
+        }
+    }
+
+    &__description {
+        font-size: clamp(16px, 2.4vw, 22px);
+        color: #555;
+        margin-bottom: 40px;
+        line-height: 1.5;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        will-change: transform, opacity; /* Performance */
+
+        @media (max-width: 768px) {
+            font-size: clamp(14px, 3vw, 18px);
+            margin-bottom: 30px;
+            padding: 0 10px;
+        }
+    }
+
+    /* LOGOS MARQUEE */
+    &__logos-outer {
+        max-width: 500px;
+        margin: 0 auto;
+        overflow: hidden;
+        position: relative;
+
+        /* Add shadow to logos container too */
+        &::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 60px;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        &::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 60px;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
+            z-index: 2;
+            pointer-events: none;
+        }
+    }
+
+    &__logos-inner {
+        display: flex;
+        gap: 40px;
+        width: max-content;
+        animation: slideLogos 18s linear infinite;
+
+        @media (max-width: 768px) {
+            gap: 30px;
+        }
+    }
+
+    &__logo-item {
+        width: 90px;
+        height: 90px;
+        flex-shrink: 0;
+        transform-style: preserve-3d; /* For 3D effect */
+
+        @media (max-width: 768px) {
+            width: 70px;
+            height: 70px;
+        }
+    }
+
+    &__logo-box {
+        width: 100%;
+        height: 100%;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+        text-transform: uppercase;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+        backface-visibility: hidden; /* For smooth 3D */
+
+        @media (max-width: 768px) {
+            font-size: 14px;
+            border-radius: 18px;
+        }
+    }
+
+    /* ANIMATIONS */
+    @keyframes slideCandles {
+        0% {
+            transform: translateX(0);
+        }
+
+        100% {
+            transform: translateX(-50%);
+        }
+    }
+
+    @keyframes slideLogos {
+        0% {
+            transform: translateX(0);
+        }
+
+        100% {
+            transform: translateX(-50%);
+        }
+    }
+
+    /* RESPONSIVE ADJUSTMENTS */
+    @media (max-width: 768px) {
+        &__candles-track {
+            animation-play-state: running;
+        }
+
+        &__logos-inner {
+            animation-play-state: running;
+        }
+    }
+
+    /* For tablets */
+    @media (min-width: 769px) and (max-width: 1024px) {
+        &__candle-item {
+            width: 190px;
+            height: 290px;
+        }
+
+        &__logos-inner {
+            gap: 35px;
+        }
+
+        &__logo-item {
+            width: 85px;
+            height: 85px;
+        }
+    }
+
+    /* Desktop large screens */
+    @media (min-width: 1200px) {
+        &__candles-track {
+            gap: 40px;
+        }
+
+        &__candle-item {
+            width: 250px;
+            height: 380px;
+        }
+
+        &__logos-inner {
+            gap: 50px;
+        }
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+        &__candles-track {
+            animation: none;
+        }
+
+        &__logos-inner {
+            animation: none;
+        }
+
+        &__candle-image-wrapper:hover {
+            transform: none;
+        }
+
+        &__logo-box:hover {
+            transform: none;
+        }
+    }
+}

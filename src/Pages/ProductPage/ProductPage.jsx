@@ -1,12 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { FaHeart, FaRegHeart } from "react-icons/fa";
 import "./ProductPage.scss";
 
 function ProductPage() {
   const { productId } = useParams();
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
+
+  // Refs for scroll control
+  const imagesContainerRef = useRef(null);
+  const detailsContainerRef = useRef(null);
+  const mainContainerRef = useRef(null);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,13 +22,13 @@ function ProductPage() {
   const [offers, setOffers] = useState([]);
   const [currentOffer, setCurrentOffer] = useState(null);
 
-  // For simple products
-  const [selectedColor, setSelectedColor] = useState(null);
+  // For simple products (fragrance-based)
+  const [selectedFragrance, setSelectedFragrance] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
 
   // For variable products
   const [selectedModel, setSelectedModel] = useState(null);
-  const [selectedModelColor, setSelectedModelColor] = useState(null);
+  const [selectedModelFragrance, setSelectedModelFragrance] = useState(null);
   const [selectedModelSize, setSelectedModelSize] = useState(null);
 
   // Quantity selector
@@ -32,7 +38,6 @@ function ProductPage() {
   const [images, setImages] = useState([]);
   const [wishlist, setWishlist] = useState(false);
   const [wishlistItem, setWishlistItem] = useState(null);
-  const [relatedProducts, setRelatedProducts] = useState([]);
 
   const [inventoryStatus, setInventoryStatus] = useState({
     stock: 0,
@@ -40,10 +45,10 @@ function ProductPage() {
     status: 'checking'
   });
 
-  // NEW: Max quantity based on stock
+  // Max quantity based on stock
   const [maxQuantity, setMaxQuantity] = useState(99);
 
-  // Add these states to your ProductPage component
+  // Reviews states
   const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -54,6 +59,10 @@ function ProductPage() {
   });
   const [reviewsPage, setReviewsPage] = useState(1);
   const [reviewsLimit] = useState(5);
+
+  // Scroll state
+  const [isImagesScrolling, setIsImagesScrolling] = useState(false);
+  const [isDetailsScrolling, setIsDetailsScrolling] = useState(false);
 
   // Fetch reviews for the product
   const fetchProductReviews = async (page = 1) => {
@@ -84,9 +93,6 @@ function ProductPage() {
     }
   };
 
-
-
-
   // Call this in useEffect when product loads
   useEffect(() => {
     if (productId) {
@@ -94,19 +100,86 @@ function ProductPage() {
     }
   }, [productId]);
 
-  // Render star rating
+  // Initialize scroll behavior after product loads
+  useEffect(() => {
+    if (product && imagesContainerRef.current && detailsContainerRef.current) {
+      setupScrollBehavior();
+    }
+  }, [product]);
+
+  const setupScrollBehavior = () => {
+    const imagesContainer = imagesContainerRef.current;
+    const detailsContainer = detailsContainerRef.current;
+
+    if (!imagesContainer || !detailsContainer) return;
+
+    // Handle images container scroll
+    const handleImagesScroll = () => {
+      setIsImagesScrolling(true);
+      
+      // Calculate scroll percentage for images
+      const imagesScrollHeight = imagesContainer.scrollHeight - imagesContainer.clientHeight;
+      const imagesScrollTop = imagesContainer.scrollTop;
+      const imagesScrollPercent = imagesScrollHeight > 0 ? (imagesScrollTop / imagesScrollHeight) : 0;
+      
+      // Calculate corresponding position in details
+      const detailsScrollHeight = detailsContainer.scrollHeight - detailsContainer.clientHeight;
+      const targetDetailsScroll = detailsScrollHeight * imagesScrollPercent;
+      
+      // Sync details scroll
+      if (!isDetailsScrolling) {
+        detailsContainer.scrollTop = targetDetailsScroll;
+      }
+      
+      setTimeout(() => setIsImagesScrolling(false), 100);
+    };
+
+    // Handle details container scroll
+    const handleDetailsScroll = () => {
+      setIsDetailsScrolling(true);
+      
+      // Calculate scroll percentage for details
+      const detailsScrollHeight = detailsContainer.scrollHeight - detailsContainer.clientHeight;
+      const detailsScrollTop = detailsContainer.scrollTop;
+      const detailsScrollPercent = detailsScrollHeight > 0 ? (detailsScrollTop / detailsScrollHeight) : 0;
+      
+      // Calculate corresponding position in images
+      const imagesScrollHeight = imagesContainer.scrollHeight - imagesContainer.clientHeight;
+      const targetImagesScroll = imagesScrollHeight * detailsScrollPercent;
+      
+      // Sync images scroll
+      if (!isImagesScrolling) {
+        imagesContainer.scrollTop = targetImagesScroll;
+      }
+      
+      setTimeout(() => setIsDetailsScrolling(false), 100);
+    };
+
+    imagesContainer.addEventListener('scroll', handleImagesScroll);
+    detailsContainer.addEventListener('scroll', handleDetailsScroll);
+
+    return () => {
+      imagesContainer.removeEventListener('scroll', handleImagesScroll);
+      detailsContainer.removeEventListener('scroll', handleDetailsScroll);
+    };
+  };
+
+  // Render star rating - FIXED to handle number properly
   const renderRatingStars = (rating, size = 'medium') => {
+    // Ensure rating is a number
+    const numericRating = typeof rating === 'number' ? rating : parseFloat(rating) || 0;
+    
     const stars = [];
-    const starSize = size === 'small' ? '1.2rem' : '1.5rem';
+    const starSize = size === 'small' ? '1.2rem' : size === 'large' ? '1.8rem' : '1.5rem';
 
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <span
           key={i}
-          className={`star ${i <= Math.round(rating) ? 'filled' : 'empty'}`}
+          className={`star ${i <= Math.round(numericRating) ? 'filled' : 'empty'}`}
           style={{ fontSize: starSize }}
         >
-          {i <= rating ? '★' : i <= Math.floor(rating) ? '★' : i - rating <= 0.5 && i - rating > 0 ? '★' : '☆'}
+          {i <= numericRating ? '★' : i <= Math.floor(numericRating) ? '★' : i - numericRating <= 0.5 && i - numericRating > 0 ? '★' : '☆'}
         </span>
       );
     }
@@ -135,35 +208,24 @@ function ProductPage() {
   // Open reviews modal
   const handleOpenReviewsModal = () => {
     setShowReviewsModal(true);
-    fetchProductReviews(1); // Refresh with page 1
+    fetchProductReviews(1);
   };
-
-
-
-
-
-
-
 
   // Fetch product data AND offers
   useEffect(() => {
     fetchProduct();
   }, [productId]);
 
-
   useEffect(() => {
-    if (product) {
+    if (product && (selectedFragrance || selectedModelFragrance)) {
       fetchInventoryStatus();
     }
-  }, [product, selectedColor, selectedModel, selectedModelColor]);
+  }, [product, selectedFragrance, selectedModel, selectedModelFragrance]);
 
   // Update max quantity when inventory status changes
   useEffect(() => {
     if (inventoryStatus.status === 'in-stock' || inventoryStatus.status === 'low-stock') {
-      // Set max quantity to available stock
       setMaxQuantity(inventoryStatus.stock);
-
-      // Adjust current quantity if it exceeds stock
       if (quantity > inventoryStatus.stock) {
         setQuantity(inventoryStatus.stock);
       }
@@ -196,26 +258,27 @@ function ProductPage() {
 
       // Initialize selections based on product type
       if (productData.type === "simple") {
-        // Simple product - initialize with first color
+        // Simple product - initialize with first fragrance
         if (productData.colors && productData.colors.length > 0) {
-          const firstColor = productData.colors[0];
-          setSelectedColor(firstColor);
+          const defaultColor = productData.colors[0];
+          
+          // Get fragrances from default color
+          const fragrances = defaultColor.fragrances || [];
+          if (fragrances.length > 0) {
+            const firstFragrance = fragrances[0];
+            setSelectedFragrance(firstFragrance);
 
-          // Check if first color has offer - PASS THE OFFERS DATA
-          checkAndSetOfferWithData(productData, firstColor, null, offersData);
+            // Check if first fragrance has offer
+            checkAndSetOfferWithData(productData, defaultColor, null, firstFragrance, offersData);
 
-          // Set images from selected color
-          if (firstColor.images && firstColor.images.length > 0) {
-            setMainImage(firstColor.images[0]);
-            setImages(firstColor.images);
-          } else if (productData.thumbnailImage) {
-            setMainImage(productData.thumbnailImage);
-            setImages([productData.thumbnailImage]);
-          }
-
-          // Initialize with first size if available
-          if (firstColor.sizes && firstColor.sizes.length > 0) {
-            setSelectedSize(firstColor.sizes[0]);
+            // Set images from default color
+            if (defaultColor.images && defaultColor.images.length > 0) {
+              setMainImage(defaultColor.images[0]);
+              setImages(defaultColor.images);
+            } else if (productData.thumbnailImage) {
+              setMainImage(productData.thumbnailImage);
+              setImages([productData.thumbnailImage]);
+            }
           }
         } else {
           // No colors - use product thumbnail
@@ -225,45 +288,34 @@ function ProductPage() {
           }
         }
       } else if (productData.type === "variable") {
-        // Variable product - initialize with first model and its first color
+        // Variable product - initialize with first model and its first fragrance
         if (productData.models && productData.models.length > 0) {
           const firstModel = productData.models[0];
           setSelectedModel(firstModel);
 
           if (firstModel.colors && firstModel.colors.length > 0) {
-            const firstModelColor = firstModel.colors[0];
-            setSelectedModelColor(firstModelColor);
+            const defaultModelColor = firstModel.colors[0];
+            const modelFragrances = defaultModelColor.fragrances || [];
+            
+            if (modelFragrances.length > 0) {
+              const firstModelFragrance = modelFragrances[0];
+              setSelectedModelFragrance(firstModelFragrance);
 
-            // Check if first model color has offer - PASS THE OFFERS DATA
-            checkAndSetOfferWithData(productData, firstModelColor, firstModel, offersData);
+              // Check if first model fragrance has offer
+              checkAndSetOfferWithData(productData, defaultModelColor, firstModel, firstModelFragrance, offersData);
 
-            // Set images from selected model color
-            if (firstModelColor.images && firstModelColor.images.length > 0) {
-              setMainImage(firstModelColor.images[0]);
-              setImages(firstModelColor.images);
-            } else if (productData.thumbnailImage) {
-              setMainImage(productData.thumbnailImage);
-              setImages([productData.thumbnailImage]);
-            }
-
-            // Initialize with first size if available
-            if (firstModelColor.sizes && firstModelColor.sizes.length > 0) {
-              setSelectedModelSize(firstModelColor.sizes[0]);
+              // Set images from default model color
+              if (defaultModelColor.images && defaultModelColor.images.length > 0) {
+                setMainImage(defaultModelColor.images[0]);
+                setImages(defaultModelColor.images);
+              } else if (productData.thumbnailImage) {
+                setMainImage(productData.thumbnailImage);
+                setImages([productData.thumbnailImage]);
+              }
             }
           }
         }
       }
-
-      // Fetch related products from same category
-      const relatedRes = await axios.get(
-        `${import.meta.env.VITE_API_URL}/products/all`
-      );
-
-      const sameCategoryProducts = relatedRes.data
-        .filter(p => p.categoryId === productData.categoryId && p.productId !== productData.productId)
-        .slice(0, 4);
-
-      setRelatedProducts(sameCategoryProducts);
 
     } catch (err) {
       console.error("Error fetching product:", err);
@@ -281,9 +333,19 @@ function ProductPage() {
 
       const params = new URLSearchParams();
 
-      const currentColor = product.type === "simple" ? selectedColor : selectedModelColor;
-      if (currentColor?.colorId) {
-        params.append('colorId', currentColor.colorId);
+      // Get default color ID (always first color)
+      const defaultColorId = product.type === "simple" 
+        ? (product.colors?.[0]?.colorId)
+        : (selectedModel?.colors?.[0]?.colorId);
+
+      if (defaultColorId) {
+        params.append('colorId', defaultColorId);
+      }
+
+      // Add fragrance parameter
+      const currentFragrance = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
+      if (currentFragrance) {
+        params.append('fragrance', currentFragrance);
       }
 
       if (product.type === "variable" && selectedModel?._id) {
@@ -294,25 +356,24 @@ function ProductPage() {
         `${import.meta.env.VITE_API_URL}/inventory/product/${product.productId}/status?${params.toString()}`
       );
 
-      // Set ALL data from backend including actual threshold
       setInventoryStatus({
         stock: response.data.stock,
-        threshold: response.data.threshold, // From DB
-        status: response.data.status // From DB logic
+        threshold: response.data.threshold,
+        status: response.data.status
       });
 
     } catch (error) {
       console.error('Error fetching inventory:', error);
       setInventoryStatus({
         stock: 0,
-        threshold: 10, // Fallback
+        threshold: 10,
         status: 'error'
       });
     }
   };
 
   // Function to check and set offer with data
-  const checkAndSetOfferWithData = (productData, color, model, offersArray) => {
+  const checkAndSetOfferWithData = (productData, color, model, fragrance, offersArray) => {
     if (!color || !color.colorId) {
       setCurrentOffer(null);
       return;
@@ -320,6 +381,7 @@ function ProductPage() {
 
     const variableModelId = model ? (model._id || model.modelId) : "";
 
+    // Find offer for this color (fragrance offers are based on color)
     const offer = offersArray.find(offer =>
       offer.productId === productData.productId &&
       offer.colorId === color.colorId &&
@@ -331,8 +393,8 @@ function ProductPage() {
   };
 
   // Function to check and set offer
-  const checkAndSetOffer = (productData, color, model) => {
-    checkAndSetOfferWithData(productData, color, model, offers);
+  const checkAndSetOffer = (productData, color, model, fragrance) => {
+    checkAndSetOfferWithData(productData, color, model, fragrance, offers);
   };
 
   // Fetch wishlist status when product loads or changes
@@ -347,10 +409,19 @@ function ProductPage() {
           const params = new URLSearchParams();
           params.append('userId', userId);
 
-          // Add variant details if available
-          const currentColor = product.type === "simple" ? selectedColor : selectedModelColor;
-          if (currentColor && currentColor.colorId) {
-            params.append('colorId', currentColor.colorId);
+          // Add fragrance details if available
+          const currentFragrance = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
+          if (currentFragrance) {
+            params.append('fragrance', currentFragrance);
+          }
+
+          // Add default color ID
+          const defaultColorId = product.type === "simple"
+            ? (product.colors?.[0]?.colorId)
+            : (selectedModel?.colors?.[0]?.colorId);
+          
+          if (defaultColorId) {
+            params.append('colorId', defaultColorId);
           }
 
           if (product.type === "variable" && selectedModel && selectedModel._id) {
@@ -382,7 +453,7 @@ function ProductPage() {
     if (product) {
       checkWishlistStatus();
     }
-  }, [product, token, selectedColor, selectedModel, selectedModelColor, selectedSize, selectedModelSize]);
+  }, [product, token, selectedFragrance, selectedModel, selectedModelFragrance, selectedSize, selectedModelSize]);
 
   // Handle pre-selection from URL parameters
   useEffect(() => {
@@ -398,37 +469,37 @@ function ProductPage() {
         if (model) {
           setSelectedModel(model);
 
-          // Check for color within this model
-          const colorId = urlParams.get('color');
-          if (colorId && model.colors) {
-            const color = model.colors.find(c => c.colorId === colorId);
-            if (color) {
-              setSelectedModelColor(color);
+          // Check for fragrance within this model
+          const fragrance = urlParams.get('fragrance');
+          if (fragrance && model.colors && model.colors.length > 0) {
+            const modelColor = model.colors[0];
+            if (modelColor.fragrances && modelColor.fragrances.includes(fragrance)) {
+              setSelectedModelFragrance(fragrance);
               // Check offer for this selection
-              checkAndSetOffer(product, color, model);
+              checkAndSetOffer(product, modelColor, model, fragrance);
               // Set images
-              if (color.images && color.images.length > 0) {
-                setMainImage(color.images[0]);
-                setImages(color.images);
+              if (modelColor.images && modelColor.images.length > 0) {
+                setMainImage(modelColor.images[0]);
+                setImages(modelColor.images);
               }
             }
           }
         }
       }
 
-      // Check for color selection (for simple products or if model not specified)
-      const colorId = urlParams.get('color');
-      if (colorId && !urlParams.get('model')) {
-        if (product.type === "simple" && product.colors) {
-          const color = product.colors.find(c => c.colorId === colorId);
-          if (color) {
-            setSelectedColor(color);
+      // Check for fragrance selection (for simple products or if model not specified)
+      const fragrance = urlParams.get('fragrance');
+      if (fragrance && !urlParams.get('model')) {
+        if (product.type === "simple" && product.colors && product.colors.length > 0) {
+          const defaultColor = product.colors[0];
+          if (defaultColor.fragrances && defaultColor.fragrances.includes(fragrance)) {
+            setSelectedFragrance(fragrance);
             // Check offer for this selection
-            checkAndSetOffer(product, color, null);
+            checkAndSetOffer(product, defaultColor, null, fragrance);
             // Set images
-            if (color.images && color.images.length > 0) {
-              setMainImage(color.images[0]);
-              setImages(color.images);
+            if (defaultColor.images && defaultColor.images.length > 0) {
+              setMainImage(defaultColor.images[0]);
+              setImages(defaultColor.images);
             }
           }
         }
@@ -437,31 +508,29 @@ function ProductPage() {
       // Check for size selection
       const size = urlParams.get('size');
       if (size) {
-        if (product.type === "simple" && selectedColor) {
+        if (product.type === "simple") {
           setSelectedSize(size);
-        } else if (product.type === "variable" && selectedModelColor) {
+        } else if (product.type === "variable") {
           setSelectedModelSize(size);
         }
       }
     }
   }, [product, window.location.search]);
 
-  // Handle color selection for simple products
-  const handleColorSelect = (color) => {
-    setSelectedColor(color);
+  // Handle fragrance selection for simple products
+  const handleFragranceSelect = (fragrance) => {
+    setSelectedFragrance(fragrance);
 
-    // Check offer for selected color
-    checkAndSetOffer(product, color, null);
-
-    // Update images for selected color
-    if (color.images && color.images.length > 0) {
-      setMainImage(color.images[0]);
-      setImages(color.images);
+    // Get default color
+    const defaultColor = product.colors?.[0];
+    if (defaultColor) {
+      // Check offer for selected fragrance (based on default color)
+      checkAndSetOffer(product, defaultColor, null, fragrance);
     }
 
     // Reset size selection
-    if (color.sizes && color.sizes.length > 0) {
-      setSelectedSize(color.sizes[0]);
+    if (defaultColor?.sizes && defaultColor.sizes.length > 0) {
+      setSelectedSize(defaultColor.sizes[0]);
     } else {
       setSelectedSize(null);
     }
@@ -471,51 +540,53 @@ function ProductPage() {
   const handleModelSelect = (model) => {
     setSelectedModel(model);
 
-    // Reset color and size selections
-    setSelectedModelColor(null);
+    // Reset fragrance and size selections
+    setSelectedModelFragrance(null);
     setSelectedModelSize(null);
 
-    // Set images from model's first color
+    // Get first fragrance from model's default color
     if (model.colors && model.colors.length > 0) {
-      const firstColor = model.colors[0];
-      setSelectedModelColor(firstColor);
+      const modelColor = model.colors[0];
+      const fragrances = modelColor.fragrances || [];
+      if (fragrances.length > 0) {
+        const firstFragrance = fragrances[0];
+        setSelectedModelFragrance(firstFragrance);
 
-      // Check offer for this model's first color
-      checkAndSetOffer(product, firstColor, model);
+        // Check offer for this model's first fragrance
+        checkAndSetOffer(product, modelColor, model, firstFragrance);
 
-      if (firstColor.images && firstColor.images.length > 0) {
-        setMainImage(firstColor.images[0]);
-        setImages(firstColor.images);
-      }
+        if (modelColor.images && modelColor.images.length > 0) {
+          setMainImage(modelColor.images[0]);
+          setImages(modelColor.images);
+        }
 
-      if (firstColor.sizes && firstColor.sizes.length > 0) {
-        setSelectedModelSize(firstColor.sizes[0]);
+        if (modelColor.sizes && modelColor.sizes.length > 0) {
+          setSelectedModelSize(modelColor.sizes[0]);
+        }
       }
     }
   };
 
-  // Handle model color selection for variable products
-  const handleModelColorSelect = (color) => {
-    setSelectedModelColor(color);
+  // Handle model fragrance selection for variable products
+  const handleModelFragranceSelect = (fragrance) => {
+    setSelectedModelFragrance(fragrance);
 
-    // Check offer for selected color
-    checkAndSetOffer(product, color, selectedModel);
-
-    // Update images for selected color
-    if (color.images && color.images.length > 0) {
-      setMainImage(color.images[0]);
-      setImages(color.images);
+    // Get default color from selected model
+    const modelColor = selectedModel?.colors?.[0];
+    if (modelColor) {
+      // Check offer for selected fragrance
+      checkAndSetOffer(product, modelColor, selectedModel, fragrance);
     }
 
     // Reset size selection
-    if (color.sizes && color.sizes.length > 0) {
-      setSelectedModelSize(color.sizes[0]);
+    if (modelColor?.sizes && modelColor.sizes.length > 0) {
+      setSelectedModelSize(modelColor.sizes[0]);
     } else {
       setSelectedModelSize(null);
     }
   };
 
-  // NEW: Updated handle quantity change with stock validation
+  // Handle quantity change with stock validation
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
 
@@ -538,57 +609,61 @@ function ProductPage() {
     }
   };
 
-  // NEW: Check if product can be purchased (for button disabling)
+  // Check if product can be purchased
   const canPurchaseProduct = () => {
+    // Check if fragrance is selected
+    if (!selectedFragrance && !selectedModelFragrance) {
+      return false;
+    }
+
     // Check stock status
     if (inventoryStatus.status === 'checking' || inventoryStatus.status === 'error') {
-      return true; // Allow while checking (existing behavior)
+      return true;
     }
 
     if (inventoryStatus.status === 'out-of-stock') {
-      return false; // Disable if out of stock
+      return false;
     }
 
     if (inventoryStatus.status === 'low-stock' || inventoryStatus.status === 'in-stock') {
-      // Check if quantity exceeds available stock
       return quantity <= inventoryStatus.stock && quantity > 0;
     }
 
-    return true; // Default fallback
+    return true;
   };
 
-  // Get base price (without offer)
+  // Get base price
   const getBasePrice = () => {
-    if (product.type === "simple" && selectedColor) {
-      return selectedColor.currentPrice || product.currentPrice || 0;
-    } else if (product.type === "variable" && selectedModelColor) {
-      return selectedModelColor.currentPrice || selectedModel?.colors?.[0]?.currentPrice || product.currentPrice || 0;
+    if (product.type === "simple" && product.colors?.[0]) {
+      return product.colors[0].currentPrice || product.currentPrice || 0;
+    } else if (product.type === "variable" && selectedModel?.colors?.[0]) {
+      return selectedModel.colors[0].currentPrice || product.currentPrice || 0;
     }
     return product.currentPrice || 0;
   };
 
-  // Get original price (first strikethrough price)
+  // Get original price
   const getOriginalPrice = () => {
-    if (product.type === "simple" && selectedColor) {
-      return selectedColor.originalPrice || product.originalPrice || 0;
-    } else if (product.type === "variable" && selectedModelColor) {
-      return selectedModelColor.originalPrice || selectedModel?.colors?.[0]?.originalPrice || product.originalPrice || 0;
+    if (product.type === "simple" && product.colors?.[0]) {
+      return product.colors[0].originalPrice || product.originalPrice || 0;
+    } else if (product.type === "variable" && selectedModel?.colors?.[0]) {
+      return selectedModel.colors[0].originalPrice || product.originalPrice || 0;
     }
     return product.originalPrice || 0;
   };
 
-  // Get regular discount percentage (before any offer)
-  const getRegularDiscountPercent = () => {
+  // Get discount percentage
+  const getDiscountPercent = () => {
     const originalPrice = getOriginalPrice();
-    const basePrice = getBasePrice();
+    const currentPrice = getBasePrice();
 
-    if (originalPrice > 0 && originalPrice > basePrice) {
-      return Math.round(((originalPrice - basePrice) / originalPrice) * 100);
+    if (originalPrice > 0 && originalPrice > currentPrice) {
+      return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
     }
     return 0;
   };
 
-  // Get offer price (with discount)
+  // Get offer price
   const getOfferPrice = () => {
     const basePrice = getBasePrice();
     if (currentOffer && currentOffer.offerPercentage > 0) {
@@ -598,7 +673,7 @@ function ProductPage() {
     return basePrice;
   };
 
-  // Get total price (offer price * quantity)
+  // Get total price
   const getTotalPrice = () => {
     return getOfferPrice() * quantity;
   };
@@ -613,30 +688,22 @@ function ProductPage() {
     return product.description || "No description available.";
   };
 
-  // Get specifications (ALWAYS use color specifications)
-  // Get specifications (CHANGED: Use product specs for simple, model specs for variable)
+  // Get specifications
   const getSpecifications = () => {
     const specs = [];
 
-    // SIMPLE PRODUCT: Use product specifications (global specs)
     if (product.type === "simple") {
       if (product.specifications && product.specifications.length > 0) {
-        // Use product-level specifications for simple products
         product.specifications.forEach(spec => {
           specs.push({ key: spec.key, value: spec.value });
         });
       }
-    }
-
-    // VARIABLE PRODUCT: Use selected model specifications
-    else if (product.type === "variable") {
+    } else if (product.type === "variable") {
       if (selectedModel && selectedModel.modelSpecifications && selectedModel.modelSpecifications.length > 0) {
-        // Use selected model's specifications
         selectedModel.modelSpecifications.forEach(spec => {
           specs.push({ key: spec.key, value: spec.value });
         });
       } else if (product.specifications && product.specifications.length > 0) {
-        // Fallback to product specifications if model has none
         product.specifications.forEach(spec => {
           specs.push({ key: spec.key, value: spec.value });
         });
@@ -648,15 +715,25 @@ function ProductPage() {
 
   // Get available sizes
   const getAvailableSizes = () => {
-    if (product.type === "simple" && selectedColor) {
-      return selectedColor.sizes || [];
-    } else if (product.type === "variable" && selectedModelColor) {
-      return selectedModelColor.sizes || [];
+    if (product.type === "simple" && product.colors?.[0]) {
+      return product.colors[0].sizes || [];
+    } else if (product.type === "variable" && selectedModel?.colors?.[0]) {
+      return selectedModel.colors[0].sizes || [];
     }
     return [];
   };
 
-  // NEW: Updated isOutOfStock function
+  // Get available fragrances
+  const getAvailableFragrances = () => {
+    if (product.type === "simple" && product.colors?.[0]) {
+      return product.colors[0].fragrances || [];
+    } else if (product.type === "variable" && selectedModel?.colors?.[0]) {
+      return selectedModel.colors[0].fragrances || [];
+    }
+    return [];
+  };
+
+  // Check if out of stock
   const isOutOfStock = () => {
     return inventoryStatus.status === 'out-of-stock';
   };
@@ -665,22 +742,16 @@ function ProductPage() {
   const isCurrentSelectionInWishlist = () => {
     if (!wishlistItem) return false;
 
-    // Check if color matches
-    if (product.type === "simple" && selectedColor) {
-      if (wishlistItem.selectedColor && wishlistItem.selectedColor.colorId !== selectedColor.colorId) {
-        return false;
-      }
-    } else if (product.type === "variable" && selectedModelColor) {
-      if (wishlistItem.selectedColor && wishlistItem.selectedColor.colorId !== selectedModelColor.colorId) {
-        return false;
-      }
+    // Check if fragrance matches
+    const currentFragrance = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
+    if (currentFragrance && wishlistItem.selectedFragrance && wishlistItem.selectedFragrance !== currentFragrance) {
+      return false;
     }
 
     // Check if model matches for variable products
     if (product.type === "variable" && selectedModel && wishlistItem.selectedModel) {
       const wishlistModelId = wishlistItem.selectedModel.modelId;
       const currentModelId = selectedModel._id || selectedModel.modelId;
-
       if (wishlistModelId !== currentModelId) {
         return false;
       }
@@ -695,9 +766,8 @@ function ProductPage() {
     return true;
   };
 
-  // =========== UPDATED WISHLIST TOGGLE FUNCTION ===========
+  // Toggle wishlist
   const toggleWishlist = async () => {
-    // Check if user is logged in
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
 
@@ -711,7 +781,7 @@ function ProductPage() {
 
     try {
       if (isCurrentlyWishlisted) {
-        // Remove from wishlist - USING QUERY PARAMS
+        // Remove from wishlist
         await axios.delete(
           `${import.meta.env.VITE_API_URL}/wishlist/remove/${product.productId}?userId=${userId}`,
           {
@@ -726,7 +796,7 @@ function ProductPage() {
         setWishlistItem(null);
 
       } else {
-        // Add to wishlist (from product page - with model/color selections)
+        // Add to wishlist
         const wishlistData = {
           userId,
           productId: product.productId,
@@ -742,18 +812,27 @@ function ProductPage() {
           };
         }
 
-        // Add selected color if available
-        const selectedColorData = product.type === "simple" ? selectedColor : selectedModelColor;
-        if (selectedColorData) {
+        // Add selected fragrance
+        const selectedFragranceData = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
+        if (selectedFragranceData) {
+          wishlistData.selectedFragrance = selectedFragranceData;
+        }
+
+        // Add default color
+        const defaultColor = product.type === "simple" 
+          ? product.colors?.[0]
+          : selectedModel?.colors?.[0];
+        
+        if (defaultColor) {
           wishlistData.selectedColor = {
-            colorId: selectedColorData.colorId,
-            colorName: selectedColorData.colorName,
-            currentPrice: getBasePrice(), // Base price
-            originalPrice: selectedColorData.originalPrice || product.originalPrice || 0
+            colorId: defaultColor.colorId,
+            colorName: defaultColor.colorName,
+            currentPrice: getBasePrice(),
+            originalPrice: defaultColor.originalPrice || product.originalPrice || 0
           };
         }
 
-        // Add selected size if available
+        // Add selected size
         const selectedSizeData = product.type === "simple" ? selectedSize : selectedModelSize;
         if (selectedSizeData) {
           wishlistData.selectedSize = selectedSizeData;
@@ -774,7 +853,6 @@ function ProductPage() {
         setWishlistItem(response.data.wishlist);
       }
 
-      // Dispatch event for navbar update
       window.dispatchEvent(new Event('wishlistUpdated'));
 
     } catch (error) {
@@ -787,9 +865,15 @@ function ProductPage() {
     }
   };
 
-  // NEW: Updated handle add to cart WITH STOCK VALIDATION
+  // Handle add to cart with stock validation
   const handleAddToCart = async () => {
-    // Check stock before proceeding
+    // Check fragrance selection
+    if (!selectedFragrance && !selectedModelFragrance) {
+      alert("Please select a fragrance");
+      return;
+    }
+
+    // Check stock
     if (!canPurchaseProduct()) {
       if (inventoryStatus.status === 'out-of-stock') {
         alert("This product is currently out of stock!");
@@ -813,16 +897,22 @@ function ProductPage() {
     const offerPrice = getOfferPrice();
     const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
 
+    // Get default color
+    const defaultColor = product.type === "simple" 
+      ? product.colors?.[0]
+      : selectedModel?.colors?.[0];
+
     // Prepare cart data
     const cartData = {
       userId,
       productId: product.productId,
       productName: product.productName,
       quantity: quantity,
-      unitPrice: basePrice,
+      unitPrice: originalPrice,
       finalPrice: offerPrice,
       totalPrice: getTotalPrice(),
-      selectedColor: product.type === "simple" ? selectedColor : selectedModelColor,
+      selectedColor: defaultColor,
+      selectedFragrance: product.type === "simple" ? selectedFragrance : selectedModelFragrance,
       selectedSize: product.type === "simple" ? selectedSize : selectedModelSize,
       hasOffer: hasOffer,
       offerDetails: hasOffer ? {
@@ -856,12 +946,7 @@ function ProductPage() {
       );
 
       alert(`Added ${quantity} item${quantity > 1 ? 's' : ''} to cart!`);
-
-      // Dispatch event for navbar and cart update
       window.dispatchEvent(new Event('cartUpdated'));
-
-      // You can open cart sidebar here if you want
-      // setIsCartOpen(true);
 
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -873,9 +958,15 @@ function ProductPage() {
     }
   };
 
-  // In ProductPage.jsx - Update handleBuyNow function
+  // Handle buy now
   const handleBuyNow = () => {
-    // Check stock before proceeding
+    // Check fragrance selection
+    if (!selectedFragrance && !selectedModelFragrance) {
+      alert("Please select a fragrance");
+      return;
+    }
+
+    // Check stock
     if (!canPurchaseProduct()) {
       if (inventoryStatus.status === 'out-of-stock') {
         alert("This product is currently out of stock!");
@@ -898,9 +989,15 @@ function ProductPage() {
     const basePrice = getBasePrice();
     const offerPrice = getOfferPrice();
     const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
-    const selectedColorData = product.type === "simple" ? selectedColor : selectedModelColor;
+    
+    // Get default color
+    const defaultColor = product.type === "simple" 
+      ? product.colors?.[0]
+      : selectedModel?.colors?.[0];
+    
+    const selectedFragranceData = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
     const selectedSizeData = product.type === "simple" ? selectedSize : selectedModelSize;
-    const thumbnailImage = selectedColorData?.images?.[0] || product.thumbnailImage;
+    const thumbnailImage = defaultColor?.images?.[0] || product.thumbnailImage;
 
     // Prepare Buy Now data
     const buyNowData = {
@@ -908,10 +1005,11 @@ function ProductPage() {
       productId: product.productId,
       productName: product.productName,
       quantity: quantity,
-      unitPrice: basePrice,
+      unitPrice: originalPrice,
       finalPrice: offerPrice,
       totalPrice: getTotalPrice(),
-      selectedColor: selectedColorData,
+      selectedColor: defaultColor,
+      selectedFragrance: selectedFragranceData,
       selectedSize: selectedSizeData,
       selectedModel: product.type === "variable" ? {
         modelId: selectedModel._id || selectedModel.modelId,
@@ -964,61 +1062,39 @@ function ProductPage() {
   const offerPrice = getOfferPrice();
   const totalPrice = getTotalPrice();
   const originalPrice = getOriginalPrice();
-  const regularDiscountPercent = getRegularDiscountPercent();
+  const discountPercent = getDiscountPercent();
   const description = getDescription();
   const specifications = getSpecifications();
   const availableSizes = getAvailableSizes();
-  const isExactWishlistMatch = isCurrentSelectionInWishlist();
+  const availableFragrances = getAvailableFragrances();
   const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
-  const savedAmount = hasOffer ? (basePrice - offerPrice) * quantity : 0;
-  const totalSavingsFromOriginal = originalPrice > 0 ? (originalPrice - offerPrice) * quantity : 0;
-  const totalDiscountPercent = originalPrice > 0 ? Math.round(((originalPrice - offerPrice) / originalPrice) * 100) : 0;
+  const finalPrice = hasOffer ? offerPrice : basePrice;
 
-  // NEW: Get purchase eligibility
+  // Get purchase eligibility
   const canPurchase = canPurchaseProduct();
 
+  // Fix for reviewsStats.averageRating - ensure it's a number
+  const averageRating = typeof reviewsStats.averageRating === 'number' 
+    ? reviewsStats.averageRating 
+    : parseFloat(reviewsStats.averageRating) || 0;
+
   return (
-    <div className="product-page">
+    <div className="product-page" ref={mainContainerRef}>
       {/* Back Button */}
       <button className="back-button" onClick={() => navigate(-1)}>
         ← Back to Products
       </button>
 
-      <div className="product-container">
-        {/* Left Column - Images */}
-        <div className="product-images-section">
-          <div className="main-image">
-            {mainImage ? (
-              <img
-                src={mainImage}
-                alt={product.productName}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://via.placeholder.com/500x400?text=No+Image";
-                }}
-              />
-            ) : (
-              <div className="no-image">No Image Available</div>
-            )}
-
-            {/* OFFER BADGE ON MAIN IMAGE */}
-            {hasOffer && (
-              <div className="offer-badge-main">
-                <span className="offer-badge-icon">🎯</span>
-                <div className="offer-badge-content">
-                  <div className="offer-badge-title">{currentOffer.offerLabel}</div>
-                  <div className="offer-badge-percent">{currentOffer.offerPercentage}% OFF</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {images.length > 1 && (
-            <div className="thumbnail-images">
+      <div className="product-main-container">
+        {/* LEFT COLUMN - Images Section */}
+        <div className="product-images-column" ref={imagesContainerRef}>
+          {/* Thumbnail Strip (Vertical) */}
+          {images.length > 0 && (
+            <div className="thumbnail-strip">
               {images.map((img, index) => (
                 <div
                   key={index}
-                  className={`thumbnail ${img === mainImage ? 'active' : ''}`}
+                  className={`thumbnail-item ${img === mainImage ? 'active' : ''}`}
                   onClick={() => setMainImage(img)}
                 >
                   <img
@@ -1034,236 +1110,165 @@ function ProductPage() {
             </div>
           )}
 
-
-          {/* Ratings & Reviews Section */}
-          <div className="ratings-reviews-section">
-            <div className="section-title">
-              Ratings & Reviews
-              {reviewsStats.totalReviews > 0 && (
-                <span className="see-all-reviews" onClick={handleOpenReviewsModal}>
-                  See All ({reviewsStats.totalReviews})
-                </span>
-              )}
-            </div>
-
-            {reviewsStats.totalReviews > 0 ? (
-              <div className="ratings-overview">
-                <div className="average-rating">
-                  <div className="rating-score">
-                    <span className="rating-number">{reviewsStats.averageRating}</span>
-                    <span className="rating-out-of">/5</span>
-                  </div>
-                  <div className="rating-stars-large">
-                    {renderRatingStars(reviewsStats.averageRating, 'large')}
-                  </div>
-                  <div className="total-reviews">
-                    {reviewsStats.totalReviews} rating{reviewsStats.totalReviews > 1 ? 's' : ''} & reviews
-                  </div>
+          {/* Main Images Container (Stacked Vertically) */}
+          <div className="main-images-container">
+            {images.length > 0 ? (
+              images.map((img, index) => (
+                <div 
+                  key={index} 
+                  className={`main-image-item ${img === mainImage ? 'active' : ''}`}
+                >
+                  <img
+                    src={img}
+                    alt={`${product.productName} - ${index + 1}`}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://via.placeholder.com/600x600?text=No+Image";
+                    }}
+                  />
                 </div>
-
-                <div className="rating-distribution">
-                  {[5, 4, 3, 2, 1].map(star => {
-                    const count = reviewsStats.ratingDistribution[star] || 0;
-                    const percentage = reviewsStats.totalReviews > 0
-                      ? Math.round((count / reviewsStats.totalReviews) * 100)
-                      : 0;
-
-                    return (
-                      <div key={star} className="rating-bar-row">
-                        <span className="star-label">{star} ★</span>
-                        <div className="rating-bar-container">
-                          <div
-                            className="rating-bar-fill"
-                            style={{ width: `${percentage}%` }}
-                          ></div>
-                        </div>
-                        <span className="rating-count">{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="reviews-preview">
-                  <div className="preview-title">Latest Reviews</div>
-                  {reviews.slice(0, 2).map((review, index) => (
-                    <div key={index} className="review-preview-item">
-                      <div className="reviewer-info">
-                        <span className="reviewer-name">{review.userName}</span>
-                        <div className="reviewer-rating">
-                          {renderRatingStars(review.rating, 'small')}
-                          <span className="review-date">{formatReviewDate(review.createdAt)}</span>
-                        </div>
-                      </div>
-                      {review.reviewText && (
-                        <p className="review-text-preview">
-                          "{review.reviewText.length > 100
-                            ? review.reviewText.substring(0, 100) + '...'
-                            : review.reviewText}"
-                        </p>
-                      )}
-                      {review.isVerifiedPurchase && (
-                        <span className="verified-badge">✅ Verified Purchase</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))
             ) : (
-              <div className="no-reviews-yet">
-                <div className="no-reviews-icon">⭐</div>
-                <div className="no-reviews-text">
-                  <p>No reviews yet for this product</p>
-                  <p className="subtext">Be the first to review this product!</p>
-                </div>
+              <div className="no-image-placeholder">
+                <div className="no-image-icon">🖼️</div>
+                <p>No images available</p>
               </div>
             )}
-
-            <button
-              className="view-all-reviews-btn"
-              onClick={handleOpenReviewsModal}
-              disabled={reviewsStats.totalReviews === 0}
-            >
-              {reviewsStats.totalReviews > 0
-                ? `View All ${reviewsStats.totalReviews} Reviews`
-                : 'No Reviews Yet'}
-            </button>
           </div>
         </div>
 
-        {/* Right Column - Details */}
-        <div className="product-details-section">
-          {/* Product Header */}
-          <div className="product-header">
-            <div className="category-badge">
-              {product.categoryName || "Uncategorized"}
+        {/* RIGHT COLUMN - Product Details */}
+        <div className="product-details-column" ref={detailsContainerRef}>
+          {/* BEST SELLER BADGE */}
+          
+            <div className="best-seller-badge">
+              BEST SELLER
             </div>
-            <h1>{product.productName}</h1>
-            <div className="product-sku">
-              SKU: {product.SKU || "Not specified"}
-              {hasOffer && (
-                <span className="offer-tag-mini">
-                  <span className="offer-icon-mini">🎁</span>
-                  Color Offer Available
+          
+
+          {/* PRODUCT HEADER with Wishlist Icon */}
+          <div className="product-header-section">
+            <h1 className="product-title">
+              {product.productName}
+              <button 
+                className={`wishlist-icon-btn ${wishlist ? 'active' : ''}`}
+                onClick={toggleWishlist}
+                title={wishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+              >
+                {wishlist ? <FaHeart /> : <FaRegHeart />}
+              </button>
+            </h1>
+          </div>
+
+          {/* SHORT DESCRIPTION */}
+          <div className="short-description">
+            {product.description || "Premium quality product with luxurious fragrance."}
+          </div>
+
+          {/* PRICE SECTION - Simple Row */}
+          <div className="simple-price-section">
+            <div className="price-row">
+              <span className="current-price">₹{finalPrice.toLocaleString()}</span>
+              {originalPrice > finalPrice && (
+                <>
+                  <span className="original-price">₹{originalPrice.toLocaleString()}</span>
+                  <span className="discount-percent">{discountPercent}% OFF</span>
+                </>
+              )}
+            </div>
+            
+            {/* Stock Status */}
+            <div className={`stock-status-badge ${inventoryStatus.status}`}>
+              {inventoryStatus.status === 'checking' ? (
+                <>Checking stock...</>
+              ) : inventoryStatus.status === 'error' ? (
+                <>Stock check failed</>
+              ) : inventoryStatus.status === 'out-of-stock' ? (
+                <>Out of Stock</>
+              ) : inventoryStatus.status === 'low-stock' ? (
+                <>Low Stock </>
+              ) : (
+                <>In Stock </>
+              )}
+            </div>
+          </div>
+
+          {/* REVIEWS ROW */}
+          <div className="reviews-row" onClick={handleOpenReviewsModal}>
+            <div className="stars-container">
+              {renderRatingStars(averageRating, 'medium')}
+            </div>
+            <div className="reviews-count">
+              {reviewsStats.totalReviews} Review{reviewsStats.totalReviews !== 1 ? 's' : ''}
+            </div>
+            <div className="reviews-arrow">→</div>
+          </div>
+
+          {/* FRAGRANCE SELECTION */}
+          <div className="fragrance-selection-section">
+            <div className="section-header">
+              <h3>Select Fragrance</h3>
+              {(selectedFragrance || selectedModelFragrance) && (
+                <span className="selected-indicator">
+                  Selected: <strong>{selectedFragrance || selectedModelFragrance}</strong>
                 </span>
               )}
             </div>
-          </div>
 
-          {/* Price Section WITH PROPER BREAKDOWN */}
-          <div className="price-section">
-            <div className="price-display">
-              {/* PRICE BREAKDOWN: Original -> Discounted -> With Offer */}
-              <div className="price-breakdown">
-                {/* ORIGINAL PRICE (with strikethrough) */}
-                <div className="price-row original-price-row">
-                  <span className="price-label">Original Price:</span>
-                  <span className="price-value struck">₹{originalPrice.toLocaleString()}</span>
-                </div>
+            {availableFragrances.length > 0 ? (
+              <div className="fragrance-grid">
+                {availableFragrances.map((fragrance, index) => {
+                  const isSelected = product.type === "simple"
+                    ? selectedFragrance === fragrance
+                    : selectedModelFragrance === fragrance;
 
-                {/* DISCOUNTED PRICE (regular discount) */}
-                {regularDiscountPercent > 0 && (
-                  <div className="price-row discounted-price-row">
-                    <span className="price-label">Discounted Price:</span>
-                    <span className="price-value struck">₹{basePrice.toLocaleString()}</span>
-                    <span className="regular-discount-badge">{regularDiscountPercent}% OFF</span>
-                  </div>
-                )}
-
-                {/* FINAL PRICE WITH OFFER (or just discounted price if no offer) */}
-                {hasOffer ? (
-                  <>
-                    <div className="price-row final-price-row">
-                      <span className="price-label">Offer Price:</span>
-                      <span className="price-value final-price">₹{offerPrice.toLocaleString()}</span>
-                      <span className="offer-percent-badge">{currentOffer.offerPercentage}% OFF</span>
+                  return (
+                    <div
+                      key={index}
+                      className={`fragrance-box ${isSelected ? 'selected' : ''} ${
+                        inventoryStatus.status === 'out-of-stock' ? 'out-of-stock' : ''
+                      }`}
+                      onClick={() => {
+                        if (inventoryStatus.status === 'out-of-stock') return;
+                        if (product.type === "simple") {
+                          handleFragranceSelect(fragrance);
+                        } else {
+                          handleModelFragranceSelect(fragrance);
+                        }
+                      }}
+                    >
+                      <div className="fragrance-name">{fragrance}</div>
+                      {inventoryStatus.status === 'out-of-stock' && (
+                        <div className="out-of-stock-overlay">Out of Stock</div>
+                      )}
                     </div>
-
-                    {/* Total savings */}
-                    <div className="price-row total-savings-row">
-                      <span className="price-label">You Save:</span>
-                      <span className="price-value save-amount">
-                        ₹{totalSavingsFromOriginal.toLocaleString()}
-                      </span>
-                      <span className="save-percent">
-                        ({totalDiscountPercent}% off)
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="price-row final-price-row">
-                    <span className="price-label">Final Price:</span>
-                    <span className="price-value final-price">₹{basePrice.toLocaleString()}</span>
-                  </div>
-                )}
+                  );
+                })}
               </div>
-
-              {/* Offer label if exists */}
-              {hasOffer && (
-                <div className="offer-label-display">
-                  <span className="offer-icon-small">🎁</span>
-                  <span className="offer-label">{currentOffer.offerLabel}</span>
-                  <span className="offer-validity">
-                    ({currentOffer.endDate ? `Valid till ${new Date(currentOffer.endDate).toLocaleDateString()}` : 'Limited Time Offer'})
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* You Save Section */}
-            {hasOffer && (
-              <div className="you-save-section">
-                <span className="save-label">You save on this item:</span>
-                <span className="save-amount">₹{(basePrice - offerPrice).toLocaleString()} per item</span>
-                <span className="save-percent">({currentOffer.offerPercentage}% off)</span>
+            ) : (
+              <div className="no-fragrances-message">
+                <p>No fragrances available for this product.</p>
               </div>
             )}
 
-            {/* NEW: Enhanced stock status with quantity info */}
-            <div className={`stock-status ${inventoryStatus.status}`}>
-              {inventoryStatus.status === 'checking' ? (
-                <>⏳ Checking stock...</>
-              ) : inventoryStatus.status === 'error' ? (
-                <>⚠️ Stock check failed</>
-              ) : inventoryStatus.status === 'out-of-stock' ? (
-                <>
-                  ❌ Out of Stock
-                  {/* {inventoryStatus.threshold > 0 && (
-                    <span className="stock-info">(Restocking threshold: {inventoryStatus.threshold})</span>
-                  )} */}
-                </>
-              ) : inventoryStatus.status === 'low-stock' ? (
-                <>
-                  ⚠️ Low Stock -
-                  {/* {inventoryStatus.threshold > 0 && (
-                    <span className="stock-info">(Threshold: {inventoryStatus.threshold})</span>
-                  )} */}
-                </>
-              ) : (
-                <>
-                  ✅ In Stock
-                  <span className="stock-info">
-                    ({inventoryStatus.stock} available)
-                  </span>
-                </>
-              )}
-            </div>
-
-            {/* Wishlist Status Info */}
-            {wishlist && wishlistItem && !isExactWishlistMatch && (
-              <div className="wishlist-info">
-                ⚠️ This product is in your wishlist with different selections.
+            {/* Fragrance selection required message */}
+            {!selectedFragrance && !selectedModelFragrance && (
+              <div className="selection-required-message">
+                ⚠️ Please select a fragrance to proceed
               </div>
             )}
           </div>
 
-          {/* NEW: Updated QUANTITY SELECTOR with stock limits */}
-          <div className="quantity-section">
-            <div className="section-title">Quantity</div>
-            <div className="quantity-selector">
+          {/* QUANTITY SELECTOR */}
+          <div className="quantity-selector-section">
+            <div className="section-header">
+              <h3>Quantity</h3>
+            </div>
+            <div className="quantity-controls">
               <button
                 className="quantity-btn minus"
                 onClick={() => handleQuantityChange(-1)}
-                disabled={quantity <= 1 || inventoryStatus.status === 'out-of-stock'}
+                disabled={quantity <= 1 || inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
               >
                 −
               </button>
@@ -1274,279 +1279,147 @@ function ProductPage() {
                 value={quantity}
                 onChange={(e) => {
                   const value = parseInt(e.target.value) || 1;
-
-                  // Check if value exceeds available stock
                   if (inventoryStatus.status === 'low-stock' || inventoryStatus.status === 'in-stock') {
                     if (value > inventoryStatus.stock) {
                       alert(`Only ${inventoryStatus.stock} items available in stock!`);
                       return;
                     }
                   }
-
                   if (value >= 1 && value <= maxQuantity) {
                     setQuantity(value);
                   }
                 }}
                 className="quantity-input"
-                disabled={inventoryStatus.status === 'out-of-stock'}
+                disabled={inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
               />
               <button
                 className="quantity-btn plus"
                 onClick={() => handleQuantityChange(1)}
-                disabled={quantity >= maxQuantity || inventoryStatus.status === 'out-of-stock'}
+                disabled={quantity >= maxQuantity || inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
               >
                 +
               </button>
-              <div className="quantity-total">
-                Total: <span className="total-price">₹{totalPrice.toLocaleString()}</span>
+              <div className="quantity-summary">
+                <span className="total-label">Total: </span>
+                <span className="total-price">₹{totalPrice.toLocaleString()}</span>
               </div>
             </div>
-
-            {/* NEW: Stock limit warning */}
-            {(inventoryStatus.status === 'low-stock' || inventoryStatus.status === 'in-stock') && (
-              <div className="stock-limit-warning">
-                ⚠️ Maximum {inventoryStatus.stock} items available
-              </div>
-            )}
-
-            {savedAmount > 0 && (
-              <div className="total-savings">
-                🎉 You save ₹{savedAmount.toLocaleString()} on {quantity} item{quantity > 1 ? 's' : ''}!
-              </div>
-            )}
           </div>
 
-          {/* Variant Selection Section */}
-          <div className="variant-section">
-            {/* For Variable Products - Model Selection */}
-            {product.type === "variable" && product.models && product.models.length > 0 && (
-              <div className="model-selection">
-                <div className="section-title">
-                  Select Model
-                  {selectedModel && (
-                    <span className="selected-variant">Selected: {selectedModel.modelName}</span>
-                  )}
-                </div>
-
-                <div className="model-options">
-                  {product.models.map((model, index) => (
-                    <div
-                      key={index}
-                      className={`model-option ${selectedModel?.modelName === model.modelName ? 'selected' : ''}`}
-                      onClick={() => handleModelSelect(model)}
-                    >
-                      <div className="model-name">{model.modelName}</div>
-                      <div className="model-price">
-                        ₹{(model.colors?.[0]?.currentPrice || product.currentPrice || 0).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Color Selection WITH OFFER INDICATORS */}
-            <div className="color-selection">
-              <div className="section-title">
-                Select Color
-                {(selectedColor || selectedModelColor) && (
-                  <span className="selected-variant">
-                    Selected: {(selectedColor || selectedModelColor)?.colorName}
+          {/* MODEL SELECTION (for variable products) */}
+          {product.type === "variable" && product.models && product.models.length > 0 && (
+            <div className="model-selection-section">
+              <div className="section-header">
+                <h3>Select Model</h3>
+                {selectedModel && (
+                  <span className="selected-indicator">
+                    Selected: <strong>{selectedModel.modelName}</strong>
                   </span>
                 )}
               </div>
+              <div className="model-options-grid">
+                {product.models.map((model, index) => (
+                  <div
+                    key={index}
+                    className={`model-option-card ${selectedModel?.modelName === model.modelName ? 'selected' : ''}`}
+                    onClick={() => handleModelSelect(model)}
+                  >
+                    <div className="model-name">{model.modelName}</div>
+                    <div className="model-price">
+                      ₹{(model.colors?.[0]?.currentPrice || product.currentPrice || 0).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-              <div className="color-options">
-                {product.type === "simple" && product.colors && product.colors.length > 0 ? (
-                  // Simple product colors
-                  product.colors.map((color, index) => {
-                    const colorOffer = offers.find(offer =>
-                      offer.colorId === color.colorId &&
-                      !offer.variableModelId &&
-                      offer.isCurrentlyValid
-                    );
-
-                    return (
-                      <div
-                        key={index}
-                        className="color-option"
-                        onClick={() => handleColorSelect(color)}
-                      >
-                        <div className={`color-circle ${selectedColor?.colorId === color.colorId ? 'selected' : ''} ${colorOffer ? 'has-offer' : ''}`}>
-                          {color.images && color.images.length > 0 ? (
-                            <img
-                              src={color.images[0]}
-                              alt={color.colorName}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.style.backgroundColor = getColorHex(color.colorName);
-                              }}
-                            />
-                          ) : (
-                            <div
-                              className="color-swatch"
-                              style={{ backgroundColor: getColorHex(color.colorName) }}
-                            >
-                              <div className="color-name-overlay">{color.colorName}</div>
-                            </div>
-                          )}
-                          {colorOffer && (
-                            <div className="color-offer-badge">
-                              {colorOffer.offerPercentage}% OFF
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="color-info">
-                          <div className="color-name">{color.colorName}</div>
-                          <div className="color-price">
-                            {colorOffer ? (
-                              <>
-                                <div className="color-price-breakdown">
-                                  <span className="color-original-price struck">₹{color.originalPrice?.toLocaleString() || color.currentPrice.toLocaleString()}</span>
-                                  <span className="color-discounted-price struck">₹{color.currentPrice.toLocaleString()}</span>
-                                  <span className="color-final-price">₹{Math.max(0, color.currentPrice * (1 - colorOffer.offerPercentage / 100)).toLocaleString()}</span>
-                                </div>
-                                <span className="color-offer-percent">{colorOffer.offerPercentage}% OFF</span>
-                              </>
-                            ) : (
-                              <>
-                                {color.originalPrice && color.originalPrice > color.currentPrice ? (
-                                  <div className="color-price-breakdown">
-                                    <span className="color-original-price struck">₹{color.originalPrice.toLocaleString()}</span>
-                                    <span className="color-discounted-price">₹{color.currentPrice.toLocaleString()}</span>
-                                  </div>
-                                ) : (
-                                  <span className="color-price-single">₹{color.currentPrice.toLocaleString()}</span>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : product.type === "variable" && selectedModel && selectedModel.colors && selectedModel.colors.length > 0 ? (
-                  // Variable product model colors
-                  selectedModel.colors.map((color, index) => {
-                    const colorOffer = offers.find(offer =>
-                      offer.colorId === color.colorId &&
-                      offer.variableModelId === (selectedModel._id || selectedModel.modelId) &&
-                      offer.isCurrentlyValid
-                    );
-
-                    return (
-                      <div
-                        key={index}
-                        className="color-option"
-                        onClick={() => handleModelColorSelect(color)}
-                      >
-                        <div className={`color-circle ${selectedModelColor?.colorId === color.colorId ? 'selected' : ''} ${colorOffer ? 'has-offer' : ''}`}>
-                          {color.images && color.images.length > 0 ? (
-                            <img
-                              src={color.images[0]}
-                              alt={color.colorName}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.style.backgroundColor = getColorHex(color.colorName);
-                              }}
-                            />
-                          ) : (
-                            <div
-                              className="color-swatch"
-                              style={{ backgroundColor: getColorHex(color.colorName) }}
-                            >
-                              <div className="color-name-overlay">{color.colorName}</div>
-                            </div>
-                          )}
-                          {colorOffer && (
-                            <div className="color-offer-badge">
-                              {colorOffer.offerPercentage}% OFF
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="color-info">
-                          <div className="color-name">{color.colorName}</div>
-                          <div className="color-price">
-                            {colorOffer ? (
-                              <>
-                                <span className="color-offer-price">₹{Math.max(0, color.currentPrice * (1 - colorOffer.offerPercentage / 100)).toLocaleString()}</span>
-                                <span className="color-original-price">₹{color.currentPrice.toLocaleString()}</span>
-                              </>
-                            ) : (
-                              <span>₹{color.currentPrice.toLocaleString()}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p>No colors available for this product.</p>
+          {/* SIZE SELECTION */}
+          {availableSizes.length > 0 && (
+            <div className="size-selection-section">
+              <div className="section-header">
+                <h3>Select Size</h3>
+                {(selectedSize || selectedModelSize) && (
+                  <span className="selected-indicator">
+                    Selected: <strong>{selectedSize || selectedModelSize}</strong>
+                  </span>
                 )}
               </div>
+              <div className="size-options-grid">
+                {availableSizes.map((size, index) => {
+                  const isSelected = product.type === "simple"
+                    ? selectedSize === size
+                    : selectedModelSize === size;
 
-              {/* Offer details for current selection */}
-              {hasOffer && (
-                <div className="current-offer-details">
-                  <div className="offer-details-title">
-                    <span className="offer-icon">🎯</span>
-                    Current Offer
-                  </div>
-                  <div className="offer-details-content">
-                    <p><strong>{currentOffer.colorName}</strong> has <strong>{currentOffer.offerPercentage}% OFF</strong></p>
-                    <p className="offer-validity">
-                      Valid: {new Date(currentOffer.startDate).toLocaleDateString()}
-                      {currentOffer.endDate && ` to ${new Date(currentOffer.endDate).toLocaleDateString()}`}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Size Selection */}
-            {availableSizes.length > 0 && (
-              <div className="size-selection">
-                <div className="section-title">
-                  Select Size
-                  {(selectedSize || selectedModelSize) && (
-                    <span className="selected-variant">
-                      Selected: {selectedSize || selectedModelSize}
-                    </span>
-                  )}
-                </div>
-
-                <div className="size-options">
-                  {availableSizes.map((size, index) => {
-                    const isSelected = product.type === "simple"
-                      ? selectedSize === size
-                      : selectedModelSize === size;
-
-                    return (
-                      <div
-                        key={index}
-                        className={`size-option ${isSelected ? 'selected' : ''}`}
-                        onClick={() => {
-                          if (product.type === "simple") {
-                            setSelectedSize(size);
-                          } else {
-                            setSelectedModelSize(size);
-                          }
-                        }}
-                      >
-                        {size}
-                      </div>
-                    );
-                  })}
-                </div>
+                  return (
+                    <div
+                      key={index}
+                      className={`size-option-box ${isSelected ? 'selected' : ''}`}
+                      onClick={() => {
+                        if (product.type === "simple") {
+                          setSelectedSize(size);
+                        } else {
+                          setSelectedModelSize(size);
+                        }
+                      }}
+                    >
+                      {size}
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
+          )}
+
+          {/* ACTION BUTTONS - Add to Cart & Buy Now in same row */}
+          <div className="action-buttons-section">
+            <button
+              className={`add-to-cart-btn ${!canPurchase || !selectedFragrance ? 'disabled' : ''}`}
+              onClick={handleAddToCart}
+              disabled={!canPurchase || !selectedFragrance}
+              title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : '')}
+            >
+              {!selectedFragrance && !selectedModelFragrance 
+                ? 'Select Fragrance First' 
+                : inventoryStatus.status === 'out-of-stock' 
+                  ? 'Out of Stock' 
+                  : `Add to Cart`}
+            </button>
+
+            <button
+              className={`buy-now-btn ${!canPurchase || !selectedFragrance ? 'disabled' : ''}`}
+              onClick={handleBuyNow}
+              disabled={!canPurchase || !selectedFragrance}
+              title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : '')}
+            >
+              {!selectedFragrance && !selectedModelFragrance 
+                ? 'Select Fragrance First' 
+                : inventoryStatus.status === 'out-of-stock' 
+                  ? 'Out of Stock' 
+                  : `Buy Now`}
+            </button>
           </div>
 
-          {/* Description Section */}
-          <div className="description-section">
-            <div className="section-title">Description</div>
+          {/* DELIVERY INFORMATION - Static Lines */}
+          <div className="delivery-info-section">
+            <div className="delivery-header">
+              <h3>Delivery Information</h3>
+            </div>
+            <div className="delivery-options">
+              <div className="delivery-option">
+                <div className="option-line">Standard delivery in 2-4 business days</div>
+              </div>
+              <div className="delivery-option">
+                <div className="option-line">Express delivery in 1-2 business days</div>
+              </div>
+            </div>
+          </div>
+
+          {/* FULL DESCRIPTION */}
+          <div className="full-description-section">
+            <div className="section-header">
+              <h3>Description</h3>
+            </div>
             <div className="description-content">
               {description.split('\n').map((paragraph, index) => (
                 <p key={index}>{paragraph}</p>
@@ -1554,170 +1427,58 @@ function ProductPage() {
             </div>
           </div>
 
-          {/* Specifications Section */}
+          {/* SPECIFICATIONS */}
           {specifications.length > 0 && (
             <div className="specifications-section">
-              <div className="section-title">Specifications</div>
-              <table className="specifications-table">
-                <tbody>
-                  {specifications.map((spec, index) => (
-                    <tr key={index}>
-                      <td>{spec.key}</td>
-                      <td>{spec.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-
-
-
-          {/* NEW: Updated Action Buttons with stock validation */}
-          <div className="action-buttons">
-            <button
-              className={`wishlist-btn ${wishlist ? 'in-wishlist' : ''}`}
-              onClick={toggleWishlist}
-              title={wishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-            >
-              {wishlist ? '♥' : '♡'} {wishlist ? (isExactWishlistMatch ? 'In Wishlist' : 'Different Selections') : 'Add to Wishlist'}
-            </button>
-
-            <button
-              className="add-to-cart-btn"
-              onClick={handleAddToCart}
-              disabled={!canPurchase}
-              title={!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : ''}
-            >
-              {inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Add to Cart (${quantity})`}
-            </button>
-
-            <button
-              className="buy-now-btn"
-              onClick={handleBuyNow}
-              disabled={!canPurchase}
-              title={!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : ''}
-            >
-              {inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Buy Now (₹${totalPrice.toLocaleString()})`}
-            </button>
-          </div>
-
-          {/* NEW: Out of stock message */}
-          {inventoryStatus.status === 'out-of-stock' && (
-            <div className="out-of-stock-message">
-              This product is currently out of stock. You can still add it to your wishlist to be notified when it's back in stock.
-            </div>
-          )}
-
-          {/* NEW: Low stock warning */}
-          {inventoryStatus.status === 'low-stock' && inventoryStatus.stock < 5 && (
-            <div className="low-stock-warning">
-              Hurry! Only {inventoryStatus.stock} item{inventoryStatus.stock > 1 ? 's' : ''} left in stock!
-            </div>
-          )}
-
-          {/* Wishlist Info Panel (optional) */}
-          {wishlistItem && (
-            <div className="wishlist-details-panel">
-              {/* <div className="panel-title">Wishlist Details</div> */}
-              {/* <div className="panel-content">
-                <p><strong>Added from:</strong> {wishlistItem.addedFrom === "product" ? "Product Page" : "Home Page"}</p>
-                {wishlistItem.selectedModel && (
-                  <p><strong>Model:</strong> {wishlistItem.selectedModel.modelName}</p>
-                )}
-                {wishlistItem.selectedColor && (
-                  <p><strong>Color:</strong> {wishlistItem.selectedColor.colorName}</p>
-                )}
-                {wishlistItem.selectedSize && (
-                  <p><strong>Size:</strong> {wishlistItem.selectedSize}</p>
-                )}
-                <p><strong>Date added:</strong> {new Date(wishlistItem.createdAt).toLocaleDateString()}</p>
-              </div> */}
+              <div className="section-header">
+                <h3>Specifications</h3>
+              </div>
+              <div className="specifications-grid">
+                {specifications.map((spec, index) => (
+                  <div key={index} className="spec-row">
+                    <div className="spec-key">{spec.key}</div>
+                    <div className="spec-value">{spec.value}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Related Products Section */}
-      {relatedProducts.length > 0 && (
-        <div className="related-products">
-          <div className="section-title">You Might Also Like</div>
-          <div className="related-grid">
-            {relatedProducts.map((relatedProduct) => {
-              // Get thumbnail for related product
-              let thumbnail = relatedProduct.thumbnailImage;
-              if (relatedProduct.type === "simple" && relatedProduct.colors && relatedProduct.colors.length > 0) {
-                thumbnail = relatedProduct.colors[0].images?.[0] || relatedProduct.thumbnailImage;
-              } else if (relatedProduct.type === "variable" && relatedProduct.models && relatedProduct.models.length > 0) {
-                const firstModel = relatedProduct.models[0];
-                if (firstModel.colors && firstModel.colors.length > 0) {
-                  thumbnail = firstModel.colors[0].images?.[0] || relatedProduct.thumbnailImage;
-                }
-              }
-
-              return (
-                <div
-                  key={relatedProduct.productId}
-                  className="related-product-card"
-                  onClick={() => navigate(`/product/${relatedProduct.productId}`)}
-                >
-                  <div className="related-image">
-                    <img
-                      src={thumbnail || "https://via.placeholder.com/300x150?text=No+Image"}
-                      alt={relatedProduct.productName}
-                    />
-                  </div>
-                  <div className="related-info">
-                    <div className="related-name">{relatedProduct.productName}</div>
-                    <div className="related-price">
-                      ₹{relatedProduct.currentPrice?.toLocaleString() || "0"}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Reviews Modal */}
+      {/* REVIEWS MODAL */}
       {showReviewsModal && (
-        <div className="reviews-modal">
+        <div className="premium-reviews-modal">
           <div className="modal-overlay" onClick={() => setShowReviewsModal(false)}></div>
-          <div className="modal-content reviews-modal-content">
+          <div className="modal-container">
             <div className="modal-header">
-              <h2>
-                Customer Reviews
-                <span className="reviews-count-badge">
-                  {reviewsStats.totalReviews} review{reviewsStats.totalReviews > 1 ? 's' : ''}
-                </span>
-              </h2>
-              <button
-                className="close-btn"
-                onClick={() => setShowReviewsModal(false)}
-              >
+              <div className="modal-title-section">
+                <h2>Customer Reviews</h2>
+                <div className="reviews-summary-badge">
+                  <span className="average-rating">{averageRating.toFixed(1)}</span>
+                  <span className="total-reviews-count">/5 • {reviewsStats.totalReviews} reviews</span>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowReviewsModal(false)}>
                 ✕
               </button>
             </div>
 
-            <div className="reviews-modal-body">
+            <div className="modal-body">
               {/* Stats Sidebar */}
               <div className="reviews-stats-sidebar">
-                <div className="overall-rating">
-                  <div className="overall-rating-number">
-                    {reviewsStats.averageRating}
-                  </div>
+                <div className="overall-rating-box">
+                  <div className="overall-rating-score">{averageRating.toFixed(1)}</div>
                   <div className="overall-rating-stars">
-                    {renderRatingStars(reviewsStats.averageRating, 'large')}
+                    {renderRatingStars(averageRating, 'large')}
                   </div>
                   <div className="overall-rating-text">
-                    {reviewsStats.totalReviews} rating{reviewsStats.totalReviews > 1 ? 's' : ''}
+                    Based on {reviewsStats.totalReviews} review{reviewsStats.totalReviews !== 1 ? 's' : ''}
                   </div>
                 </div>
 
-                <div className="rating-breakdown">
-                  <h4>Rating Breakdown</h4>
+                <div className="rating-distribution-chart">
+                  <h4>Rating Distribution</h4>
                   {[5, 4, 3, 2, 1].map(star => {
                     const count = reviewsStats.ratingDistribution[star] || 0;
                     const percentage = reviewsStats.totalReviews > 0
@@ -1725,15 +1486,15 @@ function ProductPage() {
                       : 0;
 
                     return (
-                      <div key={star} className="breakdown-row">
-                        <span className="breakdown-star">{star} ★</span>
-                        <div className="breakdown-bar-container">
+                      <div key={star} className="distribution-row">
+                        <span className="star-label">{star} ★</span>
+                        <div className="distribution-bar-container">
                           <div
-                            className="breakdown-bar-fill"
+                            className="distribution-bar-fill"
                             style={{ width: `${percentage}%` }}
                           ></div>
                         </div>
-                        <span className="breakdown-count">{count}</span>
+                        <span className="distribution-count">{count}</span>
                       </div>
                     );
                   })}
@@ -1741,97 +1502,61 @@ function ProductPage() {
               </div>
 
               {/* Reviews List */}
-              <div className="reviews-list-section">
-                <div className="reviews-filter">
-                  <div className="filter-buttons">
-                    <button className="filter-btn active">All</button>
-                    <button className="filter-btn">5 Star ({reviewsStats.ratingDistribution[5]})</button>
-                    <button className="filter-btn">4 Star ({reviewsStats.ratingDistribution[4]})</button>
-                    <button className="filter-btn">3 Star ({reviewsStats.ratingDistribution[3]})</button>
-                    <button className="filter-btn">2 Star ({reviewsStats.ratingDistribution[2]})</button>
-                    <button className="filter-btn">1 Star ({reviewsStats.ratingDistribution[1]})</button>
-                  </div>
-                  <div className="sort-options">
-                    <select className="sort-select">
-                      <option value="newest">Newest First</option>
-                      <option value="oldest">Oldest First</option>
-                      <option value="highest">Highest Rating</option>
-                      <option value="lowest">Lowest Rating</option>
-                    </select>
+              <div className="reviews-list-container">
+                <div className="reviews-filter-bar">
+                  <div className="filter-options">
+                    <button className="filter-option active">All Reviews</button>
+                    <button className="filter-option">5 Star ({reviewsStats.ratingDistribution[5]})</button>
+                    <button className="filter-option">4 Star ({reviewsStats.ratingDistribution[4]})</button>
+                    <button className="filter-option">3 Star ({reviewsStats.ratingDistribution[3]})</button>
+                    <button className="filter-option">2 Star ({reviewsStats.ratingDistribution[2]})</button>
+                    <button className="filter-option">1 Star ({reviewsStats.ratingDistribution[1]})</button>
                   </div>
                 </div>
 
-                <div className="reviews-list-container">
+                <div className="reviews-list">
                   {reviewsLoading && reviews.length === 0 ? (
                     <div className="loading-reviews">
-                      <div className="spinner-small"></div>
-                      Loading reviews...
+                      <div className="loading-spinner"></div>
+                      <p>Loading reviews...</p>
                     </div>
                   ) : reviews.length > 0 ? (
                     <>
-                      {reviews.map((review, index) => (
-                        <div key={index} className="review-card-full">
-                          <div className="review-header-full">
-                            <div className="reviewer-info-full">
-                              <div className="reviewer-avatar">
-                                {review.userName.charAt(0).toUpperCase()}
-                              </div>
+                      {reviews.map((review, index) => {
+                        // Ensure review.rating is a number
+                        const reviewRating = typeof review.rating === 'number' 
+                          ? review.rating 
+                          : parseFloat(review.rating) || 0;
+                        
+                        return (
+                          <div key={index} className="review-card">
+                            <div className="review-header">
                               <div className="reviewer-details">
-                                <div className="reviewer-name-full">{review.userName}</div>
+                                <div className="reviewer-name">{review.userName}</div>
                                 <div className="review-meta">
-                                  <div className="review-rating-full">
-                                    {renderRatingStars(review.rating, 'small')}
-                                    <span className="review-rating-value">{review.rating}/5</span>
+                                  <div className="review-stars">
+                                    {renderRatingStars(reviewRating, 'small')}
+                                    <span className="review-rating">{reviewRating}/5</span>
                                   </div>
-                                  <span className="review-date-full">
-                                    {formatReviewDate(review.createdAt)}
-                                  </span>
-                                  {review.updatedAt && review.updatedAt !== review.createdAt && (
-                                    <span className="review-updated">
-                                      (Updated)
-                                    </span>
+                                  <span className="review-date">{formatReviewDate(review.createdAt)}</span>
+                                  {review.isVerifiedPurchase && (
+                                    <span className="verified-badge">✅ Verified Purchase</span>
                                   )}
                                 </div>
                               </div>
                             </div>
 
-                            <div className="review-variant-info">
-                              {review.modelName !== "Default" && (
-                                <span className="variant-chip">{review.modelName}</span>
-                              )}
-                              <span className="variant-chip">{review.colorName}</span>
-                              {review.size && (
-                                <span className="variant-chip">Size: {review.size}</span>
-                              )}
-                              {review.isVerifiedPurchase && (
-                                <span className="verified-purchase-chip">
-                                  ✅ Verified Purchase
-                                </span>
-                              )}
+                            <div className="review-content">
+                              <p className="review-text">"{review.reviewText || 'No review text provided'}"</p>
                             </div>
                           </div>
-
-                          <div className="review-content-full">
-                            {review.reviewText ? (
-                              <p className="review-text-full">"{review.reviewText}"</p>
-                            ) : (
-                              <p className="no-review-text">No review text provided</p>
-                            )}
-                          </div>
-
-                          <div className="review-actions-full">
-                            <button className="helpful-btn">
-                              👍 Helpful ({review.helpfulCount || 0})
-                            </button>
-                            <button className="report-btn">Report</button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
 
                       {/* Load More Button */}
                       {reviews.length < reviewsStats.totalReviews && (
                         <button
-                          className="load-more-btn"
+                          className="load-more-reviews-btn"
                           onClick={() => {
                             const nextPage = reviewsPage + 1;
                             setReviewsPage(nextPage);
@@ -1844,8 +1569,8 @@ function ProductPage() {
                       )}
                     </>
                   ) : (
-                    <div className="no-reviews-full">
-                      <div className="no-reviews-icon-full">⭐</div>
+                    <div className="no-reviews-message">
+                      <div className="no-reviews-icon">⭐</div>
                       <h3>No reviews yet</h3>
                       <p>Be the first to review this product!</p>
                     </div>
@@ -1856,37 +1581,8 @@ function ProductPage() {
           </div>
         </div>
       )}
-
-
     </div>
   );
-}
-
-// Helper function to get color hex from color name
-function getColorHex(colorName) {
-  const colorMap = {
-    'red': '#ff4757',
-    'blue': '#3742fa',
-    'green': '#2ed573',
-    'yellow': '#ffa502',
-    'black': '#2f3542',
-    'white': '#ffffff',
-    'gray': '#a4b0be',
-    'pink': '#ff6b81',
-    'purple': '#6c5ce7',
-    'orange': '#ff7f00',
-    'brown': '#795548',
-    'navy': '#273c75',
-    'maroon': '#c23616',
-    'teal': '#0097a7',
-    'cyan': '#00d2d3',
-    'gold': '#ff9f1a',
-    'silver': '#bdc3c7',
-    'multicolor': 'linear-gradient(45deg, #ff4757, #3742fa, #2ed573)'
-  };
-
-  const lowerColor = colorName.toLowerCase();
-  return colorMap[lowerColor] || '#718096';
 }
 
 export default ProductPage;

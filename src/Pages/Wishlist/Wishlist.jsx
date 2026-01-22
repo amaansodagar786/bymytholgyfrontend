@@ -35,7 +35,6 @@ function Wishlist() {
         return;
       }
 
-      // ✅ CORRECT: Use query parameters
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/wishlist/my-wishlist?userId=${userId}`,
         {
@@ -65,7 +64,7 @@ function Wishlist() {
       setRemovingItem(productId);
 
       const token = localStorage.getItem("token");
-      const userId = localStorage.getItem("userId"); // Get userId
+      const userId = localStorage.getItem("userId");
 
       await axios.delete(
         `${import.meta.env.VITE_API_URL}/wishlist/remove/${productId}?userId=${userId}`,
@@ -91,42 +90,33 @@ function Wishlist() {
     }
   };
 
-  // Move item to cart (you'll need to implement cart API later)
-  const moveToCart = async (item) => {
-    try {
-      // First, add to cart
-      const cartData = {
-        productId: item.productId,
-        quantity: 1,
-        selectedModel: item.selectedModel,
-        selectedColor: item.selectedColor,
-        selectedSize: item.selectedSize
-      };
+  // Handle product click WITH VARIANT PRE-SELECTION
+  const handleProductClick = (item) => {
+    let url = `/product/${item.productId}`;
 
-      // TODO: Implement your cart API endpoint
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/cart/add`,
-        cartData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+    const params = new URLSearchParams();
 
-      // Then remove from wishlist
-      await removeFromWishlist(item.productId);
-
-      alert("Item moved to cart successfully!");
-
-      // Dispatch event for cart update
-      window.dispatchEvent(new Event('cartUpdated'));
-
-    } catch (err) {
-      console.error("Error moving to cart:", err);
-      alert(err.response?.data?.message || "Failed to move to cart. Please try again.");
+    if (item.selectedModel && item.selectedModel.modelId) {
+      params.append('model', item.selectedModel.modelId);
     }
+
+    if (item.selectedColor && item.selectedColor.colorId) {
+      params.append('color', item.selectedColor.colorId);
+    }
+
+    if (item.selectedSize) {
+      params.append('size', item.selectedSize);
+    }
+
+    if (item.selectedFragrance) {
+      params.append('fragrance', item.selectedFragrance);
+    }
+
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    navigate(url);
   };
 
   // Calculate wishlist summary
@@ -144,35 +134,6 @@ function Wishlist() {
       totalDiscount
     };
   };
-
-  // In Wishlist.js - UPDATE THE handleProductClick FUNCTION:
-
-  // Handle product click WITH VARIANT PRE-SELECTION
-  const handleProductClick = (item) => {
-    // Build URL with query parameters for variant pre-selection
-    let url = `/product/${item.productId}`;
-
-    const params = new URLSearchParams();
-
-    if (item.selectedModel && item.selectedModel.modelId) {
-      params.append('model', item.selectedModel.modelId);
-    }
-
-    if (item.selectedColor && item.selectedColor.colorId) {
-      params.append('color', item.selectedColor.colorId);
-    }
-
-    if (item.selectedSize) {
-      params.append('size', item.selectedSize);
-    }
-
-    if (params.toString()) {
-      url += `?${params.toString()}`;
-    }
-
-    navigate(url);
-  };
-
 
   const summary = calculateSummary();
 
@@ -193,13 +154,10 @@ function Wishlist() {
       <div className="wishlist-page">
         <div className="login-prompt">
           <h2>Login Required</h2>
-          <p>Please login to view your wishlist. Your wishlist items are saved to your account and will be available whenever you login.</p>
+          <p>Please login to view your wishlist.</p>
           <div className="auth-buttons">
             <Link to="/login" className="auth-btn login-btn">
               Login
-            </Link>
-            <Link to="/register" className="auth-btn register-btn">
-              Register
             </Link>
           </div>
         </div>
@@ -211,22 +169,36 @@ function Wishlist() {
   if (wishlistItems.length === 0 && !error) {
     return (
       <div className="wishlist-page">
-        <div className="page-header">
-          <h1>My Wishlist</h1>
-          <div className="wishlist-count">0 items</div>
+        {/* ===== HERO SECTION ===== */}
+        <div className="wishlist-hero">
+          <img
+            src="https://images.unsplash.com/photo-1540555700478-4be289fbecef"
+            alt="Wishlist Hero"
+          />
         </div>
 
-        <div className="empty-wishlist">
-          <div className="empty-icon">💔</div>
+        <div className="wishlist-wrapper">
+          {/* HEADER */}
+          <div className="wishlist-header">
+            <h1>Wishlist</h1>
+            <button onClick={() => navigate(-1)}>×</button>
+          </div>
 
-          <h2>Your wishlist is empty</h2>
-          <p>Looks like you haven't added any items to your wishlist yet. Start browsing our collection and add your favorite products!</p>
-          <button
-            className="browse-btn"
-            onClick={() => navigate("/")}
-          >
-            Start Shopping
-          </button>
+          <div className="wishlist-body">
+            <div className="empty-wishlist-center">
+              <div className="empty-wishlist-icon">💔</div>
+              <h2>Your wishlist is empty</h2>
+              <p className="empty-wishlist-message">
+                Looks like you haven't added any items to your wishlist yet.
+              </p>
+              <button 
+                className="empty-wishlist-button" 
+                onClick={() => navigate('/')}
+              >
+                Continue Shopping
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -236,20 +208,32 @@ function Wishlist() {
   if (error) {
     return (
       <div className="wishlist-page">
-        <div className="page-header">
-          <h1>My Wishlist</h1>
+        <div className="wishlist-hero">
+          <img
+            src="https://images.unsplash.com/photo-1540555700478-4be289fbecef"
+            alt="Wishlist Hero"
+          />
         </div>
 
-        <div className="empty-wishlist">
-          <div className="empty-icon">⚠️</div>
-          <h2>Oops! Something went wrong</h2>
-          <p>{error}</p>
-          <button
-            className="browse-btn"
-            onClick={fetchWishlist}
-          >
-            Try Again
-          </button>
+        <div className="wishlist-wrapper">
+          <div className="wishlist-header">
+            <h1>Wishlist</h1>
+            <button onClick={() => navigate(-1)}>×</button>
+          </div>
+
+          <div className="wishlist-body">
+            <div className="empty-wishlist-center">
+              <div className="empty-wishlist-icon">⚠️</div>
+              <h2>Oops! Something went wrong</h2>
+              <p className="empty-wishlist-message">{error}</p>
+              <button 
+                className="empty-wishlist-button" 
+                onClick={fetchWishlist}
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -258,186 +242,114 @@ function Wishlist() {
   // Render wishlist with items
   return (
     <div className="wishlist-page">
-      <div className="page-header">
-        <h1>My Wishlist</h1>
-        <div className="wishlist-count">{wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'}</div>
+      {/* ===== HERO SECTION ===== */}
+      <div className="wishlist-hero">
+        <img
+          src="https://images.unsplash.com/photo-1540555700478-4be289fbecef"
+          alt="Wishlist Hero"
+        />
       </div>
 
-      <div className="wishlist-container">
-        {/* Wishlist Items */}
-        <div className="wishlist-items">
-          {wishlistItems.map((item) => (
-            <div key={item.wishlistId} className="wishlist-item">
-              <div className="item-content">
-                {/* Product Image */}
-                <div className="item-image">
-                  {item.thumbnailImage ? (
-                    <img
-                      src={item.thumbnailImage}
-                      alt={item.productName}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "https://via.placeholder.com/200x200?text=No+Image";
-                      }}
-                    />
-                  ) : (
-                    <div className="no-image">No Image</div>
+      <div className="wishlist-wrapper">
+        {/* HEADER */}
+        <div className="wishlist-header">
+          <h1>Wishlist</h1>
+          <button onClick={() => navigate(-1)}>×</button>
+        </div>
+
+        <div className="wishlist-body">
+          {/* LEFT 65% - WISHLIST ITEMS */}
+          <div className="wishlist-left">
+            {wishlistItems.map((item) => (
+              <div className="wishlist-item" key={item.wishlistId}>
+                <img
+                  src={item.thumbnailImage || "https://via.placeholder.com/140x140?text=No+Image"}
+                  alt={item.productName}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://via.placeholder.com/140x140?text=No+Image";
+                  }}
+                />
+
+                <div className="wishlist-info">
+                  <h3>{item.productName}</h3>
+
+                  {/* Show fragrance if exists */}
+                  {item.selectedFragrance && (
+                    <p className="fragrance">
+                      Fragrance : {item.selectedFragrance}
+                    </p>
                   )}
-                </div>
 
-                {/* Product Details */}
-                <div className="item-details">
-                  <div className="item-header">
-                    <div className="item-title">
-                      <div className="category-badge">
-                        {item.categoryName || "Uncategorized"}
-                      </div>
-                      <h3 onClick={() => handleProductClick(item.productId, item.selectedModel, item.selectedColor)}>
-                        {item.productName}
-                      </h3>
-                    </div>
-
-                    <button
-                      className="remove-btn"
-                      onClick={() => removeFromWishlist(item.productId)}
-                      disabled={removingItem === item.productId}
-                      title="Remove from wishlist"
-                    >
-                      {removingItem === item.productId ? '⏳' : '×'}
-                    </button>
-                  </div>
-
-                  {/* Variant Information */}
-                  <div className="item-variants">
+                  {/* Show other variants */}
+                  <div className="variants">
                     {item.selectedModel && (
-                      <div className="variant-info">
-                        <span className="variant-label">Model:</span>
-                        <span className="variant-value">{item.selectedModel.modelName}</span>
-                      </div>
+                      <span className="variant-tag">Model: {item.selectedModel.modelName}</span>
                     )}
-
-                    {item.selectedColor && (
-                      <div className="variant-info">
-                        <span className="variant-label">Color:</span>
-                        <span className="variant-value">{item.selectedColor.colorName}</span>
-                        {item.selectedColor.currentPrice && item.selectedColor.currentPrice !== item.currentPrice && (
-                          <span className="variant-price">
-                            (₹{item.selectedColor.currentPrice.toLocaleString()})
-                          </span>
-                        )}
-                      </div>
-                    )}
-
+                    {/* {item.selectedColor && (
+                      <span className="variant-tag">Color: {item.selectedColor.colorName}</span>
+                    )} */}
                     {item.selectedSize && (
-                      <div className="variant-info">
-                        <span className="variant-label">Size:</span>
-                        <span className="variant-value">{item.selectedSize}</span>
-                      </div>
-                    )}
-
-                    <div className="variant-info">
-                      <span className="variant-label">Type:</span>
-                      <span className="variant-value">
-                        {item.productType === "variable" ? "Variable Product" : "Simple Product"}
-                      </span>
-                    </div>
-
-                    {item.addedFrom && (
-                      <div className="variant-info">
-                        <span className="variant-label">Added from:</span>
-                        <span className="variant-value">
-                          {item.addedFrom === "product" ? "Product Page" : "Home Page"}
-                        </span>
-                      </div>
+                      <span className="variant-tag">Size: {item.selectedSize}</span>
                     )}
                   </div>
 
-                  {/* Price Information */}
-                  <div className="price-section">
-                    <span className="current-price">
-                      ₹{item.currentPrice.toLocaleString()}
-                    </span>
-
+                  <div className="price-row">
+                    <span className="price">₹{item.currentPrice.toLocaleString()}</span>
                     {item.originalPrice && item.originalPrice > item.currentPrice && (
-                      <>
-                        <span className="original-price">
-                          ₹{item.originalPrice.toLocaleString()}
-                        </span>
-                        <span className="discount-badge">
-                          {Math.round(((item.originalPrice - item.currentPrice) / item.originalPrice) * 100)}% OFF
-                        </span>
-                      </>
+                      <span className="old">₹{item.originalPrice.toLocaleString()}</span>
                     )}
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="item-actions">
+                  <div className="wishlist-actions">
                     <button
-                      className="action-btn view-btn"
+                      className="view-details-btn"
                       onClick={() => handleProductClick(item)}
                     >
                       View Details
                     </button>
-
-                    {/* <button
-                      className="action-btn cart-btn"
-                      onClick={() => moveToCart(item)}
-                    >
-                      Add to Cart
-                    </button> */}
                   </div>
                 </div>
+
+                <button
+                  className="remove"
+                  onClick={() => removeFromWishlist(item.productId)}
+                  disabled={removingItem === item.productId}
+                  title="Remove from wishlist"
+                >
+                  {removingItem === item.productId ? '⏳' : '×'}
+                </button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Wishlist Summary */}
-        <div className="wishlist-summary">
-          <h3 className="summary-title">Wishlist Summary</h3>
+          {/* RIGHT 35% - WISHLIST SUMMARY */}
+          <div className="wishlist-right">
+            <h2>WISHLIST SUMMARY</h2>
 
-          <div className="summary-items">
-            <div className="summary-row">
-              <span className="row-label">Total Items</span>
-              <span className="row-value">{summary.totalItems}</span>
+            <div className="row">
+              <span>Total Items</span>
+              <span>{summary.totalItems}</span>
             </div>
 
             {summary.totalDiscount > 0 && (
-              <div className="summary-row">
-                <span className="row-label">Total Discount</span>
-                <span className="row-value">₹{summary.totalDiscount.toLocaleString()}</span>
+              <div className="row">
+                <span>Total Discount</span>
+                <span>₹{summary.totalDiscount.toLocaleString()}</span>
               </div>
             )}
 
-            <div className="summary-row total">
-              <span className="row-label">Total Value</span>
-              <span className="row-value">₹{summary.totalPrice.toLocaleString()}</span>
+            <div className="row total">
+              <span>Total Value</span>
+              <span>₹{summary.totalPrice.toLocaleString()}</span>
             </div>
-          </div>
 
-          <div className="summary-actions">
-            <Link to="/" className="summary-btn continue-btn">
-              Continue Shopping
-            </Link>
-
-            <button
-              className="summary-btn checkout-btn"
-              onClick={() => {
-                // You can implement bulk add to cart or checkout from wishlist
-                alert("Feature coming soon! For now, add items individually to cart.");
-              }}
+            <button 
+              className="continue-shopping-btn"
+              onClick={() => navigate('/')}
             >
-              Add All to Cart
+              CONTINUE SHOPPING
             </button>
-          </div>
-
-          <div className="wishlist-notes">
-            <div className="notes-title">Wishlist Notes</div>
-            <div className="notes-text">
-              • Items in your wishlist are saved to your account<br />
-              • You can add items to cart individually<br />
-              • Price may change if product prices are updated
-            </div>
           </div>
         </div>
       </div>

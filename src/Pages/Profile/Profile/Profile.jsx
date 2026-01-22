@@ -1,292 +1,139 @@
-// Updated Profile.jsx with Address Management
+// Updated Profile.jsx with fixed AddressForm centering
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import ReactDOM from "react-dom"; // Import ReactDOM for Portal
 import "./Profile.scss";
-import AddressForm from '../../CheckOut/Address/AddressForm'; // Import from separate file
+import AddressForm from '../../CheckOut/Address/AddressForm';
 
+// React Icons
+import { 
+  FaHome, FaBriefcase, FaMapMarkerAlt, FaPhone, FaEnvelope, 
+  FaEdit, FaTrash, FaStar, FaUser, FaLock, FaMapMarker, 
+  FaHeart, FaBox, FaSignOutAlt, FaCheck, FaExclamationTriangle 
+} from 'react-icons/fa';
+import { IoMdArrowDropdown } from 'react-icons/io';
 
-// Address Form Component
-// const AddressForm = ({ address, onSubmit, onCancel, mode = "add" }) => {
-//     const [formData, setFormData] = useState({
-//         fullName: address?.fullName || "",
-//         mobile: address?.mobile || "",
-//         email: address?.email || "",
-//         addressLine1: address?.addressLine1 || "",
-//         addressLine2: address?.addressLine2 || "",
-//         landmark: address?.landmark || "",
-//         city: address?.city || "",
-//         state: address?.state || "",
-//         pincode: address?.pincode || "",
-//         country: address?.country || "India",
-//         addressType: address?.addressType || "home",
-//         isDefault: address?.isDefault || false,
-//         instructions: address?.instructions || ""
-//     });
+// Toast configuration
+const toastConfig = {
+  position: "top-center",
+  autoClose: 4000,
+  hideProgressBar: false,
+  closeOnClick: true,
+  pauseOnHover: true,
+  draggable: true,
+  progress: undefined,
+  theme: "light",
+};
 
-//     const addressTypes = [
-//         { value: "home", label: "🏠 Home" },
-//         { value: "work", label: "💼 Work" },
-//         { value: "other", label: "📌 Other" }
-//     ];
+// Success toast
+const showSuccess = (message) => {
+  toast.success(message, {
+    ...toastConfig,
+    icon: <FaCheck className="toast-icon success" />,
+  });
+};
 
-//     const handleChange = (e) => {
-//         const { name, value, type, checked } = e.target;
-//         setFormData(prev => ({
-//             ...prev,
-//             [name]: type === 'checkbox' ? checked : value
-//         }));
-//     };
+// Error toast
+const showError = (message) => {
+  toast.error(message, {
+    ...toastConfig,
+    icon: <FaExclamationTriangle className="toast-icon error" />,
+  });
+};
 
-//     const handleSubmit = (e) => {
-//         e.preventDefault();
-//         onSubmit(formData);
-//     };
-
-//     return (
-//         <div className="address-form-modal">
-//             <div className="address-form-content">
-//                 <h3>{mode === "edit" ? "Edit Address" : "Add New Address"}</h3>
-
-//                 <form onSubmit={handleSubmit}>
-//                     <div className="form-grid">
-//                         {/* Personal Details */}
-//                         <div className="form-group">
-//                             <label>Full Name *</label>
-//                             <input
-//                                 type="text"
-//                                 name="fullName"
-//                                 value={formData.fullName}
-//                                 onChange={handleChange}
-//                                 required
-//                                 placeholder="Enter full name"
-//                             />
-//                         </div>
-
-//                         <div className="form-group">
-//                             <label>Mobile Number *</label>
-//                             <input
-//                                 type="tel"
-//                                 name="mobile"
-//                                 value={formData.mobile}
-//                                 onChange={handleChange}
-//                                 required
-//                                 placeholder="10-digit mobile number"
-//                                 pattern="[6-9]{1}[0-9]{9}"
-//                             />
-//                         </div>
-
-//                         <div className="form-group">
-//                             <label>Email</label>
-//                             <input
-//                                 type="email"
-//                                 name="email"
-//                                 value={formData.email}
-//                                 onChange={handleChange}
-//                                 placeholder="Enter email"
-//                             />
-//                         </div>
-
-//                         {/* Address Line 1 */}
-//                         <div className="form-group full-width">
-//                             <label>Address Line 1 *</label>
-//                             <input
-//                                 type="text"
-//                                 name="addressLine1"
-//                                 value={formData.addressLine1}
-//                                 onChange={handleChange}
-//                                 required
-//                                 placeholder="House/Flat No., Building, Street"
-//                             />
-//                         </div>
-
-//                         {/* Address Line 2 */}
-//                         <div className="form-group full-width">
-//                             <label>Address Line 2</label>
-//                             <input
-//                                 type="text"
-//                                 name="addressLine2"
-//                                 value={formData.addressLine2}
-//                                 onChange={handleChange}
-//                                 placeholder="Area, Locality"
-//                             />
-//                         </div>
-
-//                         {/* Landmark */}
-//                         <div className="form-group">
-//                             <label>Landmark</label>
-//                             <input
-//                                 type="text"
-//                                 name="landmark"
-//                                 value={formData.landmark}
-//                                 onChange={handleChange}
-//                                 placeholder="Nearby landmark"
-//                             />
-//                         </div>
-
-//                         {/* City, State, Pincode */}
-//                         <div className="form-group">
-//                             <label>City *</label>
-//                             <input
-//                                 type="text"
-//                                 name="city"
-//                                 value={formData.city}
-//                                 onChange={handleChange}
-//                                 required
-//                                 placeholder="City"
-//                             />
-//                         </div>
-
-//                         <div className="form-group">
-//                             <label>State *</label>
-//                             <input
-//                                 type="text"
-//                                 name="state"
-//                                 value={formData.state}
-//                                 onChange={handleChange}
-//                                 required
-//                                 placeholder="State"
-//                             />
-//                         </div>
-
-//                         <div className="form-group">
-//                             <label>Pincode *</label>
-//                             <input
-//                                 type="text"
-//                                 name="pincode"
-//                                 value={formData.pincode}
-//                                 onChange={handleChange}
-//                                 required
-//                                 placeholder="6-digit pincode"
-//                                 pattern="[0-9]{6}"
-//                             />
-//                         </div>
-
-//                         {/* Country */}
-//                         <div className="form-group">
-//                             <label>Country</label>
-//                             <input
-//                                 type="text"
-//                                 name="country"
-//                                 value={formData.country}
-//                                 onChange={handleChange}
-//                                 placeholder="Country"
-//                             />
-//                         </div>
-
-//                         {/* Address Type */}
-//                         <div className="form-group">
-//                             <label>Address Type</label>
-//                             <select
-//                                 name="addressType"
-//                                 value={formData.addressType}
-//                                 onChange={handleChange}
-//                             >
-//                                 {addressTypes.map(type => (
-//                                     <option key={type.value} value={type.value}>
-//                                         {type.label}
-//                                     </option>
-//                                 ))}
-//                             </select>
-//                         </div>
-
-//                         {/* Default Address Checkbox */}
-//                         <div className="form-group checkbox-group">
-//                             <label className="checkbox-label">
-//                                 <input
-//                                     type="checkbox"
-//                                     name="isDefault"
-//                                     checked={formData.isDefault}
-//                                     onChange={handleChange}
-//                                 />
-//                                 <span>Set as default address</span>
-//                             </label>
-//                         </div>
-
-//                         {/* Delivery Instructions */}
-//                         <div className="form-group full-width">
-//                             <label>Delivery Instructions</label>
-//                             <textarea
-//                                 name="instructions"
-//                                 value={formData.instructions}
-//                                 onChange={handleChange}
-//                                 placeholder="Any special delivery instructions"
-//                                 rows="3"
-//                             />
-//                         </div>
-//                     </div>
-
-//                     <div className="form-actions">
-//                         <button type="submit" className="save-btn">
-//                             {mode === "edit" ? "Update Address" : "Save Address"}
-//                         </button>
-//                         <button type="button" className="cancel-btn" onClick={onCancel}>
-//                             Cancel
-//                         </button>
-//                     </div>
-//                 </form>
-//             </div>
-//         </div>
-//     );
-// };
-
-// Address Card Component
+// Address Card Component with React Icons
 const AddressCard = ({ address, onEdit, onDelete, onSetDefault }) => {
+    // Choose icon based on address type
+    const getAddressIcon = () => {
+        switch (address.addressType) {
+            case 'home': return <FaHome className="icon" />;
+            case 'work': return <FaBriefcase className="icon" />;
+            default: return <FaMapMarkerAlt className="icon" />;
+        }
+    };
+
     return (
         <div className={`address-card ${address.isDefault ? 'default' : ''}`}>
-            <div className="address-header">
-                <div className="address-type">
-                    <span className="type-icon">
-                        {address.addressType === 'home' ? '🏠' :
-                            address.addressType === 'work' ? '💼' : '📌'}
-                    </span>
-                    <span className="type-text">{address.addressType}</span>
-                    {address.isDefault && (
-                        <span className="default-badge">Default</span>
+            <div className="address-card-inner">
+                <div className="address-header">
+                    <div className="address-type">
+                        <div className="type-icon-wrapper">
+                            {getAddressIcon()}
+                        </div>
+                        <div className="type-info">
+                            <span className="type-text">{address.addressType}</span>
+                            {address.isDefault && (
+                                <span className="default-badge">
+                                    <FaStar className="star-icon" /> Default
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="address-actions">
+                        <button onClick={() => onEdit(address)} className="action-btn edit">
+                            <FaEdit className="btn-icon" /> Edit
+                        </button>
+                        <button onClick={() => onDelete(address.addressId)} className="action-btn delete">
+                            <FaTrash className="btn-icon" /> Delete
+                        </button>
+                    </div>
+                </div>
+
+                <div className="address-body">
+                    <p className="address-name">{address.fullName}</p>
+                    <p className="address-contact">
+                        <FaPhone className="contact-icon" /> {address.mobile}
+                        {address.email && (
+                            <>
+                                <span className="separator">|</span>
+                                <FaEnvelope className="contact-icon" /> {address.email}
+                            </>
+                        )}
+                    </p>
+
+                    <div className="address-details">
+                        <p>{address.addressLine1}</p>
+                        {address.addressLine2 && <p>{address.addressLine2}</p>}
+                        {address.landmark && (
+                            <p className="landmark">
+                                <strong>Landmark:</strong> {address.landmark}
+                            </p>
+                        )}
+                        <p>{address.city}, {address.state} - {address.pincode}</p>
+                        <p>{address.country}</p>
+                    </div>
+
+                    {address.instructions && (
+                        <div className="address-instructions">
+                            <p>
+                                <strong>Delivery Instructions:</strong> {address.instructions}
+                            </p>
+                        </div>
+                    )}
+
+                    {!address.isDefault && (
+                        <button
+                            onClick={() => onSetDefault(address.addressId)}
+                            className="set-default-btn"
+                        >
+                            <FaStar className="star-icon" /> Set as Default
+                        </button>
                     )}
                 </div>
-
-                <div className="address-actions">
-                    <button onClick={() => onEdit(address)} className="action-btn edit">
-                        ✏️ Edit
-                    </button>
-                    <button onClick={() => onDelete(address.addressId)} className="action-btn delete">
-                        🗑️ Delete
-                    </button>
-                </div>
-            </div>
-
-            <div className="address-body">
-                <p className="address-name">{address.fullName}</p>
-                <p className="address-contact">
-                    📱 {address.mobile}
-                    {address.email && ` | ✉️ ${address.email}`}
-                </p>
-
-                <div className="address-details">
-                    <p>{address.addressLine1}</p>
-                    {address.addressLine2 && <p>{address.addressLine2}</p>}
-                    {address.landmark && <p><strong>Landmark:</strong> {address.landmark}</p>}
-                    <p>{address.city}, {address.state} - {address.pincode}</p>
-                    <p>{address.country}</p>
-                </div>
-
-                {address.instructions && (
-                    <div className="address-instructions">
-                        <p><strong>Delivery Instructions:</strong> {address.instructions}</p>
-                    </div>
-                )}
-
-                {!address.isDefault && (
-                    <button
-                        onClick={() => onSetDefault(address.addressId)}
-                        className="set-default-btn"
-                    >
-                        ⭐ Set as Default
-                    </button>
-                )}
             </div>
         </div>
+    );
+};
+
+// Create a Portal for AddressForm
+const AddressFormPortal = ({ children }) => {
+    return ReactDOM.createPortal(
+        children,
+        document.body
     );
 };
 
@@ -296,8 +143,6 @@ const Profile = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState("profile");
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
 
     // Profile data
     const [profile, setProfile] = useState({
@@ -324,6 +169,8 @@ const Profile = () => {
         { value: "", label: "Select Gender" },
         { value: "male", label: "Male" },
         { value: "female", label: "Female" },
+        { value: "other", label: "Other" },
+        { value: "prefer-not-to-say", label: "Prefer not to say" }
     ];
 
     // Get auth token
@@ -333,7 +180,6 @@ const Profile = () => {
     const fetchProfile = async () => {
         try {
             setLoading(true);
-            setError("");
 
             const token = getToken();
             if (!token) {
@@ -363,7 +209,7 @@ const Profile = () => {
             if (err.response?.status === 401) {
                 handleLogout();
             } else {
-                setError("Failed to load profile. Please try again.");
+                showError("Failed to load profile. Please try again.");
             }
         } finally {
             setLoading(false);
@@ -409,8 +255,6 @@ const Profile = () => {
         e.preventDefault();
         try {
             setSaving(true);
-            setError("");
-            setSuccess("");
 
             const token = getToken();
             if (!token) {
@@ -435,7 +279,7 @@ const Profile = () => {
             );
 
             if (response.data.success) {
-                setSuccess("Profile updated successfully!");
+                showSuccess("Profile updated successfully!");
 
                 if (response.data.token) {
                     localStorage.setItem("token", response.data.token);
@@ -454,7 +298,7 @@ const Profile = () => {
             if (err.response?.status === 401) {
                 handleLogout();
             } else {
-                setError(err.response?.data?.message || "Failed to update profile.");
+                showError(err.response?.data?.message || "Failed to update profile.");
             }
         } finally {
             setSaving(false);
@@ -466,12 +310,21 @@ const Profile = () => {
         e.preventDefault();
         try {
             setSaving(true);
-            setError("");
-            setSuccess("");
 
             const token = getToken();
             if (!token) {
                 navigate("/login");
+                return;
+            }
+
+            // Validate passwords match
+            if (passwords.newPassword !== passwords.confirmPassword) {
+                showError("New password and confirm password do not match.");
+                return;
+            }
+
+            if (passwords.newPassword.length < 6) {
+                showError("New password must be at least 6 characters.");
                 return;
             }
 
@@ -484,7 +337,7 @@ const Profile = () => {
             );
 
             if (response.data.success) {
-                setSuccess("Password changed successfully!");
+                showSuccess("Password changed successfully!");
                 setPasswords({
                     oldPassword: "",
                     newPassword: "",
@@ -496,7 +349,7 @@ const Profile = () => {
             if (err.response?.status === 401) {
                 handleLogout();
             } else {
-                setError(err.response?.data?.message || "Failed to change password.");
+                showError(err.response?.data?.message || "Failed to change password.");
             }
         } finally {
             setSaving(false);
@@ -507,8 +360,6 @@ const Profile = () => {
     const handleAddAddress = async (addressData) => {
         try {
             setSaving(true);
-            setError("");
-            setSuccess("");
 
             const token = getToken();
             const response = await axios.post(
@@ -520,13 +371,13 @@ const Profile = () => {
             );
 
             if (response.data.success) {
-                setSuccess("Address added successfully!");
+                showSuccess("Address added successfully!");
                 setShowAddressForm(false);
                 fetchAddresses();
             }
         } catch (err) {
             console.error("Error adding address:", err);
-            setError(err.response?.data?.message || "Failed to add address.");
+            showError(err.response?.data?.message || "Failed to add address.");
         } finally {
             setSaving(false);
         }
@@ -535,8 +386,6 @@ const Profile = () => {
     const handleUpdateAddress = async (addressData) => {
         try {
             setSaving(true);
-            setError("");
-            setSuccess("");
 
             const token = getToken();
             const response = await axios.put(
@@ -548,14 +397,14 @@ const Profile = () => {
             );
 
             if (response.data.success) {
-                setSuccess("Address updated successfully!");
+                showSuccess("Address updated successfully!");
                 setShowAddressForm(false);
                 setEditingAddress(null);
                 fetchAddresses();
             }
         } catch (err) {
             console.error("Error updating address:", err);
-            setError(err.response?.data?.message || "Failed to update address.");
+            showError(err.response?.data?.message || "Failed to update address.");
         } finally {
             setSaving(false);
         }
@@ -568,8 +417,6 @@ const Profile = () => {
 
         try {
             setSaving(true);
-            setError("");
-            setSuccess("");
 
             const token = getToken();
             const response = await axios.delete(
@@ -580,12 +427,12 @@ const Profile = () => {
             );
 
             if (response.data.success) {
-                setSuccess("Address deleted successfully!");
+                showSuccess("Address deleted successfully!");
                 fetchAddresses();
             }
         } catch (err) {
             console.error("Error deleting address:", err);
-            setError(err.response?.data?.message || "Failed to delete address.");
+            showError(err.response?.data?.message || "Failed to delete address.");
         } finally {
             setSaving(false);
         }
@@ -594,8 +441,6 @@ const Profile = () => {
     const handleSetDefaultAddress = async (addressId) => {
         try {
             setSaving(true);
-            setError("");
-            setSuccess("");
 
             const token = getToken();
             const response = await axios.put(
@@ -607,12 +452,12 @@ const Profile = () => {
             );
 
             if (response.data.success) {
-                setSuccess("Default address updated!");
+                showSuccess("Default address updated!");
                 fetchAddresses();
             }
         } catch (err) {
             console.error("Error setting default address:", err);
-            setError(err.response?.data?.message || "Failed to set default address.");
+            showError(err.response?.data?.message || "Failed to set default address.");
         } finally {
             setSaving(false);
         }
@@ -644,7 +489,10 @@ const Profile = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("userId");
         localStorage.removeItem("user");
-        navigate("/login");
+        showSuccess("Logged out successfully!");
+        setTimeout(() => {
+            navigate("/login");
+        }, 1500);
     };
 
     // Handle input changes
@@ -668,6 +516,7 @@ const Profile = () => {
     if (loading && activeTab === "profile") {
         return (
             <div className="profile-container">
+                <ToastContainer />
                 <div className="loading-container">
                     <div className="spinner"></div>
                     <p>Loading profile...</p>
@@ -681,6 +530,7 @@ const Profile = () => {
     if (!token) {
         return (
             <div className="profile-container">
+                <ToastContainer />
                 <div className="login-prompt">
                     <h2>Login Required</h2>
                     <p>Please login to view your profile.</p>
@@ -694,27 +544,29 @@ const Profile = () => {
 
     return (
         <div className="profile-container">
+            {/* Toast Container */}
+            <ToastContainer
+                position="top-center"
+                autoClose={4000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+            />
+
             <div className="profile-header">
-                <h1>My Profile</h1>
+                <div className="header-content">
+                    <h1 className="page-title">My Profile</h1>
+                    <p className="page-subtitle">Manage your account settings and preferences</p>
+                </div>
                 <button onClick={handleLogout} className="logout-btn">
-                    Logout
+                    <FaSignOutAlt className="logout-icon" /> Logout
                 </button>
             </div>
-
-            {/* Success/Error Messages */}
-            {success && (
-                <div className="alert success">
-                    <span>✓ {success}</span>
-                    <button onClick={() => setSuccess("")}>×</button>
-                </div>
-            )}
-
-            {error && (
-                <div className="alert error">
-                    <span>⚠ {error}</span>
-                    <button onClick={() => setError("")}>×</button>
-                </div>
-            )}
 
             <div className="profile-content">
                 {/* Sidebar Navigation */}
@@ -724,8 +576,8 @@ const Profile = () => {
                             {profile.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="user-info">
-                            <h3>{profile.name}</h3>
-                            <p>{profile.email}</p>
+                            <h3 className="user-name">{profile.name}</h3>
+                            <p className="user-email">{profile.email}</p>
                         </div>
                     </div>
 
@@ -734,25 +586,33 @@ const Profile = () => {
                             className={`nav-btn ${activeTab === "profile" ? "active" : ""}`}
                             onClick={() => setActiveTab("profile")}
                         >
-                            <span>👤</span> Personal Info
+                            <span className="nav-icon"><FaUser /></span>
+                            <span className="nav-text">Personal Info</span>
                         </button>
                         <button
                             className={`nav-btn ${activeTab === "password" ? "active" : ""}`}
                             onClick={() => setActiveTab("password")}
                         >
-                            <span>🔒</span> Change Password
+                            <span className="nav-icon"><FaLock /></span>
+                            <span className="nav-text">Change Password</span>
                         </button>
                         <button
                             className={`nav-btn ${activeTab === "addresses" ? "active" : ""}`}
                             onClick={() => setActiveTab("addresses")}
                         >
-                            <span>📍</span> My Addresses
+                            <span className="nav-icon"><FaMapMarker /></span>
+                            <span className="nav-text">My Addresses</span>
+                            {addresses.length > 0 && (
+                                <span className="nav-badge">{addresses.length}</span>
+                            )}
                         </button>
                         <button className="nav-btn" onClick={() => navigate("/wishlist")}>
-                            <span>❤️</span> My Wishlist
+                            <span className="nav-icon"><FaHeart /></span>
+                            <span className="nav-text">My Wishlist</span>
                         </button>
                         <button className="nav-btn" onClick={() => navigate("/orders")}>
-                            <span>📦</span> My Orders
+                            <span className="nav-icon"><FaBox /></span>
+                            <span className="nav-text">My Orders</span>
                         </button>
                     </nav>
                 </div>
@@ -761,11 +621,16 @@ const Profile = () => {
                 <div className="profile-main">
                     {activeTab === "profile" && (
                         <form className="profile-form" onSubmit={handleProfileUpdate}>
-                            <h2>Personal Information</h2>
+                            <div className="section-header">
+                                <h2 className="section-title">Personal Information</h2>
+                                <p className="section-subtitle">Update your personal details</p>
+                            </div>
 
                             <div className="form-grid">
                                 <div className="form-group">
-                                    <label htmlFor="name">Full Name *</label>
+                                    <label htmlFor="name" className="form-label">
+                                        Full Name <span className="required">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         id="name"
@@ -775,11 +640,14 @@ const Profile = () => {
                                         required
                                         disabled={saving}
                                         placeholder="Enter your full name"
+                                        className="form-input"
                                     />
                                 </div>
 
                                 <div className="form-group">
-                                    <label htmlFor="email">Email Address *</label>
+                                    <label htmlFor="email" className="form-label">
+                                        Email Address <span className="required">*</span>
+                                    </label>
                                     <input
                                         type="email"
                                         id="email"
@@ -789,14 +657,17 @@ const Profile = () => {
                                         required
                                         disabled={saving}
                                         placeholder="Enter your email"
+                                        className="form-input"
                                     />
-                                    <small className="form-help">
+                                    {/* <small className="form-help">
                                         Changing email will require re-login
-                                    </small>
+                                    </small> */}
                                 </div>
 
                                 <div className="form-group">
-                                    <label htmlFor="mobile">Mobile Number</label>
+                                    <label htmlFor="mobile" className="form-label">
+                                        Mobile Number
+                                    </label>
                                     <input
                                         type="tel"
                                         id="mobile"
@@ -805,6 +676,7 @@ const Profile = () => {
                                         onChange={handleProfileChange}
                                         disabled={saving}
                                         placeholder="Enter 10-digit mobile number"
+                                        className="form-input"
                                         maxLength="10"
                                         pattern="[6-9]{1}[0-9]{9}"
                                     />
@@ -814,7 +686,9 @@ const Profile = () => {
                                 </div>
 
                                 <div className="form-group">
-                                    <label htmlFor="age">Age</label>
+                                    <label htmlFor="age" className="form-label">
+                                        Age
+                                    </label>
                                     <input
                                         type="number"
                                         id="age"
@@ -823,40 +697,52 @@ const Profile = () => {
                                         onChange={handleProfileChange}
                                         disabled={saving}
                                         placeholder="Enter your age"
+                                        className="form-input"
                                         min="1"
                                         max="120"
                                     />
                                 </div>
 
                                 <div className="form-group full-width">
-                                    <label htmlFor="gender">Gender</label>
-                                    <select
-                                        id="gender"
-                                        name="gender"
-                                        value={profile.gender}
-                                        onChange={handleProfileChange}
-                                        disabled={saving}
-                                    >
-                                        {genderOptions.map(option => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <label htmlFor="gender" className="form-label">
+                                        Gender
+                                    </label>
+                                    <div className="select-wrapper">
+                                        <select
+                                            id="gender"
+                                            name="gender"
+                                            value={profile.gender}
+                                            onChange={handleProfileChange}
+                                            disabled={saving}
+                                            className="form-select"
+                                        >
+                                            {genderOptions.map(option => (
+                                                <option key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <IoMdArrowDropdown className="select-arrow" />
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="form-actions">
                                 <button
                                     type="submit"
-                                    className="save-btn"
+                                    className="save-btn primary-btn"
                                     disabled={saving}
                                 >
-                                    {saving ? "Saving..." : "Save Changes"}
+                                    {saving ? (
+                                        <>
+                                            <span className="spinner-btn"></span>
+                                            Saving...
+                                        </>
+                                    ) : "Save Changes"}
                                 </button>
                                 <button
                                     type="button"
-                                    className="cancel-btn"
+                                    className="cancel-btn secondary-btn"
                                     onClick={fetchProfile}
                                     disabled={saving}
                                 >
@@ -868,13 +754,17 @@ const Profile = () => {
 
                     {activeTab === "password" && (
                         <form className="password-form" onSubmit={handlePasswordChange}>
-                            <h2>Change Password</h2>
-                            <p className="form-description">
-                                For security, please enter your current password and then your new password.
-                            </p>
+                            <div className="section-header">
+                                <h2 className="section-title">Change Password</h2>
+                                <p className="section-subtitle">
+                                    For security, please enter your current password and then your new password.
+                                </p>
+                            </div>
 
                             <div className="form-group">
-                                <label htmlFor="oldPassword">Current Password *</label>
+                                <label htmlFor="oldPassword" className="form-label">
+                                    Current Password <span className="required">*</span>
+                                </label>
                                 <input
                                     type="password"
                                     id="oldPassword"
@@ -884,11 +774,14 @@ const Profile = () => {
                                     required
                                     disabled={saving}
                                     placeholder="Enter current password"
+                                    className="form-input"
                                 />
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="newPassword">New Password *</label>
+                                <label htmlFor="newPassword" className="form-label">
+                                    New Password <span className="required">*</span>
+                                </label>
                                 <input
                                     type="password"
                                     id="newPassword"
@@ -898,12 +791,15 @@ const Profile = () => {
                                     required
                                     disabled={saving}
                                     placeholder="Enter new password (min 6 characters)"
+                                    className="form-input"
                                     minLength="6"
                                 />
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="confirmPassword">Confirm New Password *</label>
+                                <label htmlFor="confirmPassword" className="form-label">
+                                    Confirm New Password <span className="required">*</span>
+                                </label>
                                 <input
                                     type="password"
                                     id="confirmPassword"
@@ -913,13 +809,14 @@ const Profile = () => {
                                     required
                                     disabled={saving}
                                     placeholder="Re-enter new password"
+                                    className="form-input"
                                     minLength="6"
                                 />
                             </div>
 
                             <div className="password-requirements">
-                                <h4>Password Requirements:</h4>
-                                <ul>
+                                <h4 className="requirements-title">Password Requirements:</h4>
+                                <ul className="requirements-list">
                                     <li>Minimum 6 characters</li>
                                     <li>Use a mix of letters and numbers</li>
                                     <li>Avoid common words or patterns</li>
@@ -929,14 +826,19 @@ const Profile = () => {
                             <div className="form-actions">
                                 <button
                                     type="submit"
-                                    className="save-btn"
+                                    className="save-btn primary-btn"
                                     disabled={saving}
                                 >
-                                    {saving ? "Changing Password..." : "Change Password"}
+                                    {saving ? (
+                                        <>
+                                            <span className="spinner-btn"></span>
+                                            Changing Password...
+                                        </>
+                                    ) : "Change Password"}
                                 </button>
                                 <button
                                     type="button"
-                                    className="cancel-btn"
+                                    className="cancel-btn secondary-btn"
                                     onClick={() => {
                                         setPasswords({
                                             oldPassword: "",
@@ -955,34 +857,32 @@ const Profile = () => {
 
                     {activeTab === "addresses" && (
                         <div className="addresses-tab">
-                            <div className="addresses-header">
-                                <h2>My Addresses</h2>
+                            <div className="section-header">
+                                <div className="header-content">
+                                    <h2 className="section-title">My Addresses</h2>
+                                    <p className="section-subtitle">
+                                        Manage your shipping addresses for faster checkout
+                                    </p>
+                                </div>
                                 <button
-                                    className="add-address-btn"
+                                    className="add-address-btn primary-btn"
                                     onClick={() => setShowAddressForm(true)}
-                                    disabled={saving}
+                                    disabled={saving || showAddressForm}
                                 >
-                                    ＋ Add New Address
+                                    <span className="btn-icon">+</span> Add New Address
                                 </button>
                             </div>
-
-                            {showAddressForm && (
-                                <AddressForm
-                                    address={editingAddress}
-                                    onSubmit={handleSubmitAddress}
-                                    onCancel={handleCancelAddressForm}
-                                    mode={editingAddress ? 'edit' : 'add'}
-                                />
-                            )}
 
                             {addresses.length === 0 && !showAddressForm ? (
                                 <div className="no-addresses">
                                     <div className="empty-state">
-                                        <span className="empty-icon">📍</span>
+                                        <div className="empty-icon">
+                                            <FaMapMarkerAlt />
+                                        </div>
                                         <h3>No addresses saved</h3>
                                         <p>Add your first address to make checkout faster!</p>
                                         <button
-                                            className="add-first-btn"
+                                            className="add-first-btn primary-btn"
                                             onClick={() => setShowAddressForm(true)}
                                         >
                                             Add Your First Address
@@ -990,7 +890,7 @@ const Profile = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="addresses-list">
+                                <div className="addresses-grid">
                                     {addresses.map(address => (
                                         <AddressCard
                                             key={address.addressId}
@@ -1003,20 +903,36 @@ const Profile = () => {
                                 </div>
                             )}
 
-
-
-
-
                             {addresses.length > 0 && (
                                 <div className="addresses-stats">
-                                    <p>Total addresses: {addresses.length}</p>
-                                    <p>Default address: {addresses.find(a => a.isDefault)?.city || "Not set"}</p>
+                                    <div className="stat-item">
+                                        <span className="stat-label">Total addresses:</span>
+                                        <span className="stat-value">{addresses.length}</span>
+                                    </div>
+                                    <div className="stat-item">
+                                        <span className="stat-label">Default address:</span>
+                                        <span className="stat-value">
+                                            {addresses.find(a => a.isDefault)?.city || "Not set"}
+                                        </span>
+                                    </div>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Render AddressForm as a Portal to body (outside the normal flow) */}
+            {showAddressForm && (
+                <AddressFormPortal>
+                    <AddressForm
+                        address={editingAddress}
+                        onSubmit={handleSubmitAddress}
+                        onCancel={handleCancelAddressForm}
+                        mode={editingAddress ? 'edit' : 'add'}
+                    />
+                </AddressFormPortal>
+            )}
         </div>
     );
 };

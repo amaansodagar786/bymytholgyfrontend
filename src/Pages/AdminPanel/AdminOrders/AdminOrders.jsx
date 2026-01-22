@@ -438,6 +438,9 @@ const AdminOrders = () => {
                         {order.items.slice(0, 2).map((item, idx) => (
                           <span key={idx} className="item-tag">
                             {item.productName}
+                            {item.fragrance && item.fragrance !== "Default" && (
+                              <span className="fragrance-badge">🍃 {item.fragrance}</span>
+                            )}
                           </span>
                         ))}
                         {order.items.length > 2 && (
@@ -568,6 +571,14 @@ const AdminOrders = () => {
                       {selectedOrder.orderStatus.toUpperCase()}
                     </span>
                   </div>
+                  <div className="info-item">
+                    <label>Total Items:</label>
+                    <span>{selectedOrder.items?.length || 0} items</span>
+                  </div>
+                  <div className="info-item">
+                    <label>User ID:</label>
+                    <span>{selectedOrder.userId}</span>
+                  </div>
                 </div>
               </div>
 
@@ -635,12 +646,27 @@ const AdminOrders = () => {
                     <strong>Email:</strong> {selectedOrder.deliveryAddress?.email || "N/A"}
                   </div>
                   <div className="detail-row">
-                    <strong>Address:</strong> {selectedOrder.deliveryAddress?.addressLine1}, 
-                    {selectedOrder.deliveryAddress?.city}, {selectedOrder.deliveryAddress?.state} - 
-                    {selectedOrder.deliveryAddress?.pincode}
+                    <strong>Address:</strong> 
+                    <div className="address-details">
+                      <p>{selectedOrder.deliveryAddress?.addressLine1}</p>
+                      {selectedOrder.deliveryAddress?.addressLine2 && (
+                        <p>{selectedOrder.deliveryAddress.addressLine2}</p>
+                      )}
+                      <p>{selectedOrder.deliveryAddress?.city}, {selectedOrder.deliveryAddress?.state} - {selectedOrder.deliveryAddress?.pincode}</p>
+                      <p>{selectedOrder.deliveryAddress?.country || "India"}</p>
+                      {selectedOrder.deliveryAddress?.landmark && (
+                        <p><strong>Landmark:</strong> {selectedOrder.deliveryAddress.landmark}</p>
+                      )}
+                      {selectedOrder.deliveryAddress?.instructions && (
+                        <p><strong>Instructions:</strong> {selectedOrder.deliveryAddress.instructions}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="detail-row">
-                    <strong>User ID:</strong> {selectedOrder.userId}
+                    <strong>Address Type:</strong> {selectedOrder.deliveryAddress?.addressType || "home"}
+                    {selectedOrder.deliveryAddress?.isDefault && (
+                      <span className="default-badge">Default</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -654,33 +680,59 @@ const AdminOrders = () => {
                       <div className="item-info">
                         <div className="item-name">{item.productName}</div>
                         <div className="item-variants">
-                          {item.modelName !== "Default" && <span>{item.modelName}</span>}
-                          <span>{item.colorName}</span>
-                          {item.size && <span>Size: {item.size}</span>}
+                          {item.modelName !== "Default" && <span className="variant-badge">Model: {item.modelName}</span>}
+                          <span className="variant-badge">Color: {item.colorName}</span>
+                          {/* ADDED FRAGRANCE DISPLAY */}
+                          {item.fragrance && item.fragrance !== "Default" && (
+                            <span className="variant-badge fragrance-badge">🍃 Fragrance: {item.fragrance}</span>
+                          )}
+                          {item.size && <span className="variant-badge">Size: {item.size}</span>}
+                          {item.offerPercentage > 0 && (
+                            <span className="offer-badge">{item.offerPercentage}% OFF</span>
+                          )}
                         </div>
                         <div className="item-sku">
                           SKU: {item.modelId || item.productId}
+                        </div>
+                        <div className="item-inventory">
+                          <span className="inventory-info">
+                            Purchased from stock: {item.purchasedFromStock}
+                          </span>
+                          {item.inventoryId && (
+                            <span className="inventory-id">Inventory ID: {item.inventoryId}</span>
+                          )}
                         </div>
                       </div>
                       <div className="item-pricing">
                         <div className="price-row">
                           <span>Quantity:</span>
-                          <span>{item.quantity}</span>
+                          <span className="quantity-value">{item.quantity}</span>
                         </div>
                         <div className="price-row">
                           <span>Unit Price:</span>
-                          <span>₹{item.offerPrice?.toLocaleString()}</span>
+                          <span>₹{item.unitPrice?.toLocaleString()}</span>
                         </div>
                         {item.offerPercentage > 0 && (
-                          <div className="price-row discount">
-                            <span>Discount ({item.offerPercentage}%):</span>
-                            <span>-₹{item.savedAmount?.toLocaleString()}</span>
-                          </div>
+                          <>
+                            <div className="price-row">
+                              <span>Offer Price:</span>
+                              <span className="offer-price">₹{item.offerPrice?.toLocaleString()}</span>
+                            </div>
+                            <div className="price-row discount">
+                              <span>Discount ({item.offerPercentage}%):</span>
+                              <span>-₹{item.savedAmount?.toLocaleString()}</span>
+                            </div>
+                          </>
                         )}
                         <div className="price-row total">
                           <span>Total:</span>
-                          <span>₹{item.totalPrice?.toLocaleString()}</span>
+                          <span className="total-price">₹{item.totalPrice?.toLocaleString()}</span>
                         </div>
+                        {item.offerLabel && (
+                          <div className="offer-label">
+                            🎁 Offer: {item.offerLabel}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -692,7 +744,7 @@ const AdminOrders = () => {
                 <h3>Order Summary</h3>
                 <div className="order-summary">
                   <div className="summary-row">
-                    <span>Subtotal:</span>
+                    <span>Subtotal ({selectedOrder.items?.reduce((sum, item) => sum + item.quantity, 0) || 0} items):</span>
                     <span>₹{selectedOrder.pricing?.subtotal?.toLocaleString() || 0}</span>
                   </div>
                   {selectedOrder.pricing?.totalSavings > 0 && (
@@ -703,7 +755,7 @@ const AdminOrders = () => {
                   )}
                   <div className="summary-row">
                     <span>Shipping:</span>
-                    <span>
+                    <span className={selectedOrder.pricing?.shipping === 0 ? 'free-shipping' : ''}>
                       {selectedOrder.pricing?.shipping === 0 
                         ? "FREE" 
                         : `₹${selectedOrder.pricing?.shipping || 0}`}
@@ -715,7 +767,7 @@ const AdminOrders = () => {
                   </div>
                   <div className="summary-row grand-total">
                     <span>Total Amount:</span>
-                    <span>₹{selectedOrder.pricing?.total?.toLocaleString() || 0}</span>
+                    <span className="grand-total-amount">₹{selectedOrder.pricing?.total?.toLocaleString() || 0}</span>
                   </div>
                 </div>
               </div>
@@ -726,8 +778,8 @@ const AdminOrders = () => {
                 <div className="payment-details">
                   <div className="detail-row">
                     <strong>Method:</strong> 
-                    {selectedOrder.payment?.method === "cod" ? "Cash on Delivery" :
-                     selectedOrder.payment?.method === "card" ? "Credit/Debit Card" : "UPI"}
+                    {selectedOrder.payment?.method === "cod" ? "💵 Cash on Delivery" :
+                     selectedOrder.payment?.method === "card" ? "💳 Credit/Debit Card" : "📱 UPI"}
                   </div>
                   <div className="detail-row">
                     <strong>Status:</strong> 
@@ -745,8 +797,58 @@ const AdminOrders = () => {
                       <strong>Payment Date:</strong> {formatDate(selectedOrder.payment.paymentDate)}
                     </div>
                   )}
+                  {selectedOrder.payment?.transactionId && (
+                    <div className="detail-row">
+                      <strong>Transaction ID:</strong> {selectedOrder.payment.transactionId}
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Timeline Information */}
+              <div className="section">
+                <h3>Order Timeline</h3>
+                <div className="timeline-details">
+                  <div className="detail-row">
+                    <strong>Order Placed:</strong> {formatDate(selectedOrder.timeline?.placedAt)}
+                  </div>
+                  {selectedOrder.timeline?.processedAt && (
+                    <div className="detail-row">
+                      <strong>Processed:</strong> {formatDate(selectedOrder.timeline.processedAt)}
+                    </div>
+                  )}
+                  {selectedOrder.timeline?.shippedAt && (
+                    <div className="detail-row">
+                      <strong>Shipped:</strong> {formatDate(selectedOrder.timeline.shippedAt)}
+                    </div>
+                  )}
+                  {selectedOrder.timeline?.deliveredAt && (
+                    <div className="detail-row">
+                      <strong>Delivered:</strong> {formatDate(selectedOrder.timeline.deliveredAt)}
+                    </div>
+                  )}
+                  {selectedOrder.timeline?.cancelledAt && (
+                    <div className="detail-row">
+                      <strong>Cancelled:</strong> {formatDate(selectedOrder.timeline.cancelledAt)}
+                    </div>
+                  )}
+                  {selectedOrder.timeline?.estimatedDelivery && (
+                    <div className="detail-row estimated">
+                      <strong>Estimated Delivery:</strong> {formatDate(selectedOrder.timeline.estimatedDelivery)}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedOrder.notes && (
+                <div className="section">
+                  <h3>Order Notes</h3>
+                  <div className="order-notes">
+                    <p>{selectedOrder.notes}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="modal-footer">

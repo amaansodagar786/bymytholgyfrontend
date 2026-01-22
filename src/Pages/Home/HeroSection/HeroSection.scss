@@ -1,0 +1,54 @@
+@font-face {
+  font-family: "Heading";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Medium.ttf") format("truetype");
+  font-style: normal;
+}
+@font-face {
+  font-family: "LightHeading";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Light.ttf") format("truetype");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Content";
+  src: url("../../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Regular.ttf") format("truetype");
+  font-style: normal;
+}
+// @font-face {
+//   font-family: "DarkContent";
+//   src: url("../../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Medium.ttf") format("truetype");
+//   font-style: normal;
+// }
+
+
+.hero-section {
+  width: 100%;
+  height: 87vh;   /* 🔥 pehle 100vh tha */
+  overflow: hidden;
+}
+
+.hero-swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.hero-slide {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .hero-section {
+    height: 60vh;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .hero-section {
+    height: 50vh;
+  }
+}
