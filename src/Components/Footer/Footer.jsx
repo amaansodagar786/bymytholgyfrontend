@@ -172,7 +172,7 @@ const Footer = () => {
               target="_blank" 
               rel="noopener noreferrer"
             >
-              41, Luna Rd, Taluko: Padra,
+              41, Luna Rd, Taluka: Padra,
               <br />
               District: Vadodara-391440,
               <br />
