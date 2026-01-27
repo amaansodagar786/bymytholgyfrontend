@@ -27,6 +27,7 @@ import CategoryProducts from "./Pages/CategoryProducts/CategoryProducts";
 import Footer from "./Components/Footer/Footer";
 import ScrollToTop from "./Components/GoToTop/ScrollToTop";
 import Cart from "./Pages/Cart/Cart";
+import AdminAuth from "./Pages/AdminAuth/AdminAuth";
 
 function App() {
 
@@ -38,8 +39,8 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/adminregister" element={<AdminRegister />} />
-        <Route path="/adminlogin" element={<AdminLogin />} />
+        {/* <Route path="/adminregister" element={<AdminRegister />} /> */}
+        <Route path="/adminlogin" element={<AdminAuth />} />
         <Route path="/product/:productId" element={<ProductPage />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/wishlist" element={<Wishlist />} />

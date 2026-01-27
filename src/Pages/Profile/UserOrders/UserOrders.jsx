@@ -4,32 +4,34 @@ import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {
-  FiPackage,
-  FiClock,
-  FiCheckCircle,
-  FiXCircle,
-  FiTruck,
-  FiShoppingBag,
-  FiTag,
-  FiStar,
-  FiEdit2,
-  FiTrash2,
-  FiEye,
-  FiMapPin,
-  FiCreditCard,
-  FiCalendar,
-  FiUser,
-  FiRefreshCw,
-  FiFilter,
-  FiChevronLeft,
-  FiChevronRight,
-  FiShoppingCart,
-  FiAlertCircle,
-  FiArrowLeft
+    FiPackage,
+    FiClock,
+    FiCheckCircle,
+    FiXCircle,
+    FiTruck,
+    FiShoppingBag,
+    FiTag,
+    FiStar,
+    FiEdit2,
+    FiTrash2,
+    FiEye,
+    FiMapPin,
+    FiCreditCard,
+    FiCalendar,
+    FiUser,
+    FiRefreshCw,
+    FiFilter,
+    FiChevronLeft,
+    FiChevronRight,
+    FiShoppingCart,
+    FiAlertCircle,
+    FiArrowLeft
 } from 'react-icons/fi';
 import { MdLocalShipping, MdOutlineRateReview } from 'react-icons/md';
 import { RiCouponLine } from 'react-icons/ri';
 import './UserOrders.scss';
+import LoginModal from "../../../Components/Login/LoginModel/LoginModal"; // Adjust path as needed
+
 
 const UserOrders = () => {
     const navigate = useNavigate();
@@ -42,6 +44,12 @@ const UserOrders = () => {
     const [showOrderDetails, setShowOrderDetails] = useState(false);
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [isUpdatingReview, setIsUpdatingReview] = useState(false);
+
+    // Add this state with other states
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+
     const [reviewData, setReviewData] = useState({
         rating: 0,
         reviewText: '',
@@ -100,10 +108,32 @@ const UserOrders = () => {
         }
     };
 
-    // Fetch user orders
-    const fetchUserOrders = async () => {
+
+
+    // Add this useEffect after the states
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
+
         if (!token || !userId) {
-            navigate('/login');
+            setShowLoginModal(true);
+            setIsAuthenticated(false);
+            setLoading(false); // Stop loading if not authenticated
+        } else {
+            setIsAuthenticated(true);
+            // Fetch orders only if authenticated
+            fetchUserOrders();
+            fetchOrderStats();
+        }
+    }, []);
+
+    const fetchUserOrders = async () => {
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
+
+        if (!token || !userId) {
+            setShowLoginModal(true);
+            setIsAuthenticated(false);
             return;
         }
 
@@ -128,7 +158,6 @@ const UserOrders = () => {
                 const ordersData = response.data.orders || [];
                 setOrders(ordersData);
 
-                // Safe access to summary
                 const summary = response.data.summary || {};
                 setStats(prev => ({
                     ...prev,
@@ -138,7 +167,6 @@ const UserOrders = () => {
                     cancelledOrders: summary.cancelledOrders || 0
                 }));
 
-                // Check reviews for delivered orders
                 if (ordersData.length > 0) {
                     await checkReviewsForOrders(ordersData);
                 }
@@ -581,7 +609,7 @@ const UserOrders = () => {
                                 {formatDate(order.createdAt)} at {formatTime(order.createdAt)}
                             </div>
                         </div>
-                        <div className="order-status-tag" style={{ 
+                        <div className="order-status-tag" style={{
                             backgroundColor: status.bgColor,
                             color: status.color,
                             borderColor: status.color
@@ -610,8 +638,8 @@ const UserOrders = () => {
                         <div key={index} className="order-item-grid">
                             <div className="item-image-grid">
                                 {item.productImage ? (
-                                    <img 
-                                        src={item.productImage} 
+                                    <img
+                                        src={item.productImage}
                                         alt={item.productName}
                                         className="product-image"
                                     />
@@ -760,10 +788,10 @@ const UserOrders = () => {
                                 const config = statusConfig[status];
                                 const isActive = getCurrentStatusStep(selectedOrder.orderStatus) >= (index + 1);
                                 const isCurrent = selectedOrder.orderStatus === status;
-                                
+
                                 return (
                                     <div key={status} className={`timeline-step ${isActive ? 'active' : ''} ${isCurrent ? 'current' : ''}`}>
-                                        <div className="step-icon" style={{ 
+                                        <div className="step-icon" style={{
                                             backgroundColor: isCurrent ? config.color : (isActive ? config.color : '#eee'),
                                             color: isActive ? '#fff' : '#999'
                                         }}>
@@ -781,7 +809,7 @@ const UserOrders = () => {
                                             )}
                                         </div>
                                         {index < 3 && (
-                                            <div className="step-connector" style={{ 
+                                            <div className="step-connector" style={{
                                                 backgroundColor: isActive ? config.color : '#eee'
                                             }}></div>
                                         )}
@@ -802,8 +830,8 @@ const UserOrders = () => {
                                     <div className="item-header-detail">
                                         <div className="item-image-detail">
                                             {item.productImage ? (
-                                                <img 
-                                                    src={item.productImage} 
+                                                <img
+                                                    src={item.productImage}
                                                     alt={item.productName}
                                                     className="product-image-detail"
                                                 />
@@ -1100,14 +1128,26 @@ const UserOrders = () => {
         </div>
     );
 
-    if (!token || !userId) {
+    if (!isAuthenticated && showLoginModal) {
         return (
-            <div className="auth-required">
-                <h2>Login Required</h2>
-                <p>Please login to view your orders</p>
-                <button onClick={() => navigate('/login')} className="btn primary-btn">
-                    Go to Login
-                </button>
+            <div className="user-orders">
+                <ToastContainer position="top-right" />
+                <LoginModal
+                    onClose={() => {
+                        setShowLoginModal(false);
+                        // Check if user logged in after modal closes
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('userId');
+                        if (token && userId) {
+                            setIsAuthenticated(true);
+                            fetchUserOrders();
+                            fetchOrderStats();
+                        } else {
+                            navigate('/');
+                        }
+                    }}
+                    showRegisterLink={true}
+                />
             </div>
         );
     }
@@ -1115,7 +1155,7 @@ const UserOrders = () => {
     return (
         <div className="user-orders">
             <ToastContainer position="top-right" />
-            
+
             {/* Header */}
             <div className="orders-header">
                 <h1>
@@ -1190,45 +1230,68 @@ const UserOrders = () => {
 
             {/* Orders List */}
             <div className="orders-container">
-                {loading ? renderLoading() : 
-                 error ? renderError() : 
-                 orders.length === 0 ? renderEmptyState() : (
-                    <>
-                        <div className="orders-grid">
-                            {orders.map(renderOrderCard)}
-                        </div>
+                {loading ? renderLoading() :
+                    error ? renderError() :
+                        orders.length === 0 ? renderEmptyState() : (
+                            <>
+                                <div className="orders-grid">
+                                    {orders.map(renderOrderCard)}
+                                </div>
 
-                        {stats.totalOrders > filters.limit && (
-                            <div className="pagination">
-                                <button
-                                    className="pagination-btn"
-                                    disabled={filters.page === 1}
-                                    onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
-                                >
-                                    <FiChevronLeft />
-                                    Previous
-                                </button>
-                                <span className="page-info">
-                                    Page {filters.page} of {Math.ceil(stats.totalOrders / filters.limit)}
-                                </span>
-                                <button
-                                    className="pagination-btn"
-                                    disabled={filters.page >= Math.ceil(stats.totalOrders / filters.limit)}
-                                    onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
-                                >
-                                    Next
-                                    <FiChevronRight />
-                                </button>
-                            </div>
+                                {stats.totalOrders > filters.limit && (
+                                    <div className="pagination">
+                                        <button
+                                            className="pagination-btn"
+                                            disabled={filters.page === 1}
+                                            onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
+                                        >
+                                            <FiChevronLeft />
+                                            Previous
+                                        </button>
+                                        <span className="page-info">
+                                            Page {filters.page} of {Math.ceil(stats.totalOrders / filters.limit)}
+                                        </span>
+                                        <button
+                                            className="pagination-btn"
+                                            disabled={filters.page >= Math.ceil(stats.totalOrders / filters.limit)}
+                                            onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
+                                        >
+                                            Next
+                                            <FiChevronRight />
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )}
-                    </>
-                )}
             </div>
 
             {/* Modals */}
             {showOrderDetails && selectedOrder && renderOrderDetails()}
             {showReviewModal && selectedProduct && renderReviewModal()}
-        </div>
+
+
+
+            {
+                showLoginModal && (
+                    <LoginModal
+                        onClose={() => {
+                            setShowLoginModal(false);
+                            const token = localStorage.getItem('token');
+                            const userId = localStorage.getItem('userId');
+                            if (token && userId) {
+                                setIsAuthenticated(true);
+                                fetchUserOrders();
+                                fetchOrderStats();
+                            } else {
+                                navigate('/');
+                            }
+                        }}
+                        showRegisterLink={true}
+                    />
+                )
+            }
+
+        </div >
     );
 };
 

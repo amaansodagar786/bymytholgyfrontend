@@ -149,20 +149,60 @@ const Inventories = () => {
         return;
       }
 
+      // 🔴 CRITICAL: Check if token exists
       const token = localStorage.getItem("adminToken");
-      await axios.put(
+      console.log("🔑 Token from localStorage:", token);
+      console.log("🔑 Token length:", token?.length);
+      console.log("🔑 Token exists:", !!token);
+
+      if (!token) {
+        console.error("❌ NO TOKEN FOUND in localStorage!");
+        toast.error("No authentication token found. Please login again.");
+        return;
+      }
+
+      // Test the token first
+      console.log("📤 Making PUT request...");
+      console.log("URL:", `${import.meta.env.VITE_API_URL}/inventory/add-stock/${selectedItem._id}`);
+      console.log("Headers:", { Authorization: `Bearer ${token}` });
+      console.log("Data:", stockForm);
+
+      const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/inventory/add-stock/${selectedItem._id}`,
         stockForm,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
       );
+
+      console.log("✅ Response received:", response.data);
 
       toast.success(`✅ Added ${quantity} stock to ${selectedItem.fragrance} fragrance`);
       setShowAddStock(false);
       setSelectedItem(null);
       fetchInventory();
+
     } catch (err) {
-      console.error("❌ Error adding stock:", err);
-      toast.error(err.response?.data?.error || "Failed to add stock");
+      console.error("❌❌❌ FULL ERROR DETAILS:");
+      console.error("Error message:", err.message);
+      console.error("Error code:", err.code);
+      console.error("Error status:", err.response?.status);
+      console.error("Error status text:", err.response?.statusText);
+      console.error("Error data:", err.response?.data);
+      console.error("Error headers:", err.response?.headers);
+      console.error("Error config:", err.config);
+
+      if (err.response?.status === 401) {
+        toast.error("Authentication failed. Token is invalid or expired.");
+        
+      } else if (err.response?.status === 403) {
+        toast.error("Access denied. Admin role required.");
+      } else {
+        toast.error(err.response?.data?.error || "Failed to add stock");
+      }
     }
   };
 
@@ -226,16 +266,16 @@ const Inventories = () => {
     return inventory.filter(item => {
       // Apply search filter
       if (debouncedSearch) {
-        const matchesSearch = 
+        const matchesSearch =
           item.productName?.toLowerCase().includes(debouncedSearch) ||
           item.fragrance?.toLowerCase().includes(debouncedSearch);
-        
+
         if (!matchesSearch) return false;
       }
 
       // Apply stock status filter
       const threshold = item.threshold || 10;
-      
+
       switch (filterType) {
         case "low":
           return item.stock > 0 && item.stock < threshold;
@@ -319,7 +359,7 @@ const Inventories = () => {
     filteredInventory.forEach(item => {
       const threshold = item.threshold || 10;
       totalStock += item.stock;
-      
+
       if (item.stock === 0) outOfStock++;
       else if (item.stock < threshold) lowStock++;
       else inStock++;
@@ -542,7 +582,7 @@ const Inventories = () => {
                       <MdOutlineInventory2 />
                       <p>No inventory items found</p>
                       {searchTerm && (
-                        <button 
+                        <button
                           className="clear-search-btn"
                           onClick={() => setSearchTerm("")}
                         >
@@ -924,8 +964,8 @@ const Inventories = () => {
                     <div className="preview-row-section total-section">
                       <span>Difference:</span>
                       <span className={
-                        parseFloat(stockAdjustmentForm.stock || 0) >= selectedItem.stock 
-                          ? "positive-change" 
+                        parseFloat(stockAdjustmentForm.stock || 0) >= selectedItem.stock
+                          ? "positive-change"
                           : "negative-change"
                       }>
                         {(parseFloat(stockAdjustmentForm.stock || 0) - selectedItem.stock) >= 0 ? "+" : ""}

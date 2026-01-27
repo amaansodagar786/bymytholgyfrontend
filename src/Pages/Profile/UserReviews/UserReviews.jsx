@@ -4,27 +4,30 @@ import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {
-  FiStar,
-  FiEdit2,
-  FiTrash2,
-  FiPackage,
-  FiShoppingBag,
-  FiCalendar,
-  FiCheckCircle,
-  FiMessageSquare,
-  FiFilter,
-  FiChevronLeft,
-  FiChevronRight,
-  FiAlertCircle,
-  FiRefreshCw,
-  FiX,
-  FiCheck,
-  FiClock,
-  FiUser,
-  FiTag
+    FiStar,
+    FiEdit2,
+    FiTrash2,
+    FiPackage,
+    FiShoppingBag,
+    FiCalendar,
+    FiCheckCircle,
+    FiMessageSquare,
+    FiFilter,
+    FiChevronLeft,
+    FiChevronRight,
+    FiAlertCircle,
+    FiRefreshCw,
+    FiX,
+    FiCheck,
+    FiClock,
+    FiUser,
+    FiTag
 } from 'react-icons/fi';
 import { MdOutlineRateReview } from 'react-icons/md';
 import './UserReviews.scss';
+
+import LoginModal from "../../../Components/Login/LoginModel/LoginModal";
+
 
 const UserReviews = () => {
     const navigate = useNavigate();
@@ -60,10 +63,38 @@ const UserReviews = () => {
     const userId = localStorage.getItem('userId');
     const userName = localStorage.getItem('userName') || 'User';
 
-    // Fetch user reviews
-    const fetchUserReviews = async () => {
+
+    // Add these states with other states
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+
+
+    // Add this useEffect after the states
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
+
         if (!token || !userId) {
-            navigate('/login');
+            setShowLoginModal(true);
+            setIsAuthenticated(false);
+            setLoading(false); // Stop loading if not authenticated
+        } else {
+            setIsAuthenticated(true);
+            // Fetch reviews only if authenticated
+            fetchUserReviews();
+        }
+    }, []);
+
+
+
+    const fetchUserReviews = async () => {
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
+
+        if (!token || !userId) {
+            setShowLoginModal(true);
+            setIsAuthenticated(false);
             return;
         }
 
@@ -117,8 +148,8 @@ const UserReviews = () => {
     // Calculate review statistics
     const calculateStats = (reviewsData) => {
         const total = reviewsData.length;
-        const averageRating = total > 0 
-            ? reviewsData.reduce((sum, review) => sum + review.rating, 0) / total 
+        const averageRating = total > 0
+            ? reviewsData.reduce((sum, review) => sum + review.rating, 0) / total
             : 0;
 
         const ratingCounts = {
@@ -155,10 +186,10 @@ const UserReviews = () => {
 
                         if (orderResponse.data.success) {
                             const order = orderResponse.data.order;
-                            
+
                             // Find the specific item in the order
-                            const orderItem = order.items.find(item => 
-                                item.productId === review.productId && 
+                            const orderItem = order.items.find(item =>
+                                item.productId === review.productId &&
                                 item.colorId === review.colorId
                             );
 
@@ -257,7 +288,7 @@ const UserReviews = () => {
             if (response.data.success) {
                 toast.success('Review updated successfully!');
                 setShowEditModal(false);
-                
+
                 // Update the review in state
                 setReviews(prevReviews =>
                     prevReviews.map(review =>
@@ -302,7 +333,7 @@ const UserReviews = () => {
             if (response.data.success) {
                 toast.success('Review deleted successfully!');
                 setShowDeleteModal(false);
-                
+
                 // Remove the review from state
                 setReviews(prevReviews =>
                     prevReviews.filter(review => review.reviewId !== selectedReview.reviewId)
@@ -379,7 +410,7 @@ const UserReviews = () => {
     // Render rating distribution bar
     const renderRatingBar = (count, total, rating) => {
         const percentage = total > 0 ? (count / total) * 100 : 0;
-        
+
         return (
             <div className="rating-bar-item">
                 <div className="bar-label">
@@ -387,8 +418,8 @@ const UserReviews = () => {
                     <span className="rating-count">{count}</span>
                 </div>
                 <div className="bar-container">
-                    <div 
-                        className="bar-fill" 
+                    <div
+                        className="bar-fill"
                         style={{ width: `${percentage}%` }}
                     ></div>
                 </div>
@@ -419,7 +450,7 @@ const UserReviews = () => {
                             )}
                         </div>
                     </div>
-                    
+
                     <div className="review-rating-display">
                         {renderStars(review.rating, false, 'small')}
                         <span className="review-date">
@@ -543,8 +574,8 @@ const UserReviews = () => {
                                     {renderStars(0, true, 'large')}
                                 </div>
                                 <span className="rating-text">
-                                    {editingReview.rating > 0 ? 
-                                        `${editingReview.rating} star${editingReview.rating > 1 ? 's' : ''}` : 
+                                    {editingReview.rating > 0 ?
+                                        `${editingReview.rating} star${editingReview.rating > 1 ? 's' : ''}` :
                                         'Select rating'
                                     }
                                 </span>
@@ -557,9 +588,9 @@ const UserReviews = () => {
                                 className="review-textarea"
                                 placeholder="Share your experience with this product..."
                                 value={editingReview.reviewText}
-                                onChange={(e) => setEditingReview(prev => ({ 
-                                    ...prev, 
-                                    reviewText: e.target.value 
+                                onChange={(e) => setEditingReview(prev => ({
+                                    ...prev,
+                                    reviewText: e.target.value
                                 }))}
                                 rows={5}
                                 maxLength={1000}
@@ -623,7 +654,7 @@ const UserReviews = () => {
                     </div>
                     <h3>Are you sure?</h3>
                     <p>
-                        You're about to delete your review for <strong>{selectedReview?.productName}</strong>. 
+                        You're about to delete your review for <strong>{selectedReview?.productName}</strong>.
                         This action cannot be undone.
                     </p>
 
@@ -700,14 +731,26 @@ const UserReviews = () => {
         </div>
     );
 
-    if (!token || !userId) {
+    // WITH THIS:
+    if (!isAuthenticated && showLoginModal) {
         return (
-            <div className="auth-required">
-                <h2>Login Required</h2>
-                <p>Please login to view your reviews</p>
-                <button onClick={() => navigate('/login')} className="btn primary-btn">
-                    Go to Login
-                </button>
+            <div className="my-reviews">
+                <ToastContainer position="top-right" />
+                <LoginModal
+                    onClose={() => {
+                        setShowLoginModal(false);
+                        // Check if user logged in after modal closes
+                        const token = localStorage.getItem('token');
+                        const userId = localStorage.getItem('userId');
+                        if (token && userId) {
+                            setIsAuthenticated(true);
+                            fetchUserReviews();
+                        } else {
+                            navigate('/');
+                        }
+                    }}
+                    showRegisterLink={true}
+                />
             </div>
         );
     }
@@ -715,7 +758,7 @@ const UserReviews = () => {
     return (
         <div className="my-reviews">
             <ToastContainer position="top-right" />
-            
+
             {/* Header */}
             <div className="reviews-header">
                 <h1>
@@ -805,45 +848,67 @@ const UserReviews = () => {
 
             {/* Reviews List */}
             <div className="reviews-container">
-                {loading ? renderLoading() : 
-                 error ? renderError() : 
-                 reviews.length === 0 ? renderEmptyState() : (
-                    <>
-                        <div className="reviews-list">
-                            {reviews.map(renderReviewCard)}
-                        </div>
+                {loading ? renderLoading() :
+                    error ? renderError() :
+                        reviews.length === 0 ? renderEmptyState() : (
+                            <>
+                                <div className="reviews-list">
+                                    {reviews.map(renderReviewCard)}
+                                </div>
 
-                        {stats.totalReviews > filters.limit && (
-                            <div className="pagination">
-                                <button
-                                    className="pagination-btn"
-                                    disabled={filters.page === 1}
-                                    onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
-                                >
-                                    <FiChevronLeft />
-                                    Previous
-                                </button>
-                                <span className="page-info">
-                                    Page {filters.page} of {Math.ceil(stats.totalReviews / filters.limit)}
-                                </span>
-                                <button
-                                    className="pagination-btn"
-                                    disabled={filters.page >= Math.ceil(stats.totalReviews / filters.limit)}
-                                    onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
-                                >
-                                    Next
-                                    <FiChevronRight />
-                                </button>
-                            </div>
+                                {stats.totalReviews > filters.limit && (
+                                    <div className="pagination">
+                                        <button
+                                            className="pagination-btn"
+                                            disabled={filters.page === 1}
+                                            onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
+                                        >
+                                            <FiChevronLeft />
+                                            Previous
+                                        </button>
+                                        <span className="page-info">
+                                            Page {filters.page} of {Math.ceil(stats.totalReviews / filters.limit)}
+                                        </span>
+                                        <button
+                                            className="pagination-btn"
+                                            disabled={filters.page >= Math.ceil(stats.totalReviews / filters.limit)}
+                                            onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
+                                        >
+                                            Next
+                                            <FiChevronRight />
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )}
-                    </>
-                )}
             </div>
 
             {/* Modals */}
             {showEditModal && selectedReview && renderEditModal()}
             {showDeleteModal && selectedReview && renderDeleteModal()}
-        </div>
+
+
+
+
+            {
+                showLoginModal && (
+                    <LoginModal
+                        onClose={() => {
+                            setShowLoginModal(false);
+                            const token = localStorage.getItem('token');
+                            const userId = localStorage.getItem('userId');
+                            if (token && userId) {
+                                setIsAuthenticated(true);
+                                fetchUserReviews();
+                            } else {
+                                navigate('/');
+                            }
+                        }}
+                        showRegisterLink={true}
+                    />
+                )
+            }
+        </div >
     );
 };
 

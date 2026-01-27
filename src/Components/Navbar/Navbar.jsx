@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FiSearch,
   FiHeart,
@@ -9,19 +9,81 @@ import {
   FiX
 } from "react-icons/fi";
 import axios from "axios";
+import LoginModal from "../Login/LoginModel/LoginModal";
 import "./Navbar.scss";
 
+// Import Sidebars
+import WishlistSidebar from "../../Pages/Wishlist/Sidebar/WishlistSidebar";
+import CartSidebar from "../../Pages/Cart/Sidebar/CartSidebar";
+
 function Navbar() {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [cartCount, setCartCount] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showWishlistSidebar, setShowWishlistSidebar] = useState(false);
+  const [showCartSidebar, setShowCartSidebar] = useState(false);
 
+  // Check login status
   useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem("token"));
-  }, []);
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+  }, [showLoginModal]);
 
+  // Handle user icon click
+  const handleUserClick = (e) => {
+    if (!isLoggedIn) {
+      e.preventDefault();
+      setShowLoginModal(true);
+    } else {
+      navigate("/profile");
+    }
+  };
+
+  // Handle wishlist icon click
+  const handleWishlistClick = (e) => {
+    e.preventDefault();
+    
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    // Check if mobile (window width <= 768px)
+    if (window.innerWidth <= 768) {
+      // Mobile: Navigate to wishlist page
+      navigate("/wishlist");
+      if (menuOpen) setMenuOpen(false);
+    } else {
+      // Desktop: Open sidebar
+      setShowWishlistSidebar(true);
+    }
+  };
+
+  // Handle cart icon click
+  const handleCartClick = (e) => {
+    e.preventDefault();
+    
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    // Check if mobile (window width <= 768px)
+    if (window.innerWidth <= 768) {
+      // Mobile: Navigate to cart page
+      navigate("/cart");
+      if (menuOpen) setMenuOpen(false);
+    } else {
+      // Desktop: Open sidebar
+      setShowCartSidebar(true);
+    }
+  };
+
+  // Fetch wishlist and cart counts
   useEffect(() => {
     const fetchCounts = async () => {
       const token = localStorage.getItem("token");
@@ -45,7 +107,13 @@ function Navbar() {
       }
     };
 
-    fetchCounts();
+    if (isLoggedIn) {
+      fetchCounts();
+    } else {
+      setWishlistCount(0);
+      setCartCount(0);
+    }
+
     window.addEventListener("wishlistUpdated", fetchCounts);
     window.addEventListener("cartUpdated", fetchCounts);
 
@@ -53,10 +121,29 @@ function Navbar() {
       window.removeEventListener("wishlistUpdated", fetchCounts);
       window.removeEventListener("cartUpdated", fetchCounts);
     };
-  }, []);
+  }, [isLoggedIn]);
+
+  // Close mobile menu when modal opens
+  useEffect(() => {
+    if (showLoginModal) {
+      setMenuOpen(false);
+    }
+  }, [showLoginModal]);
 
   return (
     <>
+      {/* WISHLIST SIDEBAR */}
+      <WishlistSidebar
+        isOpen={showWishlistSidebar}
+        onClose={() => setShowWishlistSidebar(false)}
+      />
+
+      {/* CART SIDEBAR */}
+      <CartSidebar
+        isOpen={showCartSidebar}
+        onClose={() => setShowCartSidebar(false)}
+      />
+
       <nav className="navbar-new">
         <div className="nav-inner">
 
@@ -90,19 +177,33 @@ function Navbar() {
               {searchOpen ? <FiX /> : <FiSearch />}
             </button>
 
-            <Link to="/wishlist" className="icon-wrap">
+            {/* WISHLIST ICON - Desktop: opens sidebar, Mobile: navigates to page */}
+            <button 
+              className="nav-wishlist-btn icon-wrap"
+              onClick={handleWishlistClick}
+              title="Wishlist"
+            >
               <FiHeart />
-              {wishlistCount > 0 && <span className="badge">{wishlistCount}</span>}
-            </Link>
+              {isLoggedIn && wishlistCount > 0 && <span className="badge">{wishlistCount}</span>}
+            </button>
 
-            <Link to="/cart" className="icon-wrap">
+            {/* CART ICON - Desktop: opens sidebar, Mobile: navigates to page */}
+            <button 
+              className="nav-cart-btn icon-wrap"
+              onClick={handleCartClick}
+              title="Cart"
+            >
               <FiShoppingBag />
-              {cartCount > 0 && <span className="badge">{cartCount}</span>}
-            </Link>
+              {isLoggedIn && cartCount > 0 && <span className="badge">{cartCount}</span>}
+            </button>
 
-            <Link to={isLoggedIn ? "/profile" : "/login"}>
+            {/* USER ICON */}
+            <button
+              className="nav-user-btn"
+              onClick={handleUserClick}
+            >
               <FiUser />
-            </Link>
+            </button>
           </div>
         </div>
       </nav>
@@ -118,17 +219,68 @@ function Navbar() {
 
           <div className="mobile-icons">
             <FiSearch />
-            <Link to="/wishlist" onClick={() => setMenuOpen(false)}>
+            
+            {/* Mobile wishlist - always navigate to page */}
+            <Link 
+              to={isLoggedIn ? "/wishlist" : "#"} 
+              onClick={(e) => {
+                if (!isLoggedIn) {
+                  e.preventDefault();
+                  setMenuOpen(false);
+                  setShowLoginModal(true);
+                } else {
+                  setMenuOpen(false);
+                }
+              }}
+            >
               <FiHeart />
             </Link>
-            <Link to="/cart" onClick={() => setMenuOpen(false)}>
+            
+            {/* Mobile cart - always navigate to page */}
+            <Link 
+              to={isLoggedIn ? "/cart" : "#"} 
+              onClick={(e) => {
+                if (!isLoggedIn) {
+                  e.preventDefault();
+                  setMenuOpen(false);
+                  setShowLoginModal(true);
+                } else {
+                  setMenuOpen(false);
+                }
+              }}
+            >
               <FiShoppingBag />
             </Link>
-            <Link to={isLoggedIn ? "/profile" : "/login"} onClick={() => setMenuOpen(false)}>
+            
+            {/* Mobile user icon */}
+            <button
+              className="mobile-user-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                setMenuOpen(false);
+                if (!isLoggedIn) {
+                  setShowLoginModal(true);
+                } else {
+                  navigate("/profile");
+                }
+              }}
+            >
               <FiUser />
-            </Link>
+            </button>
           </div>
         </div>
+      )}
+
+      {/* LOGIN MODAL */}
+      {showLoginModal && (
+        <LoginModal
+          onClose={() => {
+            setShowLoginModal(false);
+            const token = localStorage.getItem("token");
+            setIsLoggedIn(!!token);
+          }}
+          showRegisterLink={true}
+        />
       )}
     </>
   );

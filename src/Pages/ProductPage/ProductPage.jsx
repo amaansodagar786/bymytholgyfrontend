@@ -2,16 +2,27 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Autoplay, Thumbs } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/thumbs";
 import "./ProductPage.scss";
+
+// Import Sidebars
+import WishlistSidebar from "../../Pages/Wishlist/Sidebar/WishlistSidebar";
+import CartSidebar from "../../Pages/Cart/Sidebar/CartSidebar";
 
 function ProductPage() {
   const { productId } = useParams();
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
-  // Refs for scroll control
-  const imagesContainerRef = useRef(null);
-  const detailsContainerRef = useRef(null);
+  // Sidebar states
+  const [showWishlistSidebar, setShowWishlistSidebar] = useState(false);
+  const [showCartSidebar, setShowCartSidebar] = useState(false);
+
+  // Refs for scroll control - REMOVED OLD REFS
   const mainContainerRef = useRef(null);
 
   const [product, setProduct] = useState(null);
@@ -60,9 +71,8 @@ function ProductPage() {
   const [reviewsPage, setReviewsPage] = useState(1);
   const [reviewsLimit] = useState(5);
 
-  // Scroll state
-  const [isImagesScrolling, setIsImagesScrolling] = useState(false);
-  const [isDetailsScrolling, setIsDetailsScrolling] = useState(false);
+  // Swiper states for mobile
+  const [thumbsSwiper, setThumbsSwiper] = useState(null);
 
   // Fetch reviews for the product
   const fetchProductReviews = async (page = 1) => {
@@ -100,75 +110,13 @@ function ProductPage() {
     }
   }, [productId]);
 
-  // Initialize scroll behavior after product loads
-  useEffect(() => {
-    if (product && imagesContainerRef.current && detailsContainerRef.current) {
-      setupScrollBehavior();
-    }
-  }, [product]);
-
-  const setupScrollBehavior = () => {
-    const imagesContainer = imagesContainerRef.current;
-    const detailsContainer = detailsContainerRef.current;
-
-    if (!imagesContainer || !detailsContainer) return;
-
-    // Handle images container scroll
-    const handleImagesScroll = () => {
-      setIsImagesScrolling(true);
-      
-      // Calculate scroll percentage for images
-      const imagesScrollHeight = imagesContainer.scrollHeight - imagesContainer.clientHeight;
-      const imagesScrollTop = imagesContainer.scrollTop;
-      const imagesScrollPercent = imagesScrollHeight > 0 ? (imagesScrollTop / imagesScrollHeight) : 0;
-      
-      // Calculate corresponding position in details
-      const detailsScrollHeight = detailsContainer.scrollHeight - detailsContainer.clientHeight;
-      const targetDetailsScroll = detailsScrollHeight * imagesScrollPercent;
-      
-      // Sync details scroll
-      if (!isDetailsScrolling) {
-        detailsContainer.scrollTop = targetDetailsScroll;
-      }
-      
-      setTimeout(() => setIsImagesScrolling(false), 100);
-    };
-
-    // Handle details container scroll
-    const handleDetailsScroll = () => {
-      setIsDetailsScrolling(true);
-      
-      // Calculate scroll percentage for details
-      const detailsScrollHeight = detailsContainer.scrollHeight - detailsContainer.clientHeight;
-      const detailsScrollTop = detailsContainer.scrollTop;
-      const detailsScrollPercent = detailsScrollHeight > 0 ? (detailsScrollTop / detailsScrollHeight) : 0;
-      
-      // Calculate corresponding position in images
-      const imagesScrollHeight = imagesContainer.scrollHeight - imagesContainer.clientHeight;
-      const targetImagesScroll = imagesScrollHeight * detailsScrollPercent;
-      
-      // Sync images scroll
-      if (!isImagesScrolling) {
-        imagesContainer.scrollTop = targetImagesScroll;
-      }
-      
-      setTimeout(() => setIsDetailsScrolling(false), 100);
-    };
-
-    imagesContainer.addEventListener('scroll', handleImagesScroll);
-    detailsContainer.addEventListener('scroll', handleDetailsScroll);
-
-    return () => {
-      imagesContainer.removeEventListener('scroll', handleImagesScroll);
-      detailsContainer.removeEventListener('scroll', handleDetailsScroll);
-    };
-  };
+  // REMOVED ALL SCROLL SYNC CODE
 
   // Render star rating - FIXED to handle number properly
   const renderRatingStars = (rating, size = 'medium') => {
     // Ensure rating is a number
     const numericRating = typeof rating === 'number' ? rating : parseFloat(rating) || 0;
-    
+
     const stars = [];
     const starSize = size === 'small' ? '1.2rem' : size === 'large' ? '1.8rem' : '1.5rem';
 
@@ -261,7 +209,7 @@ function ProductPage() {
         // Simple product - initialize with first fragrance
         if (productData.colors && productData.colors.length > 0) {
           const defaultColor = productData.colors[0];
-          
+
           // Get fragrances from default color
           const fragrances = defaultColor.fragrances || [];
           if (fragrances.length > 0) {
@@ -296,7 +244,7 @@ function ProductPage() {
           if (firstModel.colors && firstModel.colors.length > 0) {
             const defaultModelColor = firstModel.colors[0];
             const modelFragrances = defaultModelColor.fragrances || [];
-            
+
             if (modelFragrances.length > 0) {
               const firstModelFragrance = modelFragrances[0];
               setSelectedModelFragrance(firstModelFragrance);
@@ -334,7 +282,7 @@ function ProductPage() {
       const params = new URLSearchParams();
 
       // Get default color ID (always first color)
-      const defaultColorId = product.type === "simple" 
+      const defaultColorId = product.type === "simple"
         ? (product.colors?.[0]?.colorId)
         : (selectedModel?.colors?.[0]?.colorId);
 
@@ -419,7 +367,7 @@ function ProductPage() {
           const defaultColorId = product.type === "simple"
             ? (product.colors?.[0]?.colorId)
             : (selectedModel?.colors?.[0]?.colorId);
-          
+
           if (defaultColorId) {
             params.append('colorId', defaultColorId);
           }
@@ -592,14 +540,12 @@ function ProductPage() {
 
     // Check if product is out of stock
     if (inventoryStatus.status === 'out-of-stock') {
-      alert("Product is out of stock!");
       return;
     }
 
     // Check if new quantity exceeds available stock
     if (inventoryStatus.status === 'low-stock' || inventoryStatus.status === 'in-stock') {
       if (newQuantity > inventoryStatus.stock) {
-        alert(`Only ${inventoryStatus.stock} items available in stock!`);
         return;
       }
     }
@@ -772,7 +718,8 @@ function ProductPage() {
     const userId = localStorage.getItem("userId");
 
     if (!token || !userId) {
-      alert("Please login to add items to wishlist");
+      // If not logged in, open login modal
+      // For simplicity, redirect to login
       navigate("/login");
       return;
     }
@@ -819,10 +766,10 @@ function ProductPage() {
         }
 
         // Add default color
-        const defaultColor = product.type === "simple" 
+        const defaultColor = product.type === "simple"
           ? product.colors?.[0]
           : selectedModel?.colors?.[0];
-        
+
         if (defaultColor) {
           wishlistData.selectedColor = {
             colorId: defaultColor.colorId,
@@ -855,13 +802,13 @@ function ProductPage() {
 
       window.dispatchEvent(new Event('wishlistUpdated'));
 
+      // OPEN WISHLIST SIDEBAR (Desktop only)
+      if (window.innerWidth > 768) {
+        setShowWishlistSidebar(true);
+      }
+
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-      if (error.response?.data?.message) {
-        alert(error.response.data.message);
-      } else {
-        alert("Error updating wishlist. Please try again.");
-      }
     }
   };
 
@@ -869,17 +816,11 @@ function ProductPage() {
   const handleAddToCart = async () => {
     // Check fragrance selection
     if (!selectedFragrance && !selectedModelFragrance) {
-      alert("Please select a fragrance");
       return;
     }
 
     // Check stock
     if (!canPurchaseProduct()) {
-      if (inventoryStatus.status === 'out-of-stock') {
-        alert("This product is currently out of stock!");
-      } else if (quantity > inventoryStatus.stock) {
-        alert(`Only ${inventoryStatus.stock} items available in stock!`);
-      }
       return;
     }
 
@@ -888,7 +829,7 @@ function ProductPage() {
     const userId = localStorage.getItem("userId");
 
     if (!token || !userId) {
-      alert("Please login to add items to cart");
+      // If not logged in, redirect to login
       navigate("/login");
       return;
     }
@@ -898,7 +839,7 @@ function ProductPage() {
     const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
 
     // Get default color
-    const defaultColor = product.type === "simple" 
+    const defaultColor = product.type === "simple"
       ? product.colors?.[0]
       : selectedModel?.colors?.[0];
 
@@ -908,7 +849,7 @@ function ProductPage() {
       productId: product.productId,
       productName: product.productName,
       quantity: quantity,
-      unitPrice: originalPrice,
+      unitPrice: getOriginalPrice(),
       finalPrice: offerPrice,
       totalPrice: getTotalPrice(),
       selectedColor: defaultColor,
@@ -945,16 +886,15 @@ function ProductPage() {
         }
       );
 
-      alert(`Added ${quantity} item${quantity > 1 ? 's' : ''} to cart!`);
       window.dispatchEvent(new Event('cartUpdated'));
+
+      // OPEN CART SIDEBAR (Desktop only)
+      if (window.innerWidth > 768) {
+        setShowCartSidebar(true);
+      }
 
     } catch (error) {
       console.error("Error adding to cart:", error);
-      if (error.response?.data?.message) {
-        alert(error.response.data.message);
-      } else {
-        alert("Error adding to cart. Please try again.");
-      }
     }
   };
 
@@ -962,17 +902,11 @@ function ProductPage() {
   const handleBuyNow = () => {
     // Check fragrance selection
     if (!selectedFragrance && !selectedModelFragrance) {
-      alert("Please select a fragrance");
       return;
     }
 
     // Check stock
     if (!canPurchaseProduct()) {
-      if (inventoryStatus.status === 'out-of-stock') {
-        alert("This product is currently out of stock!");
-      } else if (quantity > inventoryStatus.stock) {
-        alert(`Only ${inventoryStatus.stock} items available in stock!`);
-      }
       return;
     }
 
@@ -981,7 +915,6 @@ function ProductPage() {
     const userId = localStorage.getItem("userId");
 
     if (!token || !userId) {
-      alert("Please login to proceed with Buy Now");
       navigate("/login");
       return;
     }
@@ -989,12 +922,12 @@ function ProductPage() {
     const basePrice = getBasePrice();
     const offerPrice = getOfferPrice();
     const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
-    
+
     // Get default color
-    const defaultColor = product.type === "simple" 
+    const defaultColor = product.type === "simple"
       ? product.colors?.[0]
       : selectedModel?.colors?.[0];
-    
+
     const selectedFragranceData = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
     const selectedSizeData = product.type === "simple" ? selectedSize : selectedModelSize;
     const thumbnailImage = defaultColor?.images?.[0] || product.thumbnailImage;
@@ -1005,7 +938,7 @@ function ProductPage() {
       productId: product.productId,
       productName: product.productName,
       quantity: quantity,
-      unitPrice: originalPrice,
+      unitPrice: getOriginalPrice(),
       finalPrice: offerPrice,
       totalPrice: getTotalPrice(),
       selectedColor: defaultColor,
@@ -1074,375 +1007,450 @@ function ProductPage() {
   const canPurchase = canPurchaseProduct();
 
   // Fix for reviewsStats.averageRating - ensure it's a number
-  const averageRating = typeof reviewsStats.averageRating === 'number' 
-    ? reviewsStats.averageRating 
+  const averageRating = typeof reviewsStats.averageRating === 'number'
+    ? reviewsStats.averageRating
     : parseFloat(reviewsStats.averageRating) || 0;
 
   return (
     <div className="product-page" ref={mainContainerRef}>
+      {/* SIDEBARS */}
+      <WishlistSidebar
+        isOpen={showWishlistSidebar}
+        onClose={() => setShowWishlistSidebar(false)}
+      />
+      <CartSidebar
+        isOpen={showCartSidebar}
+        onClose={() => setShowCartSidebar(false)}
+      />
+
       {/* Back Button */}
       <button className="back-button" onClick={() => navigate(-1)}>
         ← Back to Products
       </button>
 
+      {/* SINGLE SCROLL CONTAINER - THIS IS WHERE ALL SCROLLING HAPPENS */}
       <div className="product-main-container">
-        {/* LEFT COLUMN - Images Section */}
-        <div className="product-images-column" ref={imagesContainerRef}>
-          {/* Thumbnail Strip (Vertical) */}
-          {images.length > 0 && (
-            <div className="thumbnail-strip">
-              {images.map((img, index) => (
-                <div
-                  key={index}
-                  className={`thumbnail-item ${img === mainImage ? 'active' : ''}`}
-                  onClick={() => setMainImage(img)}
-                >
-                  <img
-                    src={img}
-                    alt={`${product.productName} - View ${index + 1}`}
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "https://via.placeholder.com/80x80?text=No+Image";
-                    }}
-                  />
+        <div className="columns-wrapper">
+          {/* LEFT COLUMN - Images Section */}
+          <div className="product-images-column">
+            {/* Desktop View - Vertical Stack */}
+            <div className="desktop-images-view">
+              {/* Thumbnail Strip (Vertical) */}
+              {images.length > 0 && (
+                <div className="thumbnail-strip">
+                  {images.map((img, index) => (
+                    <div
+                      key={index}
+                      className={`thumbnail-item ${img === mainImage ? 'active' : ''}`}
+                      onClick={() => setMainImage(img)}
+                    >
+                      <img
+                        src={img}
+                        alt={`${product.productName} - View ${index + 1}`}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "https://via.placeholder.com/80x80?text=No+Image";
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          {/* Main Images Container (Stacked Vertically) */}
-          <div className="main-images-container">
-            {images.length > 0 ? (
-              images.map((img, index) => (
-                <div 
-                  key={index} 
-                  className={`main-image-item ${img === mainImage ? 'active' : ''}`}
-                >
-                  <img
-                    src={img}
-                    alt={`${product.productName} - ${index + 1}`}
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "https://via.placeholder.com/600x600?text=No+Image";
-                    }}
-                  />
-                </div>
-              ))
-            ) : (
-              <div className="no-image-placeholder">
-                <div className="no-image-icon">🖼️</div>
-                <p>No images available</p>
+              {/* Main Images Container (Stacked Vertically) */}
+              <div className="main-images-container">
+                {images.length > 0 ? (
+                  images.map((img, index) => (
+                    <div key={index} className="main-image-item">
+                      <img
+                        src={img}
+                        alt={`${product.productName} - ${index + 1}`}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "https://via.placeholder.com/600x600?text=No+Image";
+                        }}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="no-image-placeholder">
+                    <div className="no-image-icon">🖼️</div>
+                    <p>No images available</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* RIGHT COLUMN - Product Details */}
-        <div className="product-details-column" ref={detailsContainerRef}>
-          {/* BEST SELLER BADGE */}
-          
+            {/* Mobile View - Swiper Slider */}
+            <div className="mobile-images-view">
+              {images.length > 0 ? (
+                <>
+                  <Swiper
+                    spaceBetween={10}
+                    slidesPerView={1}
+                    navigation={true}
+                    autoplay={{
+                      delay: 4000,
+                      disableOnInteraction: false,
+                    }}
+                    thumbs={{ swiper: thumbsSwiper }}
+                    modules={[Navigation, Autoplay, Thumbs]}
+                    className="main-swiper"
+                  >
+                    {images.map((img, index) => (
+                      <SwiperSlide key={index}>
+                        <div className="swiper-image-container">
+                          <img
+                            src={img}
+                            alt={`${product.productName} - ${index + 1}`}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "https://via.placeholder.com/600x600?text=No+Image";
+                            }}
+                          />
+                        </div>
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+
+                  {/* Thumbnail Swiper */}
+                  <Swiper
+                    onSwiper={setThumbsSwiper}
+                    spaceBetween={10}
+                    slidesPerView={4}
+                    freeMode={true}
+                    watchSlidesProgress={true}
+                    modules={[Thumbs]}
+                    className="thumbnail-swiper"
+                  >
+                    {images.map((img, index) => (
+                      <SwiperSlide key={index}>
+                        <div className="swiper-thumbnail">
+                          <img
+                            src={img}
+                            alt={`${product.productName} - Thumb ${index + 1}`}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "https://via.placeholder.com/80x80?text=No+Image";
+                            }}
+                          />
+                        </div>
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </>
+              ) : (
+                <div className="no-image-placeholder">
+                  <div className="no-image-icon">🖼️</div>
+                  <p>No images available</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN - Product Details */}
+          <div className="product-details-column">
+            {/* BEST SELLER BADGE */}
             <div className="best-seller-badge">
               BEST SELLER
             </div>
-          
 
-          {/* PRODUCT HEADER with Wishlist Icon */}
-          <div className="product-header-section">
-            <h1 className="product-title">
-              {product.productName}
-              <button 
-                className={`wishlist-icon-btn ${wishlist ? 'active' : ''}`}
-                onClick={toggleWishlist}
-                title={wishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-              >
-                {wishlist ? <FaHeart /> : <FaRegHeart />}
-              </button>
-            </h1>
-          </div>
-
-          {/* SHORT DESCRIPTION */}
-          <div className="short-description">
-            {product.description || "Premium quality product with luxurious fragrance."}
-          </div>
-
-          {/* PRICE SECTION - Simple Row */}
-          <div className="simple-price-section">
-            <div className="price-row">
-              <span className="current-price">₹{finalPrice.toLocaleString()}</span>
-              {originalPrice > finalPrice && (
-                <>
-                  <span className="original-price">₹{originalPrice.toLocaleString()}</span>
-                  <span className="discount-percent">{discountPercent}% OFF</span>
-                </>
-              )}
+            {/* PRODUCT HEADER with Wishlist Icon */}
+            <div className="product-header-section">
+              <h1 className="product-title">
+                {product.productName}
+                <button
+                  className={`wishlist-icon-btn ${wishlist ? 'active' : ''}`}
+                  onClick={toggleWishlist}
+                  title={wishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+                >
+                  {wishlist ? <FaHeart /> : <FaRegHeart />}
+                </button>
+              </h1>
             </div>
-            
-            {/* Stock Status */}
-            <div className={`stock-status-badge ${inventoryStatus.status}`}>
-              {inventoryStatus.status === 'checking' ? (
-                <>Checking stock...</>
-              ) : inventoryStatus.status === 'error' ? (
-                <>Stock check failed</>
-              ) : inventoryStatus.status === 'out-of-stock' ? (
-                <>Out of Stock</>
-              ) : inventoryStatus.status === 'low-stock' ? (
-                <>Low Stock </>
+
+            {/* SHORT DESCRIPTION */}
+            <div className="short-description">
+              {product.description || "Premium quality product with luxurious fragrance."}
+            </div>
+
+            {/* PRICE SECTION - Simple Row */}
+            <div className="simple-price-section">
+              <div className="price-row">
+                <span className="current-price">₹{finalPrice.toLocaleString()}</span>
+                {originalPrice > finalPrice && (
+                  <>
+                    <span className="original-price">₹{originalPrice.toLocaleString()}</span>
+                    <span className="discount-percent">{discountPercent}% OFF</span>
+                  </>
+                )}
+              </div>
+
+              {/* Stock Status */}
+              <div className={`stock-status-badge ${inventoryStatus.status}`}>
+                {inventoryStatus.status === 'checking' ? (
+                  <>Checking stock...</>
+                ) : inventoryStatus.status === 'error' ? (
+                  <>Stock check failed</>
+                ) : inventoryStatus.status === 'out-of-stock' ? (
+                  <>Out of Stock</>
+                ) : inventoryStatus.status === 'low-stock' ? (
+                  <>Low Stock </>
+                ) : (
+                  <>In Stock </>
+                )}
+              </div>
+            </div>
+
+            {/* REVIEWS ROW */}
+            <div className="reviews-row" onClick={handleOpenReviewsModal}>
+              <div className="stars-container">
+                {renderRatingStars(averageRating, 'medium')}
+              </div>
+              <div className="reviews-count">
+                {reviewsStats.totalReviews} Review{reviewsStats.totalReviews !== 1 ? 's' : ''}
+              </div>
+              <div className="reviews-arrow">→</div>
+            </div>
+
+            {/* FRAGRANCE SELECTION */}
+            <div className="fragrance-selection-section">
+              <div className="section-header">
+                <h3>Select Fragrance</h3>
+                {(selectedFragrance || selectedModelFragrance) && (
+                  <span className="selected-indicator">
+                    Selected: <strong>{selectedFragrance || selectedModelFragrance}</strong>
+                  </span>
+                )}
+              </div>
+
+              {availableFragrances.length > 0 ? (
+                <div className="fragrance-grid">
+                  {availableFragrances.map((fragrance, index) => {
+                    const isSelected = product.type === "simple"
+                      ? selectedFragrance === fragrance
+                      : selectedModelFragrance === fragrance;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`fragrance-box ${isSelected ? 'selected' : ''} ${inventoryStatus.status === 'out-of-stock' ? 'out-of-stock' : ''
+                          }`}
+                        onClick={() => {
+                          if (inventoryStatus.status === 'out-of-stock') return;
+                          if (product.type === "simple") {
+                            handleFragranceSelect(fragrance);
+                          } else {
+                            handleModelFragranceSelect(fragrance);
+                          }
+                        }}
+                      >
+                        <div className="fragrance-name">{fragrance}</div>
+                        {inventoryStatus.status === 'out-of-stock' && (
+                          <div className="out-of-stock-overlay">Out of Stock</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
-                <>In Stock </>
+                <div className="no-fragrances-message">
+                  <p>No fragrances available for this product.</p>
+                </div>
               )}
-            </div>
-          </div>
 
-          {/* REVIEWS ROW */}
-          <div className="reviews-row" onClick={handleOpenReviewsModal}>
-            <div className="stars-container">
-              {renderRatingStars(averageRating, 'medium')}
-            </div>
-            <div className="reviews-count">
-              {reviewsStats.totalReviews} Review{reviewsStats.totalReviews !== 1 ? 's' : ''}
-            </div>
-            <div className="reviews-arrow">→</div>
-          </div>
-
-          {/* FRAGRANCE SELECTION */}
-          <div className="fragrance-selection-section">
-            <div className="section-header">
-              <h3>Select Fragrance</h3>
-              {(selectedFragrance || selectedModelFragrance) && (
-                <span className="selected-indicator">
-                  Selected: <strong>{selectedFragrance || selectedModelFragrance}</strong>
-                </span>
+              {/* Fragrance selection required message */}
+              {!selectedFragrance && !selectedModelFragrance && (
+                <div className="selection-required-message">
+                  ⚠️ Please select a fragrance to proceed
+                </div>
               )}
             </div>
 
-            {availableFragrances.length > 0 ? (
-              <div className="fragrance-grid">
-                {availableFragrances.map((fragrance, index) => {
-                  const isSelected = product.type === "simple"
-                    ? selectedFragrance === fragrance
-                    : selectedModelFragrance === fragrance;
-
-                  return (
-                    <div
-                      key={index}
-                      className={`fragrance-box ${isSelected ? 'selected' : ''} ${
-                        inventoryStatus.status === 'out-of-stock' ? 'out-of-stock' : ''
-                      }`}
-                      onClick={() => {
-                        if (inventoryStatus.status === 'out-of-stock') return;
-                        if (product.type === "simple") {
-                          handleFragranceSelect(fragrance);
-                        } else {
-                          handleModelFragranceSelect(fragrance);
-                        }
-                      }}
-                    >
-                      <div className="fragrance-name">{fragrance}</div>
-                      {inventoryStatus.status === 'out-of-stock' && (
-                        <div className="out-of-stock-overlay">Out of Stock</div>
-                      )}
-                    </div>
-                  );
-                })}
+            {/* QUANTITY SELECTOR */}
+            <div className="quantity-selector-section">
+              <div className="section-header">
+                <h3>Quantity</h3>
               </div>
-            ) : (
-              <div className="no-fragrances-message">
-                <p>No fragrances available for this product.</p>
-              </div>
-            )}
-
-            {/* Fragrance selection required message */}
-            {!selectedFragrance && !selectedModelFragrance && (
-              <div className="selection-required-message">
-                ⚠️ Please select a fragrance to proceed
-              </div>
-            )}
-          </div>
-
-          {/* QUANTITY SELECTOR */}
-          <div className="quantity-selector-section">
-            <div className="section-header">
-              <h3>Quantity</h3>
-            </div>
-            <div className="quantity-controls">
-              <button
-                className="quantity-btn minus"
-                onClick={() => handleQuantityChange(-1)}
-                disabled={quantity <= 1 || inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
-              >
-                −
-              </button>
-              <input
-                type="number"
-                min="1"
-                max={maxQuantity}
-                value={quantity}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value) || 1;
-                  if (inventoryStatus.status === 'low-stock' || inventoryStatus.status === 'in-stock') {
-                    if (value > inventoryStatus.stock) {
-                      alert(`Only ${inventoryStatus.stock} items available in stock!`);
-                      return;
+              <div className="quantity-controls">
+                <button
+                  className="quantity-btn minus"
+                  onClick={() => handleQuantityChange(-1)}
+                  disabled={quantity <= 1 || inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max={maxQuantity}
+                  value={quantity}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 1;
+                    if (inventoryStatus.status === 'low-stock' || inventoryStatus.status === 'in-stock') {
+                      if (value > inventoryStatus.stock) {
+                        return;
+                      }
                     }
-                  }
-                  if (value >= 1 && value <= maxQuantity) {
-                    setQuantity(value);
-                  }
-                }}
-                className="quantity-input"
-                disabled={inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
-              />
-              <button
-                className="quantity-btn plus"
-                onClick={() => handleQuantityChange(1)}
-                disabled={quantity >= maxQuantity || inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
-              >
-                +
-              </button>
-              <div className="quantity-summary">
-                <span className="total-label">Total: </span>
-                <span className="total-price">₹{totalPrice.toLocaleString()}</span>
+                    if (value >= 1 && value <= maxQuantity) {
+                      setQuantity(value);
+                    }
+                  }}
+                  className="quantity-input"
+                  disabled={inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
+                />
+                <button
+                  className="quantity-btn plus"
+                  onClick={() => handleQuantityChange(1)}
+                  disabled={quantity >= maxQuantity || inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
+                >
+                  +
+                </button>
+                <div className="quantity-summary">
+                  <span className="total-label">Total: </span>
+                  <span className="total-price">₹{totalPrice.toLocaleString()}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* MODEL SELECTION (for variable products) */}
-          {product.type === "variable" && product.models && product.models.length > 0 && (
-            <div className="model-selection-section">
-              <div className="section-header">
-                <h3>Select Model</h3>
-                {selectedModel && (
-                  <span className="selected-indicator">
-                    Selected: <strong>{selectedModel.modelName}</strong>
-                  </span>
-                )}
-              </div>
-              <div className="model-options-grid">
-                {product.models.map((model, index) => (
-                  <div
-                    key={index}
-                    className={`model-option-card ${selectedModel?.modelName === model.modelName ? 'selected' : ''}`}
-                    onClick={() => handleModelSelect(model)}
-                  >
-                    <div className="model-name">{model.modelName}</div>
-                    <div className="model-price">
-                      ₹{(model.colors?.[0]?.currentPrice || product.currentPrice || 0).toLocaleString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* SIZE SELECTION */}
-          {availableSizes.length > 0 && (
-            <div className="size-selection-section">
-              <div className="section-header">
-                <h3>Select Size</h3>
-                {(selectedSize || selectedModelSize) && (
-                  <span className="selected-indicator">
-                    Selected: <strong>{selectedSize || selectedModelSize}</strong>
-                  </span>
-                )}
-              </div>
-              <div className="size-options-grid">
-                {availableSizes.map((size, index) => {
-                  const isSelected = product.type === "simple"
-                    ? selectedSize === size
-                    : selectedModelSize === size;
-
-                  return (
+            {/* MODEL SELECTION (for variable products) */}
+            {product.type === "variable" && product.models && product.models.length > 0 && (
+              <div className="model-selection-section">
+                <div className="section-header">
+                  <h3>Select Model</h3>
+                  {selectedModel && (
+                    <span className="selected-indicator">
+                      Selected: <strong>{selectedModel.modelName}</strong>
+                    </span>
+                  )}
+                </div>
+                <div className="model-options-grid">
+                  {product.models.map((model, index) => (
                     <div
                       key={index}
-                      className={`size-option-box ${isSelected ? 'selected' : ''}`}
-                      onClick={() => {
-                        if (product.type === "simple") {
-                          setSelectedSize(size);
-                        } else {
-                          setSelectedModelSize(size);
-                        }
-                      }}
+                      className={`model-option-card ${selectedModel?.modelName === model.modelName ? 'selected' : ''}`}
+                      onClick={() => handleModelSelect(model)}
                     >
-                      {size}
+                      <div className="model-name">{model.modelName}</div>
+                      <div className="model-price">
+                        ₹{(model.colors?.[0]?.currentPrice || product.currentPrice || 0).toLocaleString()}
+                      </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* SIZE SELECTION */}
+            {availableSizes.length > 0 && (
+              <div className="size-selection-section">
+                <div className="section-header">
+                  <h3>Select Size</h3>
+                  {(selectedSize || selectedModelSize) && (
+                    <span className="selected-indicator">
+                      Selected: <strong>{selectedSize || selectedModelSize}</strong>
+                    </span>
+                  )}
+                </div>
+                <div className="size-options-grid">
+                  {availableSizes.map((size, index) => {
+                    const isSelected = product.type === "simple"
+                      ? selectedSize === size
+                      : selectedModelSize === size;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`size-option-box ${isSelected ? 'selected' : ''}`}
+                        onClick={() => {
+                          if (product.type === "simple") {
+                            setSelectedSize(size);
+                          } else {
+                            setSelectedModelSize(size);
+                          }
+                        }}
+                      >
+                        {size}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ACTION BUTTONS - Add to Cart & Buy Now in same row */}
+            <div className="action-buttons-section">
+              <button
+                className={`add-to-cart-btn ${!canPurchase || !selectedFragrance ? 'disabled' : ''}`}
+                onClick={handleAddToCart}
+                disabled={!canPurchase || !selectedFragrance}
+                title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : '')}
+              >
+                {!selectedFragrance && !selectedModelFragrance
+                  ? 'Select Fragrance First'
+                  : inventoryStatus.status === 'out-of-stock'
+                    ? 'Out of Stock'
+                    : `Add to Cart`}
+              </button>
+
+              <button
+                className={`buy-now-btn ${!canPurchase || !selectedFragrance ? 'disabled' : ''}`}
+                onClick={handleBuyNow}
+                disabled={!canPurchase || !selectedFragrance}
+                title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : '')}
+              >
+                {!selectedFragrance && !selectedModelFragrance
+                  ? 'Select Fragrance First'
+                  : inventoryStatus.status === 'out-of-stock'
+                    ? 'Out of Stock'
+                    : `Buy Now`}
+              </button>
+            </div>
+
+            {/* DELIVERY INFORMATION - Static Lines */}
+            <div className="delivery-info-section">
+              <div className="delivery-header">
+                <h3>Delivery Information</h3>
+              </div>
+              <div className="delivery-options">
+                <div className="delivery-option">
+                  <div className="option-line">Standard delivery in 2-4 business days</div>
+                </div>
+                <div className="delivery-option">
+                  <div className="option-line">Express delivery in 1-2 business days</div>
+                </div>
               </div>
             </div>
-          )}
 
-          {/* ACTION BUTTONS - Add to Cart & Buy Now in same row */}
-          <div className="action-buttons-section">
-            <button
-              className={`add-to-cart-btn ${!canPurchase || !selectedFragrance ? 'disabled' : ''}`}
-              onClick={handleAddToCart}
-              disabled={!canPurchase || !selectedFragrance}
-              title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : '')}
-            >
-              {!selectedFragrance && !selectedModelFragrance 
-                ? 'Select Fragrance First' 
-                : inventoryStatus.status === 'out-of-stock' 
-                  ? 'Out of Stock' 
-                  : `Add to Cart`}
-            </button>
-
-            <button
-              className={`buy-now-btn ${!canPurchase || !selectedFragrance ? 'disabled' : ''}`}
-              onClick={handleBuyNow}
-              disabled={!canPurchase || !selectedFragrance}
-              title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : '')}
-            >
-              {!selectedFragrance && !selectedModelFragrance 
-                ? 'Select Fragrance First' 
-                : inventoryStatus.status === 'out-of-stock' 
-                  ? 'Out of Stock' 
-                  : `Buy Now`}
-            </button>
-          </div>
-
-          {/* DELIVERY INFORMATION - Static Lines */}
-          <div className="delivery-info-section">
-            <div className="delivery-header">
-              <h3>Delivery Information</h3>
-            </div>
-            <div className="delivery-options">
-              <div className="delivery-option">
-                <div className="option-line">Standard delivery in 2-4 business days</div>
-              </div>
-              <div className="delivery-option">
-                <div className="option-line">Express delivery in 1-2 business days</div>
-              </div>
-            </div>
-          </div>
-
-          {/* FULL DESCRIPTION */}
-          <div className="full-description-section">
-            <div className="section-header">
-              <h3>Description</h3>
-            </div>
-            <div className="description-content">
-              {description.split('\n').map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-            </div>
-          </div>
-
-          {/* SPECIFICATIONS */}
-          {specifications.length > 0 && (
-            <div className="specifications-section">
+            {/* FULL DESCRIPTION */}
+            <div className="full-description-section">
               <div className="section-header">
-                <h3>Specifications</h3>
+                <h3>Description</h3>
               </div>
-              <div className="specifications-grid">
-                {specifications.map((spec, index) => (
-                  <div key={index} className="spec-row">
-                    <div className="spec-key">{spec.key}</div>
-                    <div className="spec-value">{spec.value}</div>
-                  </div>
+              <div className="description-content">
+                {description.split('\n').map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
                 ))}
               </div>
             </div>
-          )}
+
+            {/* SPECIFICATIONS */}
+            {specifications.length > 0 && (
+              <div className="specifications-section">
+                <div className="section-header">
+                  <h3>Specifications</h3>
+                </div>
+                <div className="specifications-grid">
+                  {specifications.map((spec, index) => (
+                    <div key={index} className="spec-row">
+                      <div className="spec-key">{spec.key}</div>
+                      <div className="spec-value">{spec.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1524,10 +1532,10 @@ function ProductPage() {
                     <>
                       {reviews.map((review, index) => {
                         // Ensure review.rating is a number
-                        const reviewRating = typeof review.rating === 'number' 
-                          ? review.rating 
+                        const reviewRating = typeof review.rating === 'number'
+                          ? review.rating
                           : parseFloat(review.rating) || 0;
-                        
+
                         return (
                           <div key={index} className="review-card">
                             <div className="review-header">

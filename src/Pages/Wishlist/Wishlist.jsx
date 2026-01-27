@@ -2,12 +2,17 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import "./Wishlist.scss";
+import LoginModal from "../../Components/Login/LoginModel/LoginModal"; // ← ADD THIS IMPORT
+
 
 function Wishlist() {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [removingItem, setRemovingItem] = useState(null);
+
+  const [showLoginModal, setShowLoginModal] = useState(false); // ← ADD THIS STATE
+
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -156,11 +161,29 @@ function Wishlist() {
           <h2>Login Required</h2>
           <p>Please login to view your wishlist.</p>
           <div className="auth-buttons">
-            <Link to="/login" className="auth-btn login-btn">
+            <button
+              className="auth-btn login-btn"
+              onClick={() => setShowLoginModal(true)}
+            >
               Login
-            </Link>
+            </button>
           </div>
         </div>
+
+        {/* Login Modal */}
+        {showLoginModal && (
+          <LoginModal
+            onClose={() => {
+              setShowLoginModal(false);
+              // After login, check if user has token and reload wishlist
+              const token = localStorage.getItem("token");
+              if (token) {
+                window.location.reload();
+              }
+            }}
+            showRegisterLink={true}
+          />
+        )}
       </div>
     );
   }
@@ -191,8 +214,8 @@ function Wishlist() {
               <p className="empty-wishlist-message">
                 Looks like you haven't added any items to your wishlist yet.
               </p>
-              <button 
-                className="empty-wishlist-button" 
+              <button
+                className="empty-wishlist-button"
                 onClick={() => navigate('/')}
               >
                 Continue Shopping
@@ -226,8 +249,8 @@ function Wishlist() {
               <div className="empty-wishlist-icon">⚠️</div>
               <h2>Oops! Something went wrong</h2>
               <p className="empty-wishlist-message">{error}</p>
-              <button 
-                className="empty-wishlist-button" 
+              <button
+                className="empty-wishlist-button"
                 onClick={fetchWishlist}
               >
                 Try Again
@@ -344,7 +367,7 @@ function Wishlist() {
               <span>₹{summary.totalPrice.toLocaleString()}</span>
             </div>
 
-            <button 
+            <button
               className="continue-shopping-btn"
               onClick={() => navigate('/')}
             >

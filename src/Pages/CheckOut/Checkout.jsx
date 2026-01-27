@@ -27,6 +27,9 @@ import { MdOutlineLocalShipping } from 'react-icons/md';
 import './Checkout.scss';
 import AddressForm from './Address/AddressForm';
 
+// Add this import with other imports
+import LoginModal from "../../Components/Login/LoginModel/LoginModal"; // Adjust path as needed
+
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,6 +41,9 @@ const Checkout = () => {
   // Refs for scrolling to step
   const stepRef = useRef(null);
   const [filledSteps, setFilledSteps] = useState([1]); // Track filled steps for line animation
+  const [showLoginModal, setShowLoginModal] = useState(false); // ← ADD THIS STATE
+
+
 
   // Cart Data
   const [cartItems, setCartItems] = useState([]);
@@ -93,7 +99,7 @@ const Checkout = () => {
   // ==================== INITIAL DATA FETCHING ====================
   useEffect(() => {
     if (!token || !userId) {
-      navigate('/login');
+      setShowLoginModal(true);
       return;
     }
 
@@ -898,10 +904,28 @@ const Checkout = () => {
         <div className="login-required">
           <h2>Login Required</h2>
           <p>Please login to proceed with checkout.</p>
-          <button onClick={() => navigate('/login')} className="auth-btn">
+          {/* CHANGED: onClick opens modal instead of navigate */}
+          <button onClick={() => setShowLoginModal(true)} className="auth-btn">
             Go to Login
           </button>
         </div>
+
+        {/* ADD LoginModal component */}
+        {showLoginModal && (
+          <LoginModal
+            onClose={() => {
+              setShowLoginModal(false);
+              // After login, check if user has token
+              const token = localStorage.getItem('token');
+              const userId = localStorage.getItem('userId');
+              if (token && userId) {
+                // User logged in, reload the checkout
+                window.location.reload();
+              }
+            }}
+            showRegisterLink={true}
+          />
+        )}
       </div>
     );
   }
@@ -1037,6 +1061,24 @@ const Checkout = () => {
           mode={editingAddress ? 'edit' : 'add'}
         />
       )}
+
+      {showLoginModal && (
+        <LoginModal
+          onClose={() => {
+            setShowLoginModal(false);
+            const token = localStorage.getItem('token');
+            const userId = localStorage.getItem('userId');
+            if (token && userId) {
+              window.location.reload();
+            }
+          }}
+          showRegisterLink={true}
+        />
+      )}
+
+
+
+
     </div>
   );
 };

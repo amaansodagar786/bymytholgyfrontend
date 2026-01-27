@@ -1,12 +1,13 @@
-// Updated Profile.jsx with fixed AddressForm centering
+// Updated Profile.jsx with LoginModal instead of redirect
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import ReactDOM from "react-dom"; // Import ReactDOM for Portal
+import ReactDOM from "react-dom";
 import "./Profile.scss";
 import AddressForm from '../../CheckOut/Address/AddressForm';
+import LoginModal from "../../../Components/Login/LoginModel/LoginModal";
 
 // React Icons
 import { 
@@ -44,9 +45,8 @@ const showError = (message) => {
   });
 };
 
-// Address Card Component with React Icons
+// Address Card Component
 const AddressCard = ({ address, onEdit, onDelete, onSetDefault }) => {
-    // Choose icon based on address type
     const getAddressIcon = () => {
         switch (address.addressType) {
             case 'home': return <FaHome className="icon" />;
@@ -140,9 +140,11 @@ const AddressFormPortal = ({ children }) => {
 // Main Profile Component
 const Profile = () => {
     const navigate = useNavigate();
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState("profile");
+    const [showLoginModal, setShowLoginModal] = useState(false);
 
     // Profile data
     const [profile, setProfile] = useState({
@@ -176,14 +178,31 @@ const Profile = () => {
     // Get auth token
     const getToken = () => localStorage.getItem("token");
 
+    // Check authentication on component mount
+    useEffect(() => {
+        const token = getToken();
+        if (!token) {
+            // NO TOKEN - show login modal immediately
+            setShowLoginModal(true);
+            setIsAuthenticated(false);
+            setLoading(false); // IMPORTANT: Stop loading
+        } else {
+            // HAS TOKEN - fetch profile
+            setIsAuthenticated(true);
+            fetchProfile();
+        }
+    }, []);
+
     // Fetch user profile
     const fetchProfile = async () => {
         try {
             setLoading(true);
-
+            
             const token = getToken();
             if (!token) {
-                navigate("/login");
+                setShowLoginModal(true);
+                setIsAuthenticated(false);
+                setLoading(false);
                 return;
             }
 
@@ -220,7 +239,11 @@ const Profile = () => {
     const fetchAddresses = async () => {
         try {
             const token = getToken();
-            if (!token) return;
+            if (!token) {
+                setShowLoginModal(true);
+                setIsAuthenticated(false);
+                return;
+            }
 
             const response = await axios.get(
                 `${import.meta.env.VITE_API_URL}/profile/addresses`,
@@ -241,14 +264,10 @@ const Profile = () => {
     };
 
     useEffect(() => {
-        fetchProfile();
-    }, []);
-
-    useEffect(() => {
-        if (activeTab === "addresses") {
+        if (activeTab === "addresses" && isAuthenticated) {
             fetchAddresses();
         }
-    }, [activeTab]);
+    }, [activeTab, isAuthenticated]);
 
     // Handle profile update
     const handleProfileUpdate = async (e) => {
@@ -258,7 +277,8 @@ const Profile = () => {
 
             const token = getToken();
             if (!token) {
-                navigate("/login");
+                setShowLoginModal(true);
+                setIsAuthenticated(false);
                 return;
             }
 
@@ -313,11 +333,11 @@ const Profile = () => {
 
             const token = getToken();
             if (!token) {
-                navigate("/login");
+                setShowLoginModal(true);
+                setIsAuthenticated(false);
                 return;
             }
 
-            // Validate passwords match
             if (passwords.newPassword !== passwords.confirmPassword) {
                 showError("New password and confirm password do not match.");
                 return;
@@ -362,6 +382,12 @@ const Profile = () => {
             setSaving(true);
 
             const token = getToken();
+            if (!token) {
+                setShowLoginModal(true);
+                setIsAuthenticated(false);
+                return;
+            }
+
             const response = await axios.post(
                 `${import.meta.env.VITE_API_URL}/profile/address/add`,
                 addressData,
@@ -388,6 +414,12 @@ const Profile = () => {
             setSaving(true);
 
             const token = getToken();
+            if (!token) {
+                setShowLoginModal(true);
+                setIsAuthenticated(false);
+                return;
+            }
+
             const response = await axios.put(
                 `${import.meta.env.VITE_API_URL}/profile/address/update/${editingAddress.addressId}`,
                 addressData,
@@ -419,6 +451,12 @@ const Profile = () => {
             setSaving(true);
 
             const token = getToken();
+            if (!token) {
+                setShowLoginModal(true);
+                setIsAuthenticated(false);
+                return;
+            }
+
             const response = await axios.delete(
                 `${import.meta.env.VITE_API_URL}/profile/address/delete/${addressId}`,
                 {
@@ -443,6 +481,12 @@ const Profile = () => {
             setSaving(true);
 
             const token = getToken();
+            if (!token) {
+                setShowLoginModal(true);
+                setIsAuthenticated(false);
+                return;
+            }
+
             const response = await axios.put(
                 `${import.meta.env.VITE_API_URL}/profile/address/set-default/${addressId}`,
                 {},
@@ -465,6 +509,12 @@ const Profile = () => {
 
     // Edit address
     const handleEditAddress = (address) => {
+        const token = getToken();
+        if (!token) {
+            setShowLoginModal(true);
+            setIsAuthenticated(false);
+            return;
+        }
         setEditingAddress(address);
         setShowAddressForm(true);
     };
@@ -477,6 +527,13 @@ const Profile = () => {
 
     // Submit address form
     const handleSubmitAddress = (addressData) => {
+        const token = getToken();
+        if (!token) {
+            setShowLoginModal(true);
+            setIsAuthenticated(false);
+            return;
+        }
+
         if (editingAddress) {
             handleUpdateAddress(addressData);
         } else {
@@ -489,10 +546,26 @@ const Profile = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("userId");
         localStorage.removeItem("user");
+        setIsAuthenticated(false);
         showSuccess("Logged out successfully!");
         setTimeout(() => {
-            navigate("/login");
+            navigate("/");
         }, 1500);
+    };
+
+    // Close login modal
+    const handleCloseLoginModal = () => {
+        setShowLoginModal(false);
+        
+        const token = getToken();
+        if (!token) {
+            // Still not logged in, redirect to home
+            navigate("/");
+        } else {
+            // User logged in successfully
+            setIsAuthenticated(true);
+            fetchProfile();
+        }
     };
 
     // Handle input changes
@@ -512,8 +585,23 @@ const Profile = () => {
         }));
     };
 
-    // Render loading state
-    if (loading && activeTab === "profile") {
+    // ========== RENDER LOGIC ==========
+
+    // Show ONLY LoginModal when not authenticated
+    if (!isAuthenticated && showLoginModal) {
+        return (
+            <div className="profile-container">
+                <ToastContainer />
+                <LoginModal 
+                    onClose={handleCloseLoginModal}
+                    showRegisterLink={true}
+                />
+            </div>
+        );
+    }
+
+    // Show loading when authenticated but profile still loading
+    if (loading) {
         return (
             <div className="profile-container">
                 <ToastContainer />
@@ -525,23 +613,7 @@ const Profile = () => {
         );
     }
 
-    // Check authentication
-    const token = getToken();
-    if (!token) {
-        return (
-            <div className="profile-container">
-                <ToastContainer />
-                <div className="login-prompt">
-                    <h2>Login Required</h2>
-                    <p>Please login to view your profile.</p>
-                    <button onClick={() => navigate("/login")} className="auth-btn">
-                        Go to Login
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
+    // Main profile content (user is authenticated)
     return (
         <div className="profile-container">
             {/* Toast Container */}
@@ -663,9 +735,6 @@ const Profile = () => {
                                         placeholder="Enter your email"
                                         className="form-input"
                                     />
-                                    {/* <small className="form-help">
-                                        Changing email will require re-login
-                                    </small> */}
                                 </div>
 
                                 <div className="form-group">
@@ -926,7 +995,7 @@ const Profile = () => {
                 </div>
             </div>
 
-            {/* Render AddressForm as a Portal to body (outside the normal flow) */}
+            {/* Render AddressForm as a Portal */}
             {showAddressForm && (
                 <AddressFormPortal>
                     <AddressForm
@@ -936,6 +1005,14 @@ const Profile = () => {
                         mode={editingAddress ? 'edit' : 'add'}
                     />
                 </AddressFormPortal>
+            )}
+
+            {/* Login Modal (in case it needs to show again) */}
+            {showLoginModal && (
+                <LoginModal 
+                    onClose={handleCloseLoginModal}
+                    showRegisterLink={true}
+                />
             )}
         </div>
     );

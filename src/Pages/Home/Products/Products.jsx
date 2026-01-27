@@ -5,19 +5,36 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
 import { FaRegHeart, FaHeart } from "react-icons/fa";
+import WishlistSidebar from "../../Wishlist/Sidebar/WishlistSidebar";
+import LoginModal from "../../../Components/Login/LoginModel/LoginModal"; // Add this import
 import "swiper/css";
 import "swiper/css/navigation";
 import "./Products.scss";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
-  const [wishlist, setWishlist] = useState({}); // Track wishlist status
+  const [wishlist, setWishlist] = useState({});
   const [loadingWishlist, setLoadingWishlist] = useState(true);
+  const [showWishlistSidebar, setShowWishlistSidebar] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false); // Add this state
+
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchProducts();
     fetchUserWishlist();
+  }, []);
+
+  // Listen for wishlist updates from sidebar
+  useEffect(() => {
+    const handleWishlistUpdate = () => {
+      fetchUserWishlist(); // Refresh wishlist status
+    };
+
+    window.addEventListener("wishlistUpdated", handleWishlistUpdate);
+    return () => {
+      window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
+    };
   }, []);
 
   const fetchProducts = async () => {
@@ -31,7 +48,6 @@ const Products = () => {
     }
   };
 
-  // Fetch user's wishlist from API
   const fetchUserWishlist = async () => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
@@ -50,7 +66,6 @@ const Products = () => {
         }
       );
 
-      // Create wishlist status object from API data
       const wishlistStatus = {};
       if (response.data && Array.isArray(response.data)) {
         response.data.forEach(item => {
@@ -68,17 +83,16 @@ const Products = () => {
     }
   };
 
-  // Toggle wishlist status using API
+  // Toggle wishlist status with sidebar opening
   const toggleWishlist = async (product, e) => {
     e.stopPropagation();
 
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
 
-    // Check if user is logged in
     if (!token || !userId) {
-      alert("Please login to add items to wishlist");
-      navigate("/login");
+      // OPEN LOGIN MODAL INSTEAD OF ALERT AND NAVIGATE
+      setShowLoginModal(true);
       return;
     }
 
@@ -98,14 +112,13 @@ const Products = () => {
           }
         );
 
-        // Update local state
         setWishlist(prev => ({
           ...prev,
           [productId]: false
         }));
 
       } else {
-        // Add to wishlist (without fragrance/model/size selection)
+        // Add to wishlist
         const wishlistData = {
           userId,
           productId: productId,
@@ -113,10 +126,9 @@ const Products = () => {
           categoryId: product.categoryId,
           categoryName: product.categoryName,
           addedFrom: "home",
-          selectedFragrance: null,  // No fragrance selection
-          selectedModel: null,       // No model selection
-          selectedSize: null,        // No size selection
-          // Include default color if available
+          selectedFragrance: null,
+          selectedModel: null,
+          selectedSize: null,
           selectedColor: product.colors?.[0] ? {
             colorId: product.colors[0].colorId,
             colorName: product.colors[0].colorName,
@@ -125,7 +137,7 @@ const Products = () => {
           } : null
         };
 
-        const response = await axios.post(
+        await axios.post(
           `${import.meta.env.VITE_API_URL}/wishlist/add`,
           wishlistData,
           {
@@ -136,22 +148,24 @@ const Products = () => {
           }
         );
 
-        // Update local state
         setWishlist(prev => ({
           ...prev,
           [productId]: true
         }));
+
+        // OPEN THE WISHLIST SIDEBAR WHEN ADDING ITEM
+        // Check if it's desktop view (window width > 768px)
+        if (window.innerWidth > 768) {
+          setShowWishlistSidebar(true);
+        }
       }
 
-      // Dispatch event for other components to update
       window.dispatchEvent(new Event('wishlistUpdated'));
 
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-
       if (error.response?.data?.message) {
         if (error.response.data.message.includes("already in your wishlist")) {
-          // Product already in wishlist, update state
           setWishlist(prev => ({
             ...prev,
             [productId]: true
@@ -166,114 +180,130 @@ const Products = () => {
   };
 
   return (
-    <section className="products-showcase">
-      <div className="products-slider-container">
-        <Swiper
-          modules={[Navigation]}
-          slidesPerView={4}
-          spaceBetween={48}
-          navigation={{
-            nextEl: ".prod-next",
-            prevEl: ".prod-prev",
+    <>
+      {/* Wishlist Sidebar */}
+      <WishlistSidebar
+        isOpen={showWishlistSidebar}
+        onClose={() => setShowWishlistSidebar(false)}
+      />
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <LoginModal
+          onClose={() => {
+            setShowLoginModal(false);
+            // After login, refresh wishlist status
+            fetchUserWishlist();
           }}
-          breakpoints={{
-            0: { slidesPerView: 1 },
-            768: { slidesPerView: 2 },
-            1024: { slidesPerView: 4 },
-          }}
-        >
-          {products.map((product) => {
-            const color = product.colors?.[0];
-            const image = color?.images?.[0] || product.thumbnailImage;
-            const currentPrice = color?.currentPrice ?? 0;
-            const originalPrice = color?.originalPrice ?? 0;
+          showRegisterLink={true}
+        />
+      )}
 
-            // Check if product is in wishlist
-            const isWishlisted = wishlist[product.productId] || false;
+      {/* Products Section */}
+      <section className="products-showcase">
+        <div className="products-slider-container">
+          <Swiper
+            modules={[Navigation]}
+            slidesPerView={4}
+            spaceBetween={48}
+            navigation={{
+              nextEl: ".prod-next",
+              prevEl: ".prod-prev",
+            }}
+            breakpoints={{
+              0: { slidesPerView: 1 },
+              768: { slidesPerView: 2 },
+              1024: { slidesPerView: 4 },
+            }}
+          >
+            {products.map((product) => {
+              const color = product.colors?.[0];
+              const image = color?.images?.[0] || product.thumbnailImage;
+              const currentPrice = color?.currentPrice ?? 0;
+              const originalPrice = color?.originalPrice ?? 0;
+              const isWishlisted = wishlist[product.productId] || false;
 
-            const discount =
-              originalPrice > currentPrice
-                ? Math.round(
-                  ((originalPrice - currentPrice) / originalPrice) * 100
-                )
-                : 0;
+              const discount =
+                originalPrice > currentPrice
+                  ? Math.round(
+                    ((originalPrice - currentPrice) / originalPrice) * 100
+                  )
+                  : 0;
 
-            return (
-              <SwiperSlide key={product.productId}>
-                <div
-                  className="product-item"
-                  onClick={() => navigate(`/product/${product.productId}`)}
-                >
-                  <div className="image-wrapper">
-                    {/* Wishlist Button with Conditional Icon */}
-                    <button
-                      className={`wishlist-btn ${isWishlisted ? 'wishlisted' : ''}`}
-                      onClick={(e) => toggleWishlist(product, e)}
-                      aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-                      disabled={loadingWishlist}
-                    >
-                      {loadingWishlist ? (
-                        <span className="loading-spinner-small"></span>
-                      ) : isWishlisted ? (
-                        <FaHeart className="wishlist-icon filled" />
-                      ) : (
-                        <FaRegHeart className="wishlist-icon" />
+              return (
+                <SwiperSlide key={product.productId}>
+                  <div
+                    className="product-item"
+                    onClick={() => navigate(`/product/${product.productId}`)}
+                  >
+                    <div className="image-wrapper">
+                      {/* Wishlist Button */}
+                      <button
+                        className={`wishlist-btn ${isWishlisted ? 'wishlisted' : ''}`}
+                        onClick={(e) => toggleWishlist(product, e)}
+                        aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                        disabled={loadingWishlist}
+                      >
+                        {loadingWishlist ? (
+                          <span className="loading-spinner-small"></span>
+                        ) : isWishlisted ? (
+                          <FaHeart className="wishlist-icon filled" />
+                        ) : (
+                          <FaRegHeart className="wishlist-icon" />
+                        )}
+                      </button>
+
+                      {image && (
+                        <img
+                          src={image}
+                          alt={product.productName}
+                          loading="lazy"
+                        />
                       )}
-                    </button>
+                    </div>
 
-                    {image && (
-                      <img
-                        src={image}
-                        alt={product.productName}
-                        loading="lazy"
-                      />
-                    )}
-                  </div>
+                    <h3 className="product-name">
+                      {product.productName}
+                    </h3>
 
-                  <h3 className="product-name">
-                    {product.productName}
-                  </h3>
+                    <p className="desc">
+                      {product.description || " "}
+                    </p>
 
-                  {/* Always reserve 2 lines */}
-                  <p className="desc">
-                    {product.description || " "}
-                  </p>
-
-                  <div className="price-row">
-                    <span className="price">
-                      ₹{currentPrice}
-                    </span>
-
-                    {originalPrice > currentPrice && (
-                      <span className="original">
-                        ₹{originalPrice}
+                    <div className="price-row">
+                      <span className="price">
+                        ₹{currentPrice}
                       </span>
-                    )}
 
-                    {discount > 0 && (
-                      <span className="off-badge">
-                        {discount}% OFF
-                      </span>
-                    )}
+                      {originalPrice > currentPrice && (
+                        <span className="original">
+                          ₹{originalPrice}
+                        </span>
+                      )}
+
+                      {discount > 0 && (
+                        <span className="off-badge">
+                          {discount}% OFF
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </SwiperSlide>
-            );
-          })}
-        </Swiper>
+                </SwiperSlide>
+              );
+            })}
+          </Swiper>
 
-        {/* Navigation Arrows with React Icons */}
-        <div className="slider-arrows">
-          <button className="prod-prev" aria-label="Previous">
-            <FaArrowLeft className="arrow-icon" />
-          </button>
-
-          <button className="prod-next" aria-label="Next">
-            <FaArrowRight className="arrow-icon" />
-          </button>
+          <div className="slider-arrows">
+            <button className="prod-prev" aria-label="Previous">
+              <FaArrowLeft className="arrow-icon" />
+            </button>
+            <button className="prod-next" aria-label="Next">
+              <FaArrowRight className="arrow-icon" />
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 };
 
