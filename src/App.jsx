@@ -28,6 +28,7 @@ import Footer from "./Components/Footer/Footer";
 import ScrollToTop from "./Components/GoToTop/ScrollToTop";
 import Cart from "./Pages/Cart/Cart";
 import AdminAuth from "./Pages/AdminAuth/AdminAuth";
+import Scroll from "./Pages/Dummy/Scroll";
 
 function App() {
 
@@ -50,6 +51,7 @@ function App() {
         <Route path="/orders" element={<UserOrders />} />
         <Route path="/my-reviews" element={<UserReviews />} />
         <Route path="/products" element={<AllProducts />} />
+        <Route path="/dummy" element={<Scroll />} />
 
         <Route path="/category/:categoryId" element={<CategoryProducts />} />
 

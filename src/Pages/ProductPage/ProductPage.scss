@@ -165,38 +165,51 @@ $transition-medium: 0.3s ease;
   }
 }
 
-// ===== MAIN LAYOUT =====
-.product-main-container {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 40px;
-  max-width: 1440px;
-  margin: 0 auto;
+// ===== SCROLL TRIGGER SECTION =====
+.product-scroll-section {
+  padding: 20px 0;
 
-  @include responsive(mobile) {
+  .columns-wrapper {
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 30px;
+
+    @media (min-width: 1024px) {
+      // 🔥 DESKTOP: Flex layout for ScrollTrigger
+      display: flex;
+      gap: 40px;
+      max-width: 1400px;
+      margin: 0 auto;
+      align-items: flex-start;
+      justify-content: center;
+    }
   }
 
-  @media (min-width: 1024px) {
-    grid-template-columns: 1fr 1fr;
-    height: calc(100vh - 100px);
-    gap: 60px;
+  // Mobile: keep existing grid layout
+  @media (max-width: 1023px) {
+    .columns-wrapper {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
   }
 }
 
-// ===== LEFT COLUMN - IMAGES (SYNCHRONIZED SCROLLING FIXED) =====
+// ===== LEFT COLUMN - IMAGES (LONG) =====
 .product-images-column {
-  @include flex-column;
-  position: relative;
-
-  // Hide mobile view on desktop
-  .mobile-images-view {
-    display: none;
+  // Desktop: 60% width
+  @media (min-width: 1024px) {
+    width: 50%;
+    flex-shrink: 0;
+    
+    // Hide mobile view on desktop
+    .mobile-images-view {
+      display: none;
+    }
   }
 
+  // Mobile View
   @include responsive(mobile) {
-
-    // Show mobile view, hide desktop
     .desktop-images-view {
       display: none;
     }
@@ -207,42 +220,21 @@ $transition-medium: 0.3s ease;
     }
   }
 
-  // Desktop View - SYNCHRONIZED SCROLLING FIXED
+  // Desktop View - Vertical Stack
   .desktop-images-view {
     display: flex;
-    height: 100%;
     width: 100%;
-    overflow: hidden;
-
-    @media (min-width: 1024px) {
-      height: 100%;
-      max-height: calc(100vh - 120px);
-    }
 
     // Vertical Thumbnail Strip
     .thumbnail-strip {
-      width: 80px;
+      width: 70px;
       @include flex-column;
       gap: 10px;
-      overflow-y: auto;
       flex-shrink: 0;
       padding-right: 8px;
 
       @include responsive(tablet) {
         width: 70px;
-      }
-
-      &::-webkit-scrollbar {
-        width: 4px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: $light-gray;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: $medium-gray;
-        border-radius: 2px;
       }
 
       .thumbnail-item {
@@ -276,38 +268,21 @@ $transition-medium: 0.3s ease;
       }
     }
 
-    // Main Images Container - ALL IMAGES VISIBLE
+    // Main Images Container - Stacked Vertically
     .main-images-container {
       flex: 1;
-      overflow-y: auto !important; // ⚠️ ADD THIS LINE!
       @include flex-column;
-      gap: 20px;
-      padding: 0 8px 8px 8px;
-      scroll-behavior: smooth;
-
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: $light-gray;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: $medium-gray;
-        border-radius: 3px;
-      }
+      gap: 30px;
+      padding: 0 8px 8px 30px;
 
       .main-image-item {
-        width: 100%;
-        min-height: 400px;
-        max-height: 600px;
+        width: 95%;
+        min-height: 350px;
+        max-height: 500px;
         border-radius: $border-radius-lg;
         overflow: hidden;
         background: $light-gray;
         flex-shrink: 0;
-        opacity: 1;
-        transform: none;
 
         img {
           width: 100%;
@@ -441,30 +416,17 @@ $transition-medium: 0.3s ease;
   }
 }
 
-// ===== RIGHT COLUMN - PRODUCT DETAILS (INDIVIDUAL GAPS - NO EQUAL GAP) =====
+// ===== RIGHT COLUMN - PRODUCT DETAILS (SHORT) =====
 .product-details-column {
   @include flex-column;
-  padding-right: 8px;
   padding-bottom: 40px;
-  scroll-behavior: smooth;
 
+  // Desktop: 40% width, pinned by ScrollTrigger
   @media (min-width: 1024px) {
-    height: 100%;
-    max-height: calc(100vh - 120px);
-    overflow-y: auto !important;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: $light-gray;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: $medium-gray;
-      border-radius: 3px;
-    }
+    width: 40%;
+    flex-shrink: 0;
+    // GSAP ScrollTrigger will handle the pinning
+    // No custom scrolling needed
   }
 }
 
@@ -481,7 +443,7 @@ $transition-medium: 0.3s ease;
 
 // ===== PRODUCT HEADER SECTION (INDIVIDUAL MARGIN) =====
 .product-header-section {
-  margin-bottom: 15px; // Individual margin
+  margin-bottom: 15px;
 
   .product-title {
     font-family: $heading-font;
@@ -529,12 +491,12 @@ $transition-medium: 0.3s ease;
   font-size: 1rem;
   line-height: 1.6;
   color: $dark-gray;
-  margin-bottom: 15px; // Individual margin
+  margin-bottom: 15px;
 }
 
 // ===== SIMPLE PRICE SECTION (INDIVIDUAL MARGIN) =====
 .simple-price-section {
-  margin-bottom: 20px; // Individual margin
+  margin-bottom: 20px;
 
   .price-row {
     display: flex;
@@ -606,7 +568,7 @@ $transition-medium: 0.3s ease;
   gap: 10px;
   cursor: pointer;
   transition: all $transition-fast;
-  margin-bottom: 25px; // Individual margin
+  margin-bottom: 25px;
 
   &:hover {
     .reviews-arrow {
@@ -647,7 +609,7 @@ $transition-medium: 0.3s ease;
 
 // ===== FRAGRANCE SELECTION SECTION (INDIVIDUAL MARGIN) =====
 .fragrance-selection-section {
-  margin-bottom: 25px; // Individual margin
+  margin-bottom: 25px;
 
   .section-header {
     @include flex-between;
@@ -762,7 +724,7 @@ $transition-medium: 0.3s ease;
 
 // ===== QUANTITY SELECTOR (INDIVIDUAL MARGIN) =====
 .quantity-selector-section {
-  margin-bottom: 25px; // Individual margin
+  margin-bottom: 25px;
 
   .section-header {
     margin-bottom: 12px;
@@ -864,7 +826,7 @@ $transition-medium: 0.3s ease;
 
 // ===== MODEL SELECTION (INDIVIDUAL MARGIN) =====
 .model-selection-section {
-  margin-bottom: 25px; // Individual margin
+  margin-bottom: 25px;
 
   .section-header {
     @include flex-between;
@@ -939,7 +901,7 @@ $transition-medium: 0.3s ease;
 
 // ===== SIZE SELECTION (INDIVIDUAL MARGIN) =====
 .size-selection-section {
-  margin-bottom: 25px; // Individual margin
+  margin-bottom: 25px;
 
   .section-header {
     @include flex-between;
@@ -998,7 +960,7 @@ $transition-medium: 0.3s ease;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 30px; // Individual margin
+  margin-bottom: 30px;
 
   @include responsive(small-mobile) {
     grid-template-columns: 1fr;
@@ -1053,7 +1015,7 @@ $transition-medium: 0.3s ease;
   padding: 20px;
   border: 1px solid $border-gray;
   border-radius: $border-radius-md;
-  margin-bottom: 30px; // Individual margin
+  margin-bottom: 30px;
 
   .delivery-header {
     margin-bottom: 15px;
@@ -1084,7 +1046,7 @@ $transition-medium: 0.3s ease;
 
 // ===== FULL DESCRIPTION (INDIVIDUAL MARGIN) =====
 .full-description-section {
-  margin-bottom: 30px; // Individual margin
+  margin-bottom: 30px;
 
   .section-header {
     margin-bottom: 15px;
@@ -1119,7 +1081,7 @@ $transition-medium: 0.3s ease;
 
 // ===== SPECIFICATIONS (INDIVIDUAL MARGIN) =====
 .specifications-section {
-  margin-bottom: 40px; // Individual margin
+  margin-bottom: 40px;
 
   .section-header {
     margin-bottom: 20px;
@@ -1170,6 +1132,30 @@ $transition-medium: 0.3s ease;
         display: flex;
         align-items: center;
       }
+    }
+  }
+}
+
+// ===== NEXT SECTION =====
+.next-section {
+  padding: 80px 20px;
+  background: #f8f8f8;
+  min-height: 300px;
+
+  .next-section-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+
+    h2 {
+      font-family: $heading-font;
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    p {
+      font-family: $content-font;
+      color: $medium-gray;
     }
   }
 }
@@ -1562,11 +1548,6 @@ $transition-medium: 0.3s ease;
 
 // ===== MOBILE OPTIMIZATIONS =====
 @include responsive(mobile) {
-  .product-main-container {
-    display: flex;
-    flex-direction: column;
-  }
-
   .product-images-column {
     order: 1;
   }
@@ -1605,14 +1586,9 @@ $transition-medium: 0.3s ease;
   }
 }
 
-
-
 @media (max-width: 768px) {
-
   .thumbnail-strip {
     display: none !important;
-
-
   }
 
   .main-images-container {

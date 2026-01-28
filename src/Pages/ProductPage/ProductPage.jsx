@@ -4,6 +4,8 @@ import axios from "axios";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay, Thumbs } from "swiper/modules";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/thumbs";
@@ -13,17 +15,21 @@ import "./ProductPage.scss";
 import WishlistSidebar from "../../Pages/Wishlist/Sidebar/WishlistSidebar";
 import CartSidebar from "../../Pages/Cart/Sidebar/CartSidebar";
 
+// Register GSAP ScrollTrigger
+gsap.registerPlugin(ScrollTrigger);
+
 function ProductPage() {
   const { productId } = useParams();
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
+  // GSAP ScrollTrigger refs
+  const sectionRef = useRef(null); // For the entire product section
+  const rightRef = useRef(null);   // For the right column (product details)
+
   // Sidebar states
   const [showWishlistSidebar, setShowWishlistSidebar] = useState(false);
   const [showCartSidebar, setShowCartSidebar] = useState(false);
-
-  // Refs for scroll control - REMOVED OLD REFS
-  const mainContainerRef = useRef(null);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,6 +80,45 @@ function ProductPage() {
   // Swiper states for mobile
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
 
+  // Initialize GSAP ScrollTrigger
+  useEffect(() => {
+    // Only run on desktop (screen width >= 1024px)
+    if (window.innerWidth >= 1024 && !loading && product) {
+      const section = sectionRef.current;
+      const right = rightRef.current;
+
+      if (section && right) {
+        const trigger = ScrollTrigger.create({
+          trigger: right,
+          start: "bottom bottom",
+          endTrigger: section,
+          end: "bottom bottom",
+          pin: right,
+          pinSpacing: true,
+          markers: false,
+        });
+
+        // Cleanup function
+        return () => {
+          trigger.kill();
+        };
+      }
+    }
+  }, [loading, product]);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      // Kill existing ScrollTrigger instances on mobile
+      if (window.innerWidth < 1024) {
+        ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Fetch reviews for the product
   const fetchProductReviews = async (page = 1) => {
     try {
@@ -109,8 +154,6 @@ function ProductPage() {
       fetchProductReviews();
     }
   }, [productId]);
-
-  // REMOVED ALL SCROLL SYNC CODE
 
   // Render star rating - FIXED to handle number properly
   const renderRatingStars = (rating, size = 'medium') => {
@@ -1012,7 +1055,7 @@ function ProductPage() {
     : parseFloat(reviewsStats.averageRating) || 0;
 
   return (
-    <div className="product-page" ref={mainContainerRef}>
+    <div className="product-page">
       {/* SIDEBARS */}
       <WishlistSidebar
         isOpen={showWishlistSidebar}
@@ -1028,10 +1071,10 @@ function ProductPage() {
         ← Back to Products
       </button>
 
-      {/* SINGLE SCROLL CONTAINER - THIS IS WHERE ALL SCROLLING HAPPENS */}
-      <div className="product-main-container">
+      {/* PRODUCT SECTION WITH SCROLL TRIGGER */}
+      <section className="product-scroll-section" ref={sectionRef}>
         <div className="columns-wrapper">
-          {/* LEFT COLUMN - Images Section */}
+          {/* LEFT COLUMN - Images Section (LONG) */}
           <div className="product-images-column">
             {/* Desktop View - Vertical Stack */}
             <div className="desktop-images-view">
@@ -1143,13 +1186,13 @@ function ProductPage() {
                 <div className="no-image-placeholder">
                   <div className="no-image-icon">🖼️</div>
                   <p>No images available</p>
-                </div>
+                  </div>
               )}
             </div>
           </div>
 
-          {/* RIGHT COLUMN - Product Details */}
-          <div className="product-details-column">
+          {/* RIGHT COLUMN - Product Details (SHORT) */}
+          <div className="product-details-column" ref={rightRef}>
             {/* BEST SELLER BADGE */}
             <div className="best-seller-badge">
               BEST SELLER
@@ -1452,7 +1495,15 @@ function ProductPage() {
             )}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* NEXT SECTION */}
+      <section className="next-section">
+        <div className="next-section-content">
+          <h2>Next Section</h2>
+          <p>This starts only after the product section fully ends.</p>
+        </div>
+      </section>
 
       {/* REVIEWS MODAL */}
       {showReviewsModal && (
