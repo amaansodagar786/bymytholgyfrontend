@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate , useLocation } from "react-router-dom";
 import axios from "axios";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -14,12 +14,22 @@ import "./ProductPage.scss";
 // Import Sidebars
 import WishlistSidebar from "../../Pages/Wishlist/Sidebar/WishlistSidebar";
 import CartSidebar from "../../Pages/Cart/Sidebar/CartSidebar";
+import RelatedProducts from "./RelatedProducts/RelatedProducts";
 
 // Register GSAP ScrollTrigger
 gsap.registerPlugin(ScrollTrigger);
 
 function ProductPage() {
-  const { productId } = useParams();
+  // const { productId } = useParams(); 
+  const { productName } = useParams();
+   const location = useLocation();
+  const productId = location.state?.productId;
+
+
+
+  console.log("Product ID received from Products.js:", productId);
+  console.log("Product Name from URL:", productName);
+  console.log("Full location state:", location.state);
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
@@ -105,6 +115,27 @@ function ProductPage() {
       }
     }
   }, [loading, product]);
+
+
+  // Add this near your other useEffect hooks
+  useEffect(() => {
+    // Debug swiper on mobile
+    if (window.innerWidth < 768 && images.length > 0) {
+      console.log('Mobile Swiper Debug:');
+      console.log('Images count:', images.length);
+      console.log('Main Swiper should be visible');
+
+      // Force update after mount
+      setTimeout(() => {
+        if (thumbsSwiper && !thumbsSwiper.destroyed) {
+          console.log('Thumbs swiper initialized');
+        }
+      }, 1000);
+    }
+  }, [images, thumbsSwiper]);
+
+
+
 
   // Handle window resize
   useEffect(() => {
@@ -1066,10 +1097,17 @@ function ProductPage() {
         onClose={() => setShowCartSidebar(false)}
       />
 
-      {/* Back Button */}
-      <button className="back-button" onClick={() => navigate(-1)}>
-        ← Back to Products
-      </button>
+      {/* Back Button - Styled */}
+      <div className="product-page-back-button">
+        <button
+          className="styled-back-button"
+          onClick={() => navigate(-1)}
+          aria-label="Go back to previous page"
+        >
+          <span className="back-arrow">←</span>
+          <span className="back-text">Back</span>
+        </button>
+      </div>
 
       {/* PRODUCT SECTION WITH SCROLL TRIGGER */}
       <section className="product-scroll-section" ref={sectionRef}>
@@ -1126,9 +1164,10 @@ function ProductPage() {
 
             {/* Mobile View - Swiper Slider */}
             <div className="mobile-images-view">
-              {images.length > 0 ? (
+              {images && images.length > 0 ? (
                 <>
                   <Swiper
+                    key={`main-${images.length}`}
                     spaceBetween={10}
                     slidesPerView={1}
                     navigation={true}
@@ -1136,19 +1175,32 @@ function ProductPage() {
                       delay: 4000,
                       disableOnInteraction: false,
                     }}
-                    thumbs={{ swiper: thumbsSwiper }}
+                    thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
                     modules={[Navigation, Autoplay, Thumbs]}
                     className="main-swiper"
+                    style={{
+                      width: '100%',
+                      height: '350px',
+                      '--swiper-navigation-color': '#000',
+                      '--swiper-pagination-color': '#000',
+                    }}
                   >
                     {images.map((img, index) => (
-                      <SwiperSlide key={index}>
+                      <SwiperSlide key={`slide-${index}`}>
                         <div className="swiper-image-container">
                           <img
                             src={img}
                             alt={`${product.productName} - ${index + 1}`}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = "https://via.placeholder.com/600x600?text=No+Image";
+                              e.target.src = "https://via.placeholder.com/600x600/ffffff/000000?text=No+Image";
+                            }}
+                            loading="eager"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              display: 'block'
                             }}
                           />
                         </div>
@@ -1158,23 +1210,36 @@ function ProductPage() {
 
                   {/* Thumbnail Swiper */}
                   <Swiper
+                    key={`thumbs-${images.length}`}
                     onSwiper={setThumbsSwiper}
                     spaceBetween={10}
-                    slidesPerView={4}
+                    slidesPerView={Math.min(4, images.length)}
                     freeMode={true}
                     watchSlidesProgress={true}
                     modules={[Thumbs]}
                     className="thumbnail-swiper"
+                    style={{
+                      width: '100%',
+                      height: '70px',
+                      marginTop: '10px'
+                    }}
                   >
                     {images.map((img, index) => (
-                      <SwiperSlide key={index}>
+                      <SwiperSlide key={`thumb-${index}`}>
                         <div className="swiper-thumbnail">
                           <img
                             src={img}
                             alt={`${product.productName} - Thumb ${index + 1}`}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = "https://via.placeholder.com/80x80?text=No+Image";
+                              e.target.src = "https://via.placeholder.com/80x80/ffffff/000000?text=No+Image";
+                            }}
+                            loading="lazy"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              display: 'block'
                             }}
                           />
                         </div>
@@ -1186,7 +1251,7 @@ function ProductPage() {
                 <div className="no-image-placeholder">
                   <div className="no-image-icon">🖼️</div>
                   <p>No images available</p>
-                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -1498,11 +1563,15 @@ function ProductPage() {
       </section>
 
       {/* NEXT SECTION */}
-      <section className="next-section">
-        <div className="next-section-content">
-          <h2>Next Section</h2>
-          <p>This starts only after the product section fully ends.</p>
-        </div>
+      {/* RELATED PRODUCTS SECTION */}
+      <section className="related-products-section">
+        <RelatedProducts
+          productId={productId}
+          currentFragrances={getAvailableFragrances()} // Pass current product's fragrances
+          categoryId={product.categoryId}
+          currentProductType={product.type}
+          currentModelId={selectedModel?._id}
+        />
       </section>
 
       {/* REVIEWS MODAL */}

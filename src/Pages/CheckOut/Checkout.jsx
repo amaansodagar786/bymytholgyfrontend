@@ -615,7 +615,7 @@ const Checkout = () => {
         ))}
       </div>
 
-      <div className="order-summary">
+      <div className="order-summary-checkout">
         <h3 className="summary-title">Order Summary</h3>
 
         <div className="summary-content">

@@ -228,7 +228,7 @@ const ProductOffers = () => {
   const colorStats = getColorStats();
 
   return (
-    <AdminLayout>
+    
       <div className="product-offers-container">
         <ToastContainer
           position="top-right"
@@ -852,7 +852,7 @@ const ProductOffers = () => {
           </div>
         )}
       </div>
-    </AdminLayout>
+    
   );
 };
 
