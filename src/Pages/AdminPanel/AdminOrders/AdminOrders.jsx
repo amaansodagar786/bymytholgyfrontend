@@ -21,7 +21,8 @@ import {
   FiCalendar,
   FiCreditCard,
   FiInfo,
-  FiAlertCircle
+  FiAlertCircle,
+  FiTag
 } from "react-icons/fi";
 import {
   MdOutlinePendingActions,
@@ -124,67 +125,67 @@ const AdminOrders = () => {
     };
   };
 
-// 📋 FETCH ALL ORDERS WITH SEARCH - MODIFIED VERSION
-const fetchOrders = async () => {
-  try {
-    if (!validateToken()) return;
-    
-    setIsLoading(true);
-    setError("");
-    
-    const queryParams = new URLSearchParams({
-      page: filters.page,
-      limit: filters.limit,
-      status: filters.status !== "all" ? filters.status : "",
-      search: filters.search.trim()
-    }).toString();
+  // 📋 FETCH ALL ORDERS WITH SEARCH - MODIFIED VERSION
+  const fetchOrders = async () => {
+    try {
+      if (!validateToken()) return;
 
-    console.log("📤 Fetching orders with params:", {
-      page: filters.page,
-      limit: filters.limit,
-      status: filters.status,
-      search: filters.search.trim(),
-      queryString: queryParams
-    });
+      setIsLoading(true);
+      setError("");
 
-    const response = await axios.get(
-      `${import.meta.env.VITE_API_URL}/orders/all/orders?${queryParams}`,
-      { headers: getAuthHeaders() }
-    );
+      const queryParams = new URLSearchParams({
+        page: filters.page,
+        limit: filters.limit,
+        status: filters.status !== "all" ? filters.status : "",
+        search: filters.search.trim()
+      }).toString();
 
-    console.log("✅ Orders API Response:", response.data);
-    console.log("📦 Orders count:", response.data.orders?.length || 0);
+      console.log("📤 Fetching orders with params:", {
+        page: filters.page,
+        limit: filters.limit,
+        status: filters.status,
+        search: filters.search.trim(),
+        queryString: queryParams
+      });
 
-    if (response.data.success) {
-      setOrders(response.data.orders || []);
-      
-      // REMOVE THIS PART - Don't overwrite stats from /admin/stats
-      // Keep stats separate
-      
-    } else {
-      console.log("❌ API success false:", response.data);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/orders/all/orders?${queryParams}`,
+        { headers: getAuthHeaders() }
+      );
+
+      console.log("✅ Orders API Response:", response.data);
+      console.log("📦 Orders count:", response.data.orders?.length || 0);
+
+      if (response.data.success) {
+        setOrders(response.data.orders || []);
+        toast.success(`Loaded ${response.data.orders?.length || 0} orders`);
+
+      } else {
+        console.log("❌ API success false:", response.data);
+        toast.warning("Failed to load orders data");
+      }
+    } catch (err) {
+      console.error("❌ Error fetching orders:", err);
+      console.error("Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        toast.error("Session expired. Please login again.");
+        localStorage.removeItem("adminToken");
+        localStorage.removeItem("role");
+        localStorage.removeItem("adminId");
+        setTimeout(() => navigate("/admin/login"), 2000);
+      } else {
+        setError(err.response?.data?.message || "Failed to fetch orders");
+        toast.error(err.response?.data?.message || "Failed to fetch orders");
+      }
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err) {
-    console.error("❌ Error fetching orders:", err);
-    console.error("Error details:", {
-      message: err.message,
-      response: err.response?.data,
-      status: err.response?.status
-    });
-    
-    if (err.response?.status === 401 || err.response?.status === 403) {
-      toast.error("Session expired. Please login again.");
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("role");
-      localStorage.removeItem("adminId");
-      setTimeout(() => navigate("/admin/login"), 2000);
-    } else {
-      setError(err.response?.data?.message || "Failed to fetch orders");
-    }
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   // 📊 FETCH ORDER STATS SEPARATELY - DEBUGGED
   const fetchOrderStats = async () => {
@@ -226,6 +227,7 @@ const fetchOrders = async () => {
         // Also update the orders count if needed
         if (statsData.totalOrders > 0) {
           console.log(`✅ Successfully loaded ${statsData.totalOrders} orders`);
+          toast.info(`Stats updated: ${statsData.totalOrders} total orders`);
         }
       } else {
         console.log("⚠️ Stats API didn't return expected data");
@@ -234,6 +236,7 @@ const fetchOrders = async () => {
           hasStats: !!response.data.stats,
           statsKeys: response.data.stats ? Object.keys(response.data.stats) : 'no stats'
         });
+        toast.warning("Could not load statistics data");
       }
     } catch (err) {
       console.error("❌ Error fetching stats:", err);
@@ -249,6 +252,9 @@ const fetchOrders = async () => {
 
       if (err.response?.status === 404) {
         console.error("❌ Route not found - check backend routes");
+        toast.error("Statistics API endpoint not found");
+      } else {
+        toast.error("Failed to load statistics");
       }
     }
   };
@@ -313,6 +319,8 @@ const fetchOrders = async () => {
         // Refresh stats
         fetchOrderStats();
         fetchOrders();
+      } else {
+        toast.warning("Failed to update order status");
       }
     } catch (err) {
       console.error("Error updating order status:", err);
@@ -352,6 +360,9 @@ const fetchOrders = async () => {
       console.log("🚀 Executing search with value:", value);
       console.log("📋 Current filters:", filters);
       fetchOrders();
+      if (value.trim()) {
+        toast.info(`Searching for: ${value}`);
+      }
     }, 500);
   };
 
@@ -380,6 +391,7 @@ const fetchOrders = async () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("role");
     localStorage.removeItem("adminId");
+    toast.info("Logged out successfully");
     navigate("/admin/login");
   };
 
@@ -415,6 +427,18 @@ const fetchOrders = async () => {
   if (!token || role !== "admin") {
     return (
       <div className="admin-orders access-denied">
+        <ToastContainer
+          position="top-center"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
         <div className="access-denied-content">
           <FiPackage className="denied-icon" />
           <h2>Access Restricted</h2>
@@ -433,10 +457,10 @@ const fetchOrders = async () => {
   return (
     <div className="admin-orders-container">
       <ToastContainer
-        position="top-right"
+        position="top-center"
         autoClose={3000}
         hideProgressBar={false}
-        newestOnTop={false}
+        newestOnTop
         closeOnClick
         rtl={false}
         pauseOnFocusLoss
@@ -459,6 +483,7 @@ const fetchOrders = async () => {
               className="refresh-orders-btn"
               onClick={() => {
                 console.log("🔄 Manual refresh clicked");
+                toast.info("Refreshing orders...");
                 fetchOrders();
                 fetchOrderStats();
               }}
@@ -484,7 +509,6 @@ const fetchOrders = async () => {
           <div className="stat-card-content">
             <h3>{stats.totalOrders || 0}</h3>
             <p>Total Orders</p>
-            
           </div>
         </div>
 
@@ -495,7 +519,6 @@ const fetchOrders = async () => {
           <div className="stat-card-content">
             <h3>₹{stats.totalRevenue ? stats.totalRevenue.toLocaleString('en-IN') : 0}</h3>
             <p>Total Revenue</p>
-           
           </div>
         </div>
 
@@ -506,7 +529,6 @@ const fetchOrders = async () => {
           <div className="stat-card-content">
             <h3>{stats.pendingOrders || 0}</h3>
             <p>Pending Orders</p>
-           
           </div>
         </div>
 
@@ -517,7 +539,6 @@ const fetchOrders = async () => {
           <div className="stat-card-content">
             <h3>{stats.processingOrders || 0}</h3>
             <p>Processing</p>
-            
           </div>
         </div>
 
@@ -528,7 +549,6 @@ const fetchOrders = async () => {
           <div className="stat-card-content">
             <h3>{stats.shippedOrders || 0}</h3>
             <p>Shipped</p>
-           
           </div>
         </div>
 
@@ -539,7 +559,6 @@ const fetchOrders = async () => {
           <div className="stat-card-content">
             <h3>{stats.deliveredOrders || 0}</h3>
             <p>Delivered</p>
-            
           </div>
         </div>
       </div>
@@ -560,11 +579,11 @@ const fetchOrders = async () => {
                 if (e.key === 'Enter') {
                   console.log("🔍 Enter pressed for search:", filters.search);
                   fetchOrders();
+                  toast.info(`Searching: ${filters.search}`);
                 }
               }}
             />
           </div>
-          
         </div>
 
         <div className="orders-status-filters">
@@ -573,6 +592,7 @@ const fetchOrders = async () => {
             onClick={() => {
               console.log("📊 Filter: All Orders");
               setFilters(prev => ({ ...prev, status: "all", page: 1 }));
+              toast.info("Showing all orders");
             }}
           >
             All Orders
@@ -584,6 +604,7 @@ const fetchOrders = async () => {
               onClick={() => {
                 console.log(`📊 Filter: ${config.label}`);
                 setFilters(prev => ({ ...prev, status: key, page: 1 }));
+                toast.info(`Showing ${config.label} orders`);
               }}
               style={{ color: filters.status === key ? 'white' : config.color }}
             >
@@ -763,7 +784,10 @@ const fetchOrders = async () => {
           <div className="orders-pagination">
             <button
               className="orders-page-btn prev"
-              onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
+              onClick={() => {
+                setFilters(prev => ({ ...prev, page: prev.page - 1 }));
+                toast.info(`Loading page ${filters.page - 1}`);
+              }}
               disabled={filters.page === 1 || isLoading}
             >
               <FiChevronLeft />
@@ -780,7 +804,10 @@ const fetchOrders = async () => {
 
             <button
               className="orders-page-btn next"
-              onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
+              onClick={() => {
+                setFilters(prev => ({ ...prev, page: prev.page + 1 }));
+                toast.info(`Loading page ${filters.page + 1}`);
+              }}
               disabled={filters.page >= Math.ceil(stats.totalOrders / filters.limit) || isLoading}
             >
               Next
@@ -793,7 +820,22 @@ const fetchOrders = async () => {
       {/* Order Details Modal */}
       {showOrderDetails && selectedOrder && (
         <div className="order-details-modal-overlay">
-          <div className="modal-backdrop" onClick={() => setShowOrderDetails(false)}></div>
+          <ToastContainer
+            position="top-center"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
+          <div className="modal-backdrop" onClick={() => {
+            setShowOrderDetails(false);
+            toast.info("Closed order details");
+          }}></div>
           <div className="order-details-modal-content">
             <div className="modal-header-section">
               <div className="modal-title-section">
@@ -802,7 +844,10 @@ const fetchOrders = async () => {
               </div>
               <button
                 className="modal-close-btn"
-                onClick={() => setShowOrderDetails(false)}
+                onClick={() => {
+                  setShowOrderDetails(false);
+                  toast.info("Closed order details");
+                }}
               >
                 <FiX />
               </button>
@@ -868,18 +913,6 @@ const fetchOrders = async () => {
                     </select>
                   </div>
 
-                  {/* <div className="form-group-section">
-                    <label>Update Notes</label>
-                    <textarea
-                      placeholder="Add any notes or instructions..."
-                      value={statusUpdate.notes}
-                      onChange={(e) => setStatusUpdate(prev => ({ ...prev, notes: e.target.value }))}
-                      disabled={isLoading}
-                      rows="3"
-                      className="notes-textarea-section"
-                    />
-                  </div> */}
-
                   <div className="form-actions-section">
                     <button
                       className="btn-primary-section"
@@ -890,7 +923,10 @@ const fetchOrders = async () => {
                     </button>
                     <button
                       className="btn-secondary-section"
-                      onClick={() => setShowOrderDetails(false)}
+                      onClick={() => {
+                        setShowOrderDetails(false);
+                        toast.info("Cancelled status update");
+                      }}
                       disabled={isLoading}
                     >
                       Cancel
@@ -973,14 +1009,13 @@ const fetchOrders = async () => {
                         </div>
                         {item.offerPercentage > 0 && (
                           <div className="price-row-section discount-section">
-                            <span>Discount ({item.offerPercentage}%):</span>
+                            <span>Discount:</span>
                             <span>-₹{item.savedAmount?.toLocaleString('en-IN')}</span>
                           </div>
                         )}
                         <div className="price-row-section total-section">
                           <span>Total:</span>
                           <span className="total-amount-section">
-                            {/* <HiOutlineCurrencyRupee />  */}
                             ₹{item.totalPrice?.toLocaleString('en-IN')}
                           </span>
                         </div>
@@ -990,25 +1025,40 @@ const fetchOrders = async () => {
                 </div>
               </div>
 
-              {/* Order Summary */}
+              {/* Order Summary - FIXED VERSION */}
               <div className="modal-section-item">
                 <h3 className="section-title-item">
                   <FiDollarSign />
                   Order Summary
                 </h3>
                 <div className="order-summary-card-section">
-                  <div className="summary-row-section">
-                    <span>Subtotal</span>
-                    <span>₹{selectedOrder.pricing?.subtotal?.toLocaleString('en-IN') || 0}</span>
-                  </div>
-
+                  {/* Original Price (if there are savings) */}
                   {selectedOrder.pricing?.totalSavings > 0 && (
-                    <div className="summary-row-section discount-section">
-                      <span>Total Savings</span>
-                      <span>-₹{selectedOrder.pricing.totalSavings.toLocaleString('en-IN')}</span>
+                    <div className="summary-row-section original-price-section">
+                      <span>Original Price</span>
+                      <span className="strikethrough-section">
+                        ₹{selectedOrder.pricing?.subtotal?.toLocaleString('en-IN') || 0}
+                      </span>
                     </div>
                   )}
 
+                  {/* Total Savings */}
+                  {selectedOrder.pricing?.totalSavings > 0 && (
+                    <div className="summary-row-section discount-section">
+                      <span>Total Savings</span>
+                      <span className="savings-text">-₹{selectedOrder.pricing.totalSavings.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+
+                  {/* Discounted Subtotal (Items Total after savings) */}
+                  <div className="summary-row-section">
+                    <span>Items Total</span>
+                    <span className="discounted-subtotal">
+                      ₹{(selectedOrder.pricing?.subtotal - (selectedOrder.pricing?.totalSavings || 0)).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+
+                  {/* Shipping */}
                   <div className="summary-row-section">
                     <span>Shipping</span>
                     <span className={selectedOrder.pricing?.shipping === 0 ? 'free-section' : ''}>
@@ -1018,15 +1068,16 @@ const fetchOrders = async () => {
                     </span>
                   </div>
 
+                  {/* Tax */}
                   <div className="summary-row-section">
                     <span>Tax (GST)</span>
                     <span>₹{selectedOrder.pricing?.tax?.toLocaleString('en-IN') || 0}</span>
                   </div>
 
+                  {/* Grand Total */}
                   <div className="summary-row-section total-section">
                     <span>Total Amount</span>
                     <span className="grand-total-section">
-                      {/* <HiOutlineCurrencyRupee /> */}
                       ₹{selectedOrder.pricing?.total?.toLocaleString('en-IN') || 0}
                     </span>
                   </div>
@@ -1037,7 +1088,10 @@ const fetchOrders = async () => {
             <div className="modal-footer-section">
               <button
                 className="btn-secondary-section"
-                onClick={() => setShowOrderDetails(false)}
+                onClick={() => {
+                  setShowOrderDetails(false);
+                  toast.info("Closed order details");
+                }}
               >
                 Close
               </button>

@@ -1,0 +1,77 @@
+@font-face {
+    font-family: "Bold";
+    src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Content";
+    src: url("../../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Regular.ttf") format("truetype");
+}
+
+/* ROOT SECTION */
+.ashokvatika-model {
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  padding: 15px 0;
+}
+
+/* INNER WRAP */
+.ashokvatika-model__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 15px 70px 15px 100px;
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  min-height: 350px;
+}
+
+/* LEFT CONTENT */
+.ashokvatika-model__content {
+  flex: 0.9;
+  padding: 5px 0;
+}
+
+.ashokvatika-title {
+  font-family: "Bold";
+  font-size: 28px;
+  margin-bottom: 12px;
+  margin-top: 25px;
+}
+
+/* LIST */
+.ashokvatika-list {
+  list-style: disc;
+  padding-left: 18px;
+  font-family: "Content";
+  font-size: 16px;
+  line-height: 1.5;
+
+  li {
+    margin-bottom: 2px;
+  }
+}
+
+/* RIGHT IMAGE - FIXED DIMENSIONS */
+.ashokvatika-model__image {
+  flex: 1.1;
+  display: flex;
+  justify-content: flex-end;
+  
+  img {
+    width: 880px;
+    height: 350px;
+    object-fit: contain;
+    object-position: center;
+    
+    /* Force these exact dimensions */
+    min-width: 750px;
+    max-width: 900px;
+    min-height: 350px;
+    max-height: 350px;
+  }
+}
+
+/* ❌ NO MOBILE STYLES INTENTIONALLY */

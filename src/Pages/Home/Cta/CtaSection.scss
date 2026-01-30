@@ -5,6 +5,13 @@
   font-style: normal;
 }
 
+@font-face {
+    font-family: "Bold";
+    src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+    font-style: normal;
+    // font-weight: 500; 
+}
+
 /* MAIN CTA */
 .cta-section {
   width: 100%;
@@ -20,7 +27,7 @@
 .cta-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.4) ;  
   display: flex;
   align-items: center;
   justify-content: center;
@@ -29,7 +36,7 @@
 
 /* TEXT */
 .cta-text {
-  font-family: "Heading", serif;
+  font-family: "Bold", serif;
   font-size: 28px;
   letter-spacing: 2px;
   color: #fff;

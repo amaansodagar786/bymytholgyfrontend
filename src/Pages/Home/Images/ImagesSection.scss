@@ -1,56 +1,95 @@
 /* ImagesSection Component Styles */
 
+@font-face {
+    font-family: "Bold";
+    src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Content";
+    src: url("../../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Regular.ttf") format("truetype");
+}
+
 .images-section {
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
+    /* CHANGED: from hidden to visible */
     position: relative;
+}
 
-    /* CANDLES SECTION WITH SHADOWS */
-    &__candles {
-        padding: 60px 0;
-        margin-bottom: 20px;
-        position: relative;
+/* CANDLES SECTION WITH SHADOWS */
+.images-section__candles {
+    padding: 60px 0;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    /* CHANGED: from hidden to visible */
+
+    @media (max-width: 768px) {
+        padding: 40px 0;
+        margin-bottom: 15px;
         overflow: hidden;
+        /* Keep hidden on mobile for animation */
+    }
+}
 
-        @media (max-width: 768px) {
-            padding: 40px 0;
-            margin-bottom: 15px;
-        }
+/* Shadow Gradients */
+.images-section__shadow {
+    position: absolute;
+    top: 0;
+    width: 120px;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+
+    @media (max-width: 768px) {
+        width: 60px;
     }
 
-    /* Shadow Gradients */
-    &__shadow {
-        position: absolute;
-        top: 0;
-        width: 120px;
-        height: 100%;
-        z-index: 10;
-        pointer-events: none;
-
-        @media (max-width: 768px) {
-            width: 60px;
-        }
-
-        &--left {
-            left: 0;
-            background: linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
-        }
-
-        &--right {
-            right: 0;
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
-        }
+    &--left {
+        left: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
     }
 
-    &__candles-track {
-        display: flex;
+    &--right {
+        right: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
+
+        /* Hide right shadow on desktop since all images are visible */
+        @media (min-width: 769px) {
+            display: none;
+        }
+    }
+}
+
+.images-section__candles-track {
+    display: flex;
+    gap: 20px;
+    /* Reduced gap to fit better */
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    width: 100%;
+
+    /* For desktop - fit all images */
+    @media (min-width: 769px) {
         gap: 30px;
         justify-content: center;
-        align-items: center;
-        padding: 0 60px;
+        flex-wrap: nowrap;
+        overflow-x: visible;
+
+        /* Calculate total width needed and center */
+        /* 5 images × width + 4 gaps = total width */
+    }
+
+    @media (max-width: 768px) {
+        animation: slideCandles 25s linear infinite;
+        padding: 0 30px;
+        justify-content: flex-start;
         overflow-x: auto;
-        scroll-behavior: smooth;
         -webkit-overflow-scrolling: touch;
+        gap: 30px;
 
         /* Hide scrollbar */
         scrollbar-width: none;
@@ -58,253 +97,352 @@
         &::-webkit-scrollbar {
             display: none;
         }
+    }
+}
 
-        @media (max-width: 768px) {
-            animation: slideCandles 25s linear infinite;
-            padding: 0 30px;
-            justify-content: flex-start;
-        }
+.images-section__candle-item {
+    flex: 0 0 auto;
+    position: relative;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+
+    /* Responsive sizes for desktop to fit 5 images */
+    @media (min-width: 1400px) {
+        width: 200px;
+        height: 320px;
     }
 
-    &__candle-item {
-        flex: 0 0 auto;
-        width: 220px;
-        height: 340px;
-        position: relative;
-        transform-style: preserve-3d; /* For 3D rotation */
-        perspective: 1000px; /* For 3D effect */
-
-        @media (max-width: 1024px) {
-            width: 200px;
-            height: 300px;
-        }
-
-        @media (max-width: 768px) {
-            width: 180px;
-            height: 260px;
-            margin-right: 20px;
-        }
+    @media (min-width: 1200px) and (max-width: 1399px) {
+        width: 190px;
+        height: 300px;
     }
 
-    &__candle-image-wrapper {
-        width: 100%;
-        height: 100%;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        transition: all 0.4s ease;
-        backface-visibility: hidden; /* For smooth 3D */
-
-        &:hover {
-            transform: scale(1.02) translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-        }
-
-        img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-            backface-visibility: hidden; /* For smooth 3D */
-        }
+    @media (min-width: 992px) and (max-width: 1199px) {
+        width: 180px;
+        height: 280px;
     }
 
-    /* PLATFORMS SECTION */
-    &__platforms {
-        text-align: center;
-        padding: 0 20px 80px;
-
-        @media (max-width: 768px) {
-            padding: 0 15px 60px;
-        }
+    @media (min-width: 769px) and (max-width: 991px) {
+        width: 160px;
+        height: 250px;
     }
 
-    &__title {
-        font-size: clamp(32px, 4.5vw, 52px);
-        margin-bottom: 14px;
-        font-weight: 700;
-        line-height: 1.2;
-        will-change: transform, opacity; /* Performance */
-
-        @media (max-width: 768px) {
-            font-size: clamp(28px, 6vw, 40px);
-        }
-    }
-
-    &__description {
-        font-size: clamp(16px, 2.4vw, 22px);
-        color: #555;
-        margin-bottom: 40px;
-        line-height: 1.5;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-        will-change: transform, opacity; /* Performance */
-
-        @media (max-width: 768px) {
-            font-size: clamp(14px, 3vw, 18px);
-            margin-bottom: 30px;
-            padding: 0 10px;
-        }
-    }
-
-    /* LOGOS MARQUEE */
-    &__logos-outer {
-        max-width: 500px;
-        margin: 0 auto;
-        overflow: hidden;
-        position: relative;
-
-        /* Add shadow to logos container too */
-        &::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 60px;
-            height: 100%;
-            background: linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
-            z-index: 2;
-            pointer-events: none;
-        }
-
-        &::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 0;
-            width: 60px;
-            height: 100%;
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
-            z-index: 2;
-            pointer-events: none;
-        }
-    }
-
-    &__logos-inner {
-        display: flex;
-        gap: 40px;
-        width: max-content;
-        animation: slideLogos 18s linear infinite;
-
-        @media (max-width: 768px) {
-            gap: 30px;
-        }
-    }
-
-    &__logo-item {
-        width: 90px;
-        height: 90px;
-        flex-shrink: 0;
-        transform-style: preserve-3d; /* For 3D effect */
-
-        @media (max-width: 768px) {
-            width: 70px;
-            height: 70px;
-        }
-    }
-
-    &__logo-box {
-        width: 100%;
-        height: 100%;
-        border-radius: 22px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 16px;
-        text-transform: uppercase;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-        transition: all 0.3s ease;
-        backface-visibility: hidden; /* For smooth 3D */
-
-        @media (max-width: 768px) {
-            font-size: 14px;
-            border-radius: 18px;
-        }
-    }
-
-    /* ANIMATIONS */
-    @keyframes slideCandles {
-        0% {
-            transform: translateX(0);
-        }
-
-        100% {
-            transform: translateX(-50%);
-        }
-    }
-
-    @keyframes slideLogos {
-        0% {
-            transform: translateX(0);
-        }
-
-        100% {
-            transform: translateX(-50%);
-        }
-    }
-
-    /* RESPONSIVE ADJUSTMENTS */
     @media (max-width: 768px) {
-        &__candles-track {
-            animation-play-state: running;
-        }
-
-        &__logos-inner {
-            animation-play-state: running;
-        }
+        width: 180px;
+        height: 260px;
     }
 
-    /* For tablets */
-    @media (min-width: 769px) and (max-width: 1024px) {
-        &__candle-item {
-            width: 190px;
-            height: 290px;
-        }
+    @media (max-width: 480px) {
+        width: 150px;
+        height: 220px;
+    }
+}
 
-        &__logos-inner {
-            gap: 35px;
-        }
+.images-section__candle-image-wrapper {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transition: all 0.4s ease;
+    backface-visibility: hidden;
 
-        &__logo-item {
-            width: 85px;
-            height: 85px;
-        }
+    &:hover {
+        transform: scale(1.02) translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
     }
 
-    /* Desktop large screens */
-    @media (min-width: 1200px) {
-        &__candles-track {
-            gap: 40px;
-        }
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        backface-visibility: hidden;
+    }
+}
 
-        &__candle-item {
-            width: 250px;
-            height: 380px;
-        }
+/* PLATFORMS SECTION */
+.images-section__platforms {
+    text-align: center;
+    padding: 0 20px 80px;
 
-        &__logos-inner {
-            gap: 50px;
-        }
+    @media (max-width: 768px) {
+        padding: 0 15px 60px;
+    }
+}
+
+.images-section__title {
+    font-size: clamp(32px, 4.5vw, 52px);
+    margin-bottom: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    will-change: transform, opacity;
+    font-family: "Bold", sans-serif;
+
+    @media (max-width: 768px) {
+        font-size: clamp(28px, 6vw, 40px);
+    }
+}
+
+.images-section__description {
+    font-size: clamp(16px, 2.4vw, 22px);
+    color: #555;
+    margin-bottom: 50px;
+    line-height: 1.5;
+    max-width: 650px;
+    margin-left: auto;
+    margin-right: auto;
+    will-change: transform, opacity;
+    font-family: "Content", sans-serif;
+
+    @media (max-width: 768px) {
+        font-size: clamp(14px, 3vw, 18px);
+        margin-bottom: 30px;
+        padding: 0 10px;
+    }
+}
+
+/* LOGOS MARQUEE */
+.images-section__logos-outer {
+    max-width: 500px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 60px;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+        z-index: 2;
+        pointer-events: none;
     }
 
-    /* Reduced motion support */
-    @media (prefers-reduced-motion: reduce) {
-        &__candles-track {
-            animation: none;
-        }
+    &::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 60px;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
+        z-index: 2;
+        pointer-events: none;
+    }
+}
 
-        &__logos-inner {
-            animation: none;
-        }
+.images-section__logos-inner {
+    display: flex;
+    gap: 40px;
+    width: max-content;
+    animation: slideLogos 18s linear infinite;
 
-        &__candle-image-wrapper:hover {
-            transform: none;
-        }
+    @media (max-width: 768px) {
+        gap: 30px;
+    }
+}
 
-        &__logo-box:hover {
-            transform: none;
-        }
+.images-section__logo-item {
+    width: 90px;
+    height: 90px;
+    flex-shrink: 0;
+    transform-style: preserve-3d;
+
+    @media (max-width: 768px) {
+        width: 70px;
+        height: 70px;
+    }
+}
+
+.images-section__logo-box {
+    width: 100%;
+    height: 100%;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+    text-transform: uppercase;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    backface-visibility: hidden;
+
+    @media (max-width: 768px) {
+        font-size: 14px;
+        border-radius: 18px;
+    }
+}
+
+/* ANIMATIONS */
+@keyframes slideCandles {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes slideLogos {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* RESPONSIVE ADJUSTMENTS */
+@media (max-width: 768px) {
+    .images-section__candles-track {
+        animation-play-state: running;
+    }
+
+    .images-section__logos-inner {
+        animation-play-state: running;
+    }
+}
+
+/* For tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .images-section__candle-item {
+        width: 170px;
+        height: 260px;
+    }
+
+    .images-section__logos-inner {
+        gap: 35px;
+    }
+
+    .images-section__logo-item {
+        width: 85px;
+        height: 85px;
+    }
+}
+
+/* Desktop large screens */
+@media (min-width: 1200px) {
+    .images-section__candles-track {
+        gap: 20px;
+    }
+
+    .images-section__candle-item {
+        width: 230px;
+        height: 325px;
+    }
+
+    .images-section__logos-inner {
+        gap: 50px;
+    }
+}
+
+/* Extra large screens - more space */
+@media (min-width: 1600px) {
+    .images-section__candles-track {
+        gap: 35px;
+    }
+
+    .images-section__candle-item {
+        width: 220px;
+        height: 350px;
+    }
+}
+
+/* Ultra wide screens */
+@media (min-width: 1920px) {
+    .images-section__candles-track {
+        gap: 40px;
+    }
+
+    .images-section__candle-item {
+        width: 240px;
+        height: 380px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .images-section__candles-track {
+        animation: none;
+    }
+
+    .images-section__logos-inner {
+        animation: none;
+    }
+
+    .images-section__candle-image-wrapper:hover {
+        transform: none;
+    }
+
+    .images-section__logo-box:hover {
+        transform: none;
+    }
+}
+
+
+/* Add this to your ImagesSection.scss file */
+
+.images-section__logo-box {
+    width: 100%;
+    height: 100%;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+    text-transform: uppercase;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    backface-visibility: hidden;
+    overflow: hidden;
+    /* Add this for logo images */
+    padding: 15px;
+    /* Add padding for logos */
+    box-sizing: border-box;
+    /* Include padding in dimensions */
+
+    /* Add a subtle border for contrast */
+    border: 1px solid rgba(0, 0, 0, 0.08);
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+
+    @media (max-width: 768px) {
+        font-size: 14px;
+        border-radius: 18px;
+        padding: 12px;
+    }
+}
+
+/* Optional: Add hover effect specifically for logo boxes */
+.images-section__logo-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* For tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .images-section__logo-item {
+        width: 85px;
+        height: 85px;
+    }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .images-section__logo-item {
+        width: 70px;
+        height: 70px;
     }
 }

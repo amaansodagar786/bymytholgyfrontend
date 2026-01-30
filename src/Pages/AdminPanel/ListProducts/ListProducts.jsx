@@ -113,7 +113,7 @@ const ListProducts = () => {
   const fetchProducts = async () => {
     try {
       if (!validateToken()) return;
-      
+
       setIsLoading(true);
       setError("");
 
@@ -123,7 +123,7 @@ const ListProducts = () => {
       );
 
       console.log("✅ Products fetched:", response.data.length);
-      
+
       if (Array.isArray(response.data)) {
         setProducts(response.data);
       } else {
@@ -132,7 +132,7 @@ const ListProducts = () => {
       }
     } catch (err) {
       console.error("❌ Error fetching products:", err);
-      
+
       if (err.response?.status === 401 || err.response?.status === 403) {
         toast.error("Session expired. Please login again.");
         localStorage.removeItem("adminToken");
@@ -153,7 +153,7 @@ const ListProducts = () => {
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/categories/get`
       );
-      
+
       setCategories(response.data);
       // Set default category if none selected
       if (response.data?.length > 0 && !formData.categoryId) {
@@ -181,7 +181,7 @@ const ListProducts = () => {
     const value = e.target.value;
 
     setSearchTerm(value);
-    
+
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
@@ -336,7 +336,7 @@ const ListProducts = () => {
   const addProduct = async () => {
     try {
       if (!validateToken()) return;
-      
+
       if (!formData.productName.trim()) {
         toast.error("Product name is required");
         return;
@@ -427,6 +427,45 @@ const ListProducts = () => {
         });
       }
 
+      // ... After creating formDataToSend and before axios.post:
+
+      // ✅ ADD THIS LOGGING CODE:
+      console.log("======= FRONTEND - DEBUG LOGS =======");
+      console.log("📤 Sending FormData to backend:");
+
+      // Log all FormData entries
+      for (let pair of formDataToSend.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(`📎 FILE - Field: "${pair[0]}"`);
+          console.log(`   Name: ${pair[1].name}`);
+          console.log(`   Type: ${pair[1].type}`);
+          console.log(`   Size: ${pair[1].size} bytes`);
+        } else {
+          // For non-file fields, show truncated value
+          const value = String(pair[1]).length > 100
+            ? String(pair[1]).substring(0, 100) + "..."
+            : pair[1];
+          console.log(`📝 FIELD - "${pair[0]}": ${value}`);
+        }
+      }
+
+      // Specific thumbnail check
+      console.log("\n🖼️ Thumbnail Status:");
+      console.log("   Has thumbnail file?", !!thumbnailFile);
+      if (thumbnailFile) {
+        console.log("   Thumbnail name:", thumbnailFile.name);
+        console.log("   Thumbnail size:", thumbnailFile.size, "bytes");
+        console.log("   Thumbnail type:", thumbnailFile.type);
+      }
+
+      // Check FormData for thumbnail
+      const hasThumbnailInFormData = Array.from(formDataToSend.entries())
+        .some(([key, value]) => key === 'thumbnail' && value instanceof File);
+      console.log("   Thumbnail in FormData?", hasThumbnailInFormData);
+
+      console.log("====================================\n");
+
+      // ✅ KEEP THE ORIGINAL AXIOS CALL BELOW THIS
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/products/add`,
         formDataToSend,
@@ -440,7 +479,7 @@ const ListProducts = () => {
       }
     } catch (err) {
       console.error("❌ Error adding product:", err);
-      
+
       if (err.response?.status === 401 || err.response?.status === 403) {
         toast.error("Session expired. Please login again.");
         localStorage.clear();
@@ -459,7 +498,7 @@ const ListProducts = () => {
   const updateProduct = async () => {
     try {
       if (!validateToken()) return;
-      
+
       if (!formData.productId) {
         toast.error("Product ID is missing");
         return;
@@ -530,6 +569,9 @@ const ListProducts = () => {
         });
       }
 
+
+
+
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/products/update/${formData.productId}`,
         formDataToSend,
@@ -543,7 +585,7 @@ const ListProducts = () => {
       }
     } catch (err) {
       console.error("❌ Error updating product:", err);
-      
+
       if (err.response?.status === 401 || err.response?.status === 403) {
         toast.error("Session expired. Please login again.");
         localStorage.clear();
@@ -562,7 +604,7 @@ const ListProducts = () => {
   const deleteProduct = async () => {
     try {
       if (!validateToken()) return;
-      
+
       if (!deleteProductId) return;
 
       const shouldDelete = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
@@ -585,7 +627,7 @@ const ListProducts = () => {
       }
     } catch (err) {
       console.error("❌ Error deleting product:", err);
-      
+
       if (err.response?.status === 401 || err.response?.status === 403) {
         toast.error("Session expired. Please login again.");
         localStorage.clear();
@@ -690,7 +732,7 @@ const ListProducts = () => {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
       XLSX.writeFile(workbook, "products_list.xlsx");
-      
+
       toast.success("✅ Excel file downloaded successfully!");
     } catch (err) {
       console.error("❌ Error exporting to Excel:", err);
@@ -794,7 +836,7 @@ const ListProducts = () => {
                 }}
               />
             </div>
-            
+
             <div className="products-action-buttons">
               <button
                 className="export-products-btn"
@@ -804,7 +846,7 @@ const ListProducts = () => {
                 <FiFileText />
                 Export Excel
               </button>
-              
+
               <button
                 className="add-product-btn"
                 onClick={() => {
@@ -955,7 +997,7 @@ const ListProducts = () => {
                             <FiEdit className="action-icon-display" />
                             <span className="action-text-display">Edit</span>
                           </button>
-                          
+
                           <button
                             className="delete-product-btn"
                             onClick={() => setDeleteProductId(product.productId)}
@@ -1090,7 +1132,7 @@ const ListProducts = () => {
                           className="file-input-section"
                         />
                       </label>
-                      
+
                       {thumbnailFile && (
                         <div className="image-preview-section">
                           <img src={URL.createObjectURL(thumbnailFile)} alt="Thumbnail preview" />
@@ -1102,7 +1144,7 @@ const ListProducts = () => {
                           </div>
                         </div>
                       )}
-                      
+
                       {!thumbnailFile && existingThumbnail && (
                         <div className="image-preview-section">
                           <p className="current-label-section">Current thumbnail:</p>
@@ -1131,7 +1173,7 @@ const ListProducts = () => {
                           className="file-input-section"
                         />
                       </label>
-                      
+
                       {formData.colors[0]?.images?.length > 0 && (
                         <div className="images-preview-section">
                           <div className="images-count-section">
@@ -1225,7 +1267,7 @@ const ListProducts = () => {
                       Add Field
                     </button>
                   </div>
-                  
+
                   <div className="specifications-container-section">
                     {formData.specifications.map((spec, index) => (
                       <div key={index} className="spec-row-section">
@@ -1273,11 +1315,11 @@ const ListProducts = () => {
                       Add Fragrance
                     </button>
                   </div>
-                  
+
                   <p className="section-hint-section">
                     Add different fragrance options (e.g., Rose, Lavender, Sandalwood)
                   </p>
-                  
+
                   <div className="fragrances-container-section">
                     {formData.colors[0]?.fragrances?.length === 0 ? (
                       <div className="no-items-section">
@@ -1317,7 +1359,7 @@ const ListProducts = () => {
                 >
                   Cancel
                 </button>
-                
+
                 {formMode === "add" ? (
                   <button
                     className="btn-primary-section"
@@ -1374,7 +1416,7 @@ const ListProducts = () => {
                 >
                   Cancel
                 </button>
-                
+
                 <button
                   className="btn-danger-section"
                   onClick={deleteProduct}

@@ -2,37 +2,43 @@ import React from "react";
 import { motion } from "framer-motion";
 import "./ImagesSection.scss";
 
+import amazonLogo from "../../../assets/images/home/logos/amazon.png";
+import flipkartLogo from "../../../assets/images/home/logos/flipkart.png";
+import blinkitLogo from "../../../assets/images/home/logos/blinkit.png";
+import zeptoLogo from "../../../assets/images/home/logos/zepto.png";
+
+// Import or use actual brand logos
 const ImagesSection = () => {
   // Fixed Unsplash images - all should work now
   const candleImages = [
-    "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae",
+    "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb",
     "https://images.unsplash.com/photo-1533090161767-e6ffed986c88",
     "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb",
     "https://images.unsplash.com/photo-1533090161767-e6ffed986c88",
     "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb",
   ];
-  
+
+  // Updated platforms with actual brand logos
   const platforms = [
     {
-      name: "Zomato",
-      color: "#e23744",
-      textColor: "white",
-    },
-    {
-      name: "Blinkit",
-      color: "#f9d74c",
-      textColor: "black",
+      name: "Amazon",
+      logo: amazonLogo,
+      backgroundColor: "#FFFFFF",
     },
     {
       name: "Flipkart",
-      color: "#ffee3b",
-      textColor: "#0047ff",
-      letter: "F",
+      logo: flipkartLogo,
+      backgroundColor: "#FFFFFF",
+    },
+    {
+      name: "Blinkit",
+      logo: blinkitLogo,
+      backgroundColor: "#FFFFFF",
     },
     {
       name: "Zepto",
-      color: "#4a0072",
-      textColor: "#ff4d8d",
+      logo: zeptoLogo,
+      backgroundColor: "#FFFFFF",
     },
   ];
 
@@ -89,7 +95,7 @@ const ImagesSection = () => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="images-section"
       initial="hidden"
       whileInView="visible"
@@ -100,12 +106,12 @@ const ImagesSection = () => {
       <div className="images-section__candles">
         {/* Left Shadow Gradient */}
         <div className="images-section__shadow images-section__shadow--left"></div>
-        
+
         {/* Candle Images */}
         <div className="images-section__candles-track">
           {candleImages.map((img, i) => (
-            <motion.div 
-              key={i} 
+            <motion.div
+              key={i}
               className="images-section__candle-item"
               custom={i}
               variants={imageVariants}
@@ -116,7 +122,7 @@ const ImagesSection = () => {
             </motion.div>
           ))}
         </div>
-        
+
         {/* Right Shadow Gradient */}
         <div className="images-section__shadow images-section__shadow--right"></div>
       </div>
@@ -138,27 +144,36 @@ const ImagesSection = () => {
         </motion.p>
 
         {/* LOGOS MARQUEE */}
-        <motion.div 
+        <motion.div
           className="images-section__logos-outer"
           variants={itemVariants}
         >
           <div className="images-section__logos-inner">
             {[...platforms, ...platforms].map((item, i) => (
-              <motion.div 
-                key={i} 
+              <motion.div
+                key={i}
                 className="images-section__logo-item"
                 custom={i}
                 variants={logoVariants}
                 whileHover={{ scale: 1.1, rotate: 5 }}
               >
-                <div 
+                <div
                   className="images-section__logo-box"
-                  style={{ 
-                    backgroundColor: item.color,
-                    color: item.textColor
+                  style={{
+                    backgroundColor: item.backgroundColor,
+                    padding: "10px", // Add padding for logos
                   }}
                 >
-                  {item.letter || item.name}
+                  <img
+                    src={item.logo}
+                    alt={`${item.name} logo`}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      padding: "5px"
+                    }}
+                  />
                 </div>
               </motion.div>
             ))}

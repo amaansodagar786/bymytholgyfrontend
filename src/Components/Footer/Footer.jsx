@@ -86,7 +86,7 @@ const Footer = () => {
 
   return (
     <footer className="footer">
-      <motion.div 
+      <motion.div
         className="footer__top"
         initial="hidden"
         whileInView="visible"
@@ -167,9 +167,9 @@ const Footer = () => {
             <a href="mailto:bymythology@gmail.com">bymythology@gmail.com</a>
           </motion.p>
           <motion.p whileHover={{ scale: 1.05 }}>
-            <a 
-              href="https://maps.google.com/?q=41,Luna+Road,Taluko:Padra,District:Vadodara-391440,Gujarat" 
-              target="_blank" 
+            <a
+              href="https://maps.google.com/?q=41,Luna+Road,Taluko:Padra,District:Vadodara-391440,Gujarat"
+              target="_blank"
               rel="noopener noreferrer"
             >
               41, Luna Rd, Taluka: Padra,
@@ -182,14 +182,14 @@ const Footer = () => {
         </motion.div>
 
         {/* COPYRIGHT */}
-        <motion.div 
+        <motion.div
           className="footer__bottom"
           variants={itemVariants}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1, duration: 0.8 }}
         >
-          Copyright © 2026 Candle - All Rights Reserved.
+          Copyright © 2026 ByMythology - All Rights Reserved.
           <span>
             Design and Developed by{" "}
             <motion.b

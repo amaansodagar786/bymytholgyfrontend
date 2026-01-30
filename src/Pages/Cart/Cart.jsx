@@ -21,6 +21,14 @@ const Cart = () => {
   const userId = localStorage.getItem("userId");
   const navigate = useNavigate();
 
+  // ✅ CHANGE 1: Create product slug function
+  const createProductSlug = (productName) => {
+    return productName
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .replace(/\s+/g, '-');
+  };
+
   /* ================= FETCH CART ================= */
   useEffect(() => {
     if (token && userId) fetchCart();
@@ -51,20 +59,25 @@ const Cart = () => {
     }
   };
 
-  /* ================= SUMMARY ================= */
   const calculateSummary = (items, apiSummary) => {
-    const subtotal =
-      apiSummary?.subtotal ||
-      items.reduce((sum, i) => sum + i.totalPrice, 0);
+    // Calculate discounted subtotal
+    const subtotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
 
-    const totalSavings =
-      apiSummary?.totalSavings ||
-      items.reduce((sum, i) => {
-        if (i.hasOffer && i.offerDetails) {
-          return sum + i.offerDetails.savedAmount;
-        }
-        return sum;
-      }, 0);
+    // Calculate original subtotal
+    const originalSubtotal = items.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
+
+    // Calculate total savings correctly
+    const totalSavings = items.reduce((sum, i) => {
+      if (i.hasOffer) {
+        const originalItemTotal = i.unitPrice * i.quantity;
+        const discountedItemTotal = i.finalPrice * i.quantity;
+        return sum + (originalItemTotal - discountedItemTotal);
+      }
+      return sum;
+    }, 0);
+
+    // Alternative: totalSavings = originalSubtotal - subtotal
+    // const totalSavings = originalSubtotal - subtotal;
 
     const shipping = subtotal > 1000 ? 0 : 120;
     const tax = subtotal * 0.18;
@@ -72,7 +85,8 @@ const Cart = () => {
 
     setCartSummary({
       totalItems: items.reduce((s, i) => s + i.quantity, 0),
-      subtotal,
+      subtotal, // Discounted subtotal
+      originalSubtotal, // ← ADD THIS LINE
       totalSavings,
       shipping,
       tax,
@@ -132,9 +146,11 @@ const Cart = () => {
     }
   };
 
-  /* ================= CHECKOUT ================= */
   const proceedToCheckout = () => {
     if (cartItems.length === 0) return;
+
+    console.log('📍 Cart Summary BEFORE sending to checkout:', cartSummary);
+    console.log('📍 totalSavings value:', cartSummary.totalSavings);
 
     const checkoutCartData = {
       items: cartItems.map((item) => ({
@@ -151,20 +167,31 @@ const Cart = () => {
         selectedSize: item.selectedSize || null,
         hasOffer: item.hasOffer || false,
         offerDetails: item.offerDetails || null,
-        thumbnailImage:
-          item.selectedColor?.images?.[0] || item.thumbnailImage || null
+        thumbnailImage: item.selectedColor?.images?.[0] || item.thumbnailImage || null
       })),
-      summary: cartSummary,
+      summary: {
+        ...cartSummary, // This now includes originalSubtotal
+        // Make sure all fields are present
+        subtotal: cartSummary.subtotal,
+        originalSubtotal: cartSummary.originalSubtotal, // ← Ensure this is included
+        totalSavings: cartSummary.totalSavings,  // ← YOU HAVE THIS!
+        shipping: cartSummary.shipping,
+        tax: cartSummary.tax,
+        total: cartSummary.total,
+        totalItems: cartSummary.totalItems
+      },
       userId,
       totalItems: cartSummary.totalItems,
       grandTotal: cartSummary.total
     };
 
+    console.log('📍 Checkout Cart Data being sent:', checkoutCartData);
+    console.log('📍 Checkout Summary being sent:', checkoutCartData.summary);
+
     navigate("/checkout", {
       state: { cartMode: true, cartData: checkoutCartData }
     });
-  };
-
+  };;
   /* ================= JSX ================= */
   return (
     <>
@@ -185,12 +212,12 @@ const Cart = () => {
 
         <div className="bag-body">
           {/* ===== EMPTY STATE ===== */}
-          {/* ===== EMPTY STATE ===== */}
           {!loading && cartItems.length === 0 && (
             <div className="empty-cart-center">
               <div className="empty-cart-icon">
                 <FiShoppingBag size={80} />
-              </div>              <h2>Your cart is empty</h2>
+              </div>
+              <h2>Your cart is empty</h2>
               <p className="empty-cart-message">
                 Looks like you haven't added any items to your cart yet.
               </p>
@@ -206,59 +233,89 @@ const Cart = () => {
           {/* LEFT 65% */}
           {cartItems.length > 0 && (
             <div className="bag-left">
-              {cartItems.map((item) => (
-                <div className="bag-item" key={item._id}>
-                  <img
-                    src={
-                      item.selectedColor?.images?.[0] ||
-                      item.thumbnailImage
-                    }
-                    alt={item.productName}
-                  />
+              {cartItems.map((item) => {
+                // ✅ CHANGE 2: Calculate discount
+                const hasDiscount = item.unitPrice && item.unitPrice > item.finalPrice;
+                const discountPercentage = hasDiscount
+                  ? Math.round(((item.unitPrice - item.finalPrice) / item.unitPrice) * 100)
+                  : 0;
 
-                  <div className="bag-info">
-                    <h3>{item.productName}</h3>
+                return (
+                  <div className="bag-item" key={item._id}>
+                    {/* ✅ CHANGE 1: Make image clickable */}
+                    <img
+                      src={
+                        item.selectedColor?.images?.[0] ||
+                        item.thumbnailImage
+                      }
+                      alt={item.productName}
+                      onClick={() => {
+                        const urlSlug = createProductSlug(item.productName);
+                        navigate(`/product/${urlSlug}`, {
+                          state: {
+                            productId: item.productId,
+                            ...(item.selectedModel && { modelId: item.selectedModel.modelId }),
+                            ...(item.selectedColor && { colorId: item.selectedColor.colorId }),
+                            ...(item.selectedFragrance && { fragrance: item.selectedFragrance }),
+                            ...(item.selectedSize && { size: item.selectedSize })
+                          }
+                        });
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    />
 
-                    {item.selectedFragrance && (
-                      <p className="fragrance">
-                        Fragrance : {item.selectedFragrance}
-                      </p>
-                    )}
+                    <div className="bag-info">
+                      <h3>{item.productName}</h3>
 
-                    <div className="price-row">
-                      <span className="price">₹{item.finalPrice}</span>
-                      {item.unitPrice && (
-                        <span className="old">₹{item.unitPrice}</span>
+                      {item.selectedFragrance && (
+                        <p className="fragrance">
+                          Fragrance : {item.selectedFragrance}
+                        </p>
                       )}
+
+                      <div className="price-row">
+                        <span className="price">₹{item.finalPrice}</span>
+                        {item.unitPrice && item.unitPrice > item.finalPrice && (
+                          <>
+                            <span className="old">₹{item.unitPrice}</span>
+                            {/* ✅ CHANGE 2: Show discount badge */}
+                            {discountPercentage > 0 && (
+                              <span className="off-badge">
+                                {discountPercentage}% OFF
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      <div className="qty">
+                        <button
+                          onClick={() =>
+                            updateQuantity(item._id, item.quantity - 1)
+                          }
+                        >
+                          −
+                        </button>
+                        <span>{item.quantity}</span>
+                        <button
+                          onClick={() =>
+                            updateQuantity(item._id, item.quantity + 1)
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="qty">
-                      <button
-                        onClick={() =>
-                          updateQuantity(item._id, item.quantity - 1)
-                        }
-                      >
-                        −
-                      </button>
-                      <span>{item.quantity}</span>
-                      <button
-                        onClick={() =>
-                          updateQuantity(item._id, item.quantity + 1)
-                        }
-                      >
-                        +
-                      </button>
-                    </div>
+                    <button
+                      className="remove"
+                      onClick={() => removeItem(item._id)}
+                    >
+                      ×
+                    </button>
                   </div>
-
-                  <button
-                    className="remove"
-                    onClick={() => removeItem(item._id)}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

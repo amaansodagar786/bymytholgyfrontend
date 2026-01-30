@@ -1,23 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { toast, ToastContainer } from "react-toastify"; // ✅ Added ToastContainer import
 import "./Wishlist.scss";
-import LoginModal from "../../Components/Login/LoginModel/LoginModal"; // ← ADD THIS IMPORT
-
+import LoginModal from "../../Components/Login/LoginModel/LoginModal";
+import "react-toastify/dist/ReactToastify.css"; // ✅ Added CSS import
 
 function Wishlist() {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [removingItem, setRemovingItem] = useState(null);
-
-  const [showLoginModal, setShowLoginModal] = useState(false); // ← ADD THIS STATE
-
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
-  // Fetch wishlist data
   useEffect(() => {
     if (token) {
       fetchWishlist();
@@ -52,10 +50,12 @@ function Wishlist() {
     } catch (err) {
       console.error("Error fetching wishlist:", err);
       setError("Failed to load wishlist. Please try again.");
+      toast.error("Failed to load wishlist. Please try again.");
 
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("userId");
+        toast.info("Session expired. Please login again.");
         window.location.reload();
       }
     } finally {
@@ -63,16 +63,18 @@ function Wishlist() {
     }
   };
 
-  // Remove item from wishlist
-  const removeFromWishlist = async (productId) => {
+  const removeFromWishlist = async (productId, selectedFragrance) => {
     try {
       setRemovingItem(productId);
 
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("userId");
 
+      // ✅ SIMPLE: Always pass the fragrance (it's always there)
+      const url = `${import.meta.env.VITE_API_URL}/wishlist/remove/${productId}?userId=${userId}&fragrance=${selectedFragrance}`;
+
       await axios.delete(
-        `${import.meta.env.VITE_API_URL}/wishlist/remove/${productId}?userId=${userId}`,
+        url,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -81,23 +83,34 @@ function Wishlist() {
         }
       );
 
-      // Update local state
-      setWishlistItems(prev => prev.filter(item => item.productId !== productId));
+      // ✅ Remove from local state - match BOTH productId AND fragrance
+      setWishlistItems(prev => prev.filter(item => 
+        !(item.productId === productId && item.selectedFragrance === selectedFragrance)
+      ));
 
       // Dispatch event for navbar update
       window.dispatchEvent(new Event('wishlistUpdated'));
 
+      toast.success("Item removed from wishlist");
+
     } catch (err) {
       console.error("Error removing from wishlist:", err);
-      alert("Failed to remove item. Please try again.");
+      toast.error("Failed to remove item. Please try again.");
     } finally {
       setRemovingItem(null);
     }
   };
 
-  // Handle product click WITH VARIANT PRE-SELECTION
+  const createProductSlug = (productName) => {
+    return productName
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .replace(/\s+/g, '-');
+  };
+
   const handleProductClick = (item) => {
-    let url = `/product/${item.productId}`;
+    const urlSlug = createProductSlug(item.productName);
+    let url = `/product/${urlSlug}`;
 
     const params = new URLSearchParams();
 
@@ -121,10 +134,39 @@ function Wishlist() {
       url += `?${params.toString()}`;
     }
 
-    navigate(url);
+    navigate(url, {
+      state: { 
+        productId: item.productId,
+        ...(item.selectedModel && { modelId: item.selectedModel.modelId }),
+        ...(item.selectedColor && { colorId: item.selectedColor.colorId }),
+        ...(item.selectedFragrance && { fragrance: item.selectedFragrance }),
+        ...(item.selectedSize && { size: item.selectedSize }) ,
+        // fragranceFromWishlist: item.selectedFragrance,
+      }
+    });
   };
 
-  // Calculate wishlist summary
+  const calculateDiscount = (item) => {
+    const originalPrice = item.originalPrice || 0;
+    const currentPrice = item.currentPrice || 0;
+    
+    if (originalPrice > 0 && currentPrice < originalPrice) {
+      const discountAmount = originalPrice - currentPrice;
+      const discountPercentage = Math.round((discountAmount / originalPrice) * 100);
+      return {
+        hasDiscount: true,
+        discountAmount,
+        discountPercentage
+      };
+    }
+    
+    return {
+      hasDiscount: false,
+      discountAmount: 0,
+      discountPercentage: 0
+    };
+  };
+
   const calculateSummary = () => {
     const totalItems = wishlistItems.length;
     const totalPrice = wishlistItems.reduce((sum, item) => sum + (item.currentPrice || 0), 0);
@@ -142,10 +184,21 @@ function Wishlist() {
 
   const summary = calculateSummary();
 
-  // Render loading state
   if (loading) {
     return (
       <div className="wishlist-page">
+        <ToastContainer
+          position="top-center"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
         <div className="loading-container">
           <div className="loading-spinner"></div>
         </div>
@@ -153,10 +206,21 @@ function Wishlist() {
     );
   }
 
-  // Render login prompt if not logged in
   if (!token) {
     return (
       <div className="wishlist-page">
+        <ToastContainer
+          position="top-center"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
         <div className="login-prompt">
           <h2>Login Required</h2>
           <p>Please login to view your wishlist.</p>
@@ -170,14 +234,13 @@ function Wishlist() {
           </div>
         </div>
 
-        {/* Login Modal */}
         {showLoginModal && (
           <LoginModal
             onClose={() => {
               setShowLoginModal(false);
-              // After login, check if user has token and reload wishlist
               const token = localStorage.getItem("token");
               if (token) {
+                toast.success("Login successful!");
                 window.location.reload();
               }
             }}
@@ -188,11 +251,21 @@ function Wishlist() {
     );
   }
 
-  // Render empty wishlist
   if (wishlistItems.length === 0 && !error) {
     return (
       <div className="wishlist-page">
-        {/* ===== HERO SECTION ===== */}
+        <ToastContainer
+          position="top-center"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
         <div className="wishlist-hero">
           <img
             src="https://images.unsplash.com/photo-1540555700478-4be289fbecef"
@@ -201,7 +274,6 @@ function Wishlist() {
         </div>
 
         <div className="wishlist-wrapper">
-          {/* HEADER */}
           <div className="wishlist-header">
             <h1>Wishlist</h1>
             <button onClick={() => navigate(-1)}>×</button>
@@ -227,10 +299,21 @@ function Wishlist() {
     );
   }
 
-  // Render error state
   if (error) {
     return (
       <div className="wishlist-page">
+        <ToastContainer
+          position="top-center"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
         <div className="wishlist-hero">
           <img
             src="https://images.unsplash.com/photo-1540555700478-4be289fbecef"
@@ -262,10 +345,21 @@ function Wishlist() {
     );
   }
 
-  // Render wishlist with items
   return (
     <div className="wishlist-page">
-      {/* ===== HERO SECTION ===== */}
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+      
       <div className="wishlist-hero">
         <img
           src="https://images.unsplash.com/photo-1540555700478-4be289fbecef"
@@ -274,79 +368,83 @@ function Wishlist() {
       </div>
 
       <div className="wishlist-wrapper">
-        {/* HEADER */}
         <div className="wishlist-header">
           <h1>Wishlist</h1>
           <button onClick={() => navigate(-1)}>×</button>
         </div>
 
         <div className="wishlist-body">
-          {/* LEFT 65% - WISHLIST ITEMS */}
           <div className="wishlist-left">
-            {wishlistItems.map((item) => (
-              <div className="wishlist-item" key={item.wishlistId}>
-                <img
-                  src={item.thumbnailImage || "https://via.placeholder.com/140x140?text=No+Image"}
-                  alt={item.productName}
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "https://via.placeholder.com/140x140?text=No+Image";
-                  }}
-                />
+            {wishlistItems.map((item) => {
+              const discount = calculateDiscount(item);
+              
+              return (
+                <div className="wishlist-item" key={item.wishlistId}>
+                  <img
+                    src={item.thumbnailImage || "https://via.placeholder.com/140x140?text=No+Image"}
+                    alt={item.productName}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://via.placeholder.com/140x140?text=No+Image";
+                    }}
+                  />
 
-                <div className="wishlist-info">
-                  <h3>{item.productName}</h3>
+                  <div className="wishlist-info">
+                    <h3>{item.productName}</h3>
 
-                  {/* Show fragrance if exists */}
-                  {item.selectedFragrance && (
+                    {/* ✅ ALWAYS show fragrance (it's always there) */}
                     <p className="fragrance">
                       Fragrance : {item.selectedFragrance}
                     </p>
-                  )}
 
-                  {/* Show other variants */}
-                  <div className="variants">
-                    {item.selectedModel && (
-                      <span className="variant-tag">Model: {item.selectedModel.modelName}</span>
-                    )}
-                    {/* {item.selectedColor && (
-                      <span className="variant-tag">Color: {item.selectedColor.colorName}</span>
-                    )} */}
-                    {item.selectedSize && (
-                      <span className="variant-tag">Size: {item.selectedSize}</span>
-                    )}
+                    <div className="variants">
+                      {item.selectedModel && (
+                        <span className="variant-tag">Model: {item.selectedModel.modelName}</span>
+                      )}
+                      {item.selectedSize && (
+                        <span className="variant-tag">Size: {item.selectedSize}</span>
+                      )}
+                    </div>
+
+                    <div className="price-row">
+                      <span className="price">₹{item.currentPrice.toLocaleString()}</span>
+                      
+                      {item.originalPrice && item.originalPrice > item.currentPrice && (
+                        <>
+                          <span className="old">₹{item.originalPrice.toLocaleString()}</span>
+                          {discount.hasDiscount && (
+                            <span className="off-badge">
+                              {discount.discountPercentage}% OFF
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    <div className="wishlist-actions">
+                      <button
+                        className="view-details-btn"
+                        onClick={() => handleProductClick(item)}
+                      >
+                        View Details
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="price-row">
-                    <span className="price">₹{item.currentPrice.toLocaleString()}</span>
-                    {item.originalPrice && item.originalPrice > item.currentPrice && (
-                      <span className="old">₹{item.originalPrice.toLocaleString()}</span>
-                    )}
-                  </div>
-
-                  <div className="wishlist-actions">
-                    <button
-                      className="view-details-btn"
-                      onClick={() => handleProductClick(item)}
-                    >
-                      View Details
-                    </button>
-                  </div>
+                  {/* ✅ PASS FRAGRANCE TO REMOVE FUNCTION */}
+                  <button
+                    className="remove"
+                    onClick={() => removeFromWishlist(item.productId, item.selectedFragrance)}
+                    disabled={removingItem === item.productId}
+                    title="Remove from wishlist"
+                  >
+                    {removingItem === item.productId ? '⏳' : '×'}
+                  </button>
                 </div>
-
-                <button
-                  className="remove"
-                  onClick={() => removeFromWishlist(item.productId)}
-                  disabled={removingItem === item.productId}
-                  title="Remove from wishlist"
-                >
-                  {removingItem === item.productId ? '⏳' : '×'}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* RIGHT 35% - WISHLIST SUMMARY */}
           <div className="wishlist-right">
             <h2>WISHLIST SUMMARY</h2>
 
@@ -369,7 +467,10 @@ function Wishlist() {
 
             <button
               className="continue-shopping-btn"
-              onClick={() => navigate('/')}
+              onClick={() => {
+                toast.info("Continue shopping");
+                navigate('/');
+              }}
             >
               CONTINUE SHOPPING
             </button>

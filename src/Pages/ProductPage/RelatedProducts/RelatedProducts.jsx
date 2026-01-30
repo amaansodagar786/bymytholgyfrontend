@@ -5,10 +5,12 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
 import { FaRegHeart, FaHeart } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
 import WishlistSidebar from "../../Wishlist/Sidebar/WishlistSidebar";
 import LoginModal from "../../../Components/Login/LoginModel/LoginModal";
 import "swiper/css";
 import "swiper/css/navigation";
+import "react-toastify/dist/ReactToastify.css";
 import "./RelatedProducts.scss";
 
 const RelatedProducts = ({
@@ -19,11 +21,11 @@ const RelatedProducts = ({
   currentModelId
 }) => {
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [wishlistStatus, setWishlistStatus] = useState({});
-  const [loadingWishlist, setLoadingWishlist] = useState(true);
+  const [wishlist, setWishlist] = useState({});
   const [showWishlistSidebar, setShowWishlistSidebar] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [updatingProductId, setUpdatingProductId] = useState(null); // ✅ Track updating product
   const [swiper, setSwiper] = useState(null);
 
   const navigate = useNavigate();
@@ -32,30 +34,75 @@ const RelatedProducts = ({
     fetchRelatedProducts();
   }, [productId, currentFragrances, categoryId]);
 
-  // Fetch wishlist status for all related products
+  // ✅ Fetch wishlist when products load
   useEffect(() => {
     if (relatedProducts.length > 0) {
       fetchUserWishlist();
     }
   }, [relatedProducts]);
 
-  // Listen for wishlist updates
-  useEffect(() => {
-    const handleWishlistUpdate = () => {
-      fetchUserWishlist();
-    };
-
-    window.addEventListener("wishlistUpdated", handleWishlistUpdate);
-    return () => {
-      window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
-    };
-  }, []);
+  // ✅ REMOVED event listener - No more wishlistUpdated event
 
   const fetchRelatedProducts = async () => {
     try {
       setLoading(true);
-
-      // If we have fragrances, find products with same fragrances
+      
+      // FIRST: Try to fetch products with offers from fragrance API
+      if (currentFragrances && currentFragrances.length > 0) {
+        try {
+          // Get all products with offers first
+          const offersResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL}/productoffers/public-products-with-offers`
+          );
+          
+          // Then get fragrance-based related products
+          const fragranceResponse = await axios.post(
+            `${import.meta.env.VITE_API_URL}/products/related-by-fragrances`,
+            {
+              productId,
+              fragrances: currentFragrances,
+              categoryId,
+              limit: 12
+            }
+          );
+          
+          if (fragranceResponse.data.success && fragranceResponse.data.products.length > 0) {
+            // Create a map of products with offers for quick lookup
+            const offersMap = {};
+            offersResponse.data.forEach(product => {
+              if (product.colors?.[0]?.hasOffer) {
+                offersMap[product.productId] = {
+                  ...product,
+                  hasOffer: true,
+                  offer: product.colors[0].offer
+                };
+              }
+            });
+            
+            // Merge: Take fragrance-based products and add offer data if available
+            const mergedProducts = fragranceResponse.data.products
+              .filter(product => product.productId !== productId)
+              .slice(0, 8)
+              .map(product => {
+                const productWithOffer = offersMap[product.productId];
+                if (productWithOffer) {
+                  return {
+                    ...product,
+                    colors: productWithOffer.colors
+                  };
+                }
+                return product;
+              });
+            
+            setRelatedProducts(mergedProducts);
+            return;
+          }
+        } catch (offerErr) {
+          console.log("Could not fetch offers data:", offerErr.message);
+        }
+      }
+      
+      // FALLBACK: Original logic without offers
       if (currentFragrances && currentFragrances.length > 0) {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL}/products/related-by-fragrances`,
@@ -91,7 +138,6 @@ const RelatedProducts = ({
         `${import.meta.env.VITE_API_URL}/products/category/${categoryId}`
       );
 
-      // Filter out current product and limit to 8
       const filteredProducts = response.data
         .filter(product => product.productId !== productId)
         .slice(0, 8);
@@ -109,7 +155,6 @@ const RelatedProducts = ({
         `${import.meta.env.VITE_API_URL}/products/all`
       );
 
-      // Filter out current product and limit to 8
       const filteredProducts = response.data
         .filter(product => product.productId !== productId)
         .slice(0, 8);
@@ -121,20 +166,16 @@ const RelatedProducts = ({
     }
   };
 
-  // ✅ FIXED: Correct wishlist endpoint
+  // ✅ UPDATED: Fetch wishlist with first fragrance logic
   const fetchUserWishlist = async () => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
 
     if (!token || !userId) {
-      setLoadingWishlist(false);
       return;
     }
 
     try {
-      setLoadingWishlist(true);
-
-      // ✅ CORRECT ENDPOINT: /wishlist/my-wishlist with userId as query param
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/wishlist/my-wishlist`,
         {
@@ -145,24 +186,94 @@ const RelatedProducts = ({
 
       const wishlistStatus = {};
 
-      // ✅ Correct response structure: response.data.wishlist
       if (response.data && response.data.wishlist && Array.isArray(response.data.wishlist)) {
+        // Create a map of productId -> wishlist items with FIRST FRAGRANCE
+        const firstFragranceWishlistMap = {};
+
         response.data.wishlist.forEach(item => {
-          if (item.productId) {
-            wishlistStatus[item.productId] = true;
+          if (item.productId && item.isActive) {
+            const product = relatedProducts.find(p => p.productId === item.productId);
+            if (product) {
+              const firstFragrance = product.colors?.[0]?.fragrances?.[0] || null;
+              if (item.selectedFragrance === firstFragrance) {
+                firstFragranceWishlistMap[item.productId] = true;
+              }
+            }
+          }
+        });
+
+        // Set wishlist status based on the map
+        relatedProducts.forEach(product => {
+          const productId = product.productId;
+          // ✅ Don't update if this product is currently being updated
+          if (productId !== updatingProductId) {
+            wishlistStatus[productId] = firstFragranceWishlistMap[productId] || false;
           }
         });
       }
 
-      setWishlistStatus(wishlistStatus);
+      setWishlist(prev => ({
+        ...prev,
+        ...wishlistStatus
+      }));
+      
+      setUpdatingProductId(null); // ✅ Reset updating flag
+
     } catch (error) {
       console.error("Error fetching wishlist:", error);
-    } finally {
-      setLoadingWishlist(false);
+      setUpdatingProductId(null);
     }
   };
 
-  // ✅ FIXED: Correct wishlist toggle
+  // ✅ Calculate price with offer
+  const calculatePriceWithOffer = (color) => {
+    if (!color) {
+      return {
+        finalPrice: 0,
+        originalPrice: 0,
+        discount: 0,
+        hasOffer: false,
+        offerLabel: null,
+        offerPercentage: 0
+      };
+    }
+    
+    const originalPrice = Number(color.originalPrice) || 0;
+    const baseCurrentPrice = Number(color.currentPrice) || originalPrice;
+    const hasColorOffer = color.hasOffer && color.offer?.isCurrentlyValid;
+    const offerPercentage = hasColorOffer ? Number(color.offer.offerPercentage) : 0;
+    
+    let finalPrice = baseCurrentPrice;
+    let discountPercentage = 0;
+    
+    if (hasColorOffer && offerPercentage > 0) {
+      const offerDiscountAmount = (baseCurrentPrice * offerPercentage) / 100;
+      finalPrice = baseCurrentPrice - offerDiscountAmount;
+      
+      if (finalPrice < 0) finalPrice = 0;
+      
+      if (originalPrice > 0) {
+        const totalDiscount = originalPrice - finalPrice;
+        discountPercentage = Math.round((totalDiscount / originalPrice) * 100);
+      }
+    } else {
+      if (originalPrice > 0 && baseCurrentPrice < originalPrice) {
+        finalPrice = baseCurrentPrice;
+        discountPercentage = Math.round(((originalPrice - baseCurrentPrice) / originalPrice) * 100);
+      }
+    }
+    
+    return {
+      finalPrice: parseFloat(finalPrice.toFixed(2)),
+      originalPrice: originalPrice,
+      discount: discountPercentage,
+      hasOffer: hasColorOffer,
+      offerLabel: hasColorOffer ? color.offer.offerLabel : null,
+      offerPercentage: offerPercentage
+    };
+  };
+
+  // ✅ UPDATED: Improved toggleWishlist with immediate UI update
   const toggleWishlist = async (product, e) => {
     e.stopPropagation();
 
@@ -171,17 +282,30 @@ const RelatedProducts = ({
 
     if (!token || !userId) {
       setShowLoginModal(true);
+      toast.info("Please login to add items to wishlist");
       return;
     }
 
-    const isCurrentlyWishlisted = wishlistStatus[product.productId];
+    const isCurrentlyWishlisted = wishlist[product.productId];
     const productIdToUpdate = product.productId;
 
+    // ✅ Get FIRST FRAGRANCE from product
+    const firstFragrance = product.colors?.[0]?.fragrances?.[0] || null;
+
+    // ✅ Set updating flag
+    setUpdatingProductId(productIdToUpdate);
+
     try {
+      // ✅ Update UI IMMEDIATELY and PERSISTENTLY
+      setWishlist(prev => ({
+        ...prev,
+        [productIdToUpdate]: !isCurrentlyWishlisted
+      }));
+
       if (isCurrentlyWishlisted) {
-        // ✅ CORRECT DELETE ENDPOINT
+        // ✅ Remove with FIRST FRAGRANCE
         await axios.delete(
-          `${import.meta.env.VITE_API_URL}/wishlist/remove/${productIdToUpdate}?userId=${userId}`,
+          `${import.meta.env.VITE_API_URL}/wishlist/remove/${productIdToUpdate}?userId=${userId}&fragrance=${firstFragrance}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -190,13 +314,13 @@ const RelatedProducts = ({
           }
         );
 
-        setWishlistStatus(prev => ({
-          ...prev,
-          [productIdToUpdate]: false
-        }));
+        toast.success("Removed from wishlist");
 
       } else {
-        // ✅ CORRECT ADD TO WISHLIST
+        // ✅ Add to wishlist with FIRST FRAGRANCE
+        const color = product.colors?.[0];
+        const priceInfo = calculatePriceWithOffer(color);
+
         const wishlistData = {
           userId,
           productId: productIdToUpdate,
@@ -204,14 +328,14 @@ const RelatedProducts = ({
           categoryId: product.categoryId,
           categoryName: product.categoryName,
           addedFrom: "related-products",
-          selectedFragrance: product.colors?.[0]?.fragrances?.[0] || null,
+          selectedFragrance: firstFragrance,
           selectedModel: null,
           selectedSize: null,
-          selectedColor: product.colors?.[0] ? {
-            colorId: product.colors[0].colorId,
-            colorName: product.colors[0].colorName,
-            currentPrice: product.colors[0].currentPrice || 0,
-            originalPrice: product.colors[0].originalPrice || 0
+          selectedColor: color ? {
+            colorId: color.colorId,
+            colorName: color.colorName,
+            currentPrice: priceInfo.finalPrice,
+            originalPrice: priceInfo.originalPrice
           } : null
         };
 
@@ -226,22 +350,58 @@ const RelatedProducts = ({
           }
         );
 
-        setWishlistStatus(prev => ({
-          ...prev,
-          [productIdToUpdate]: true
-        }));
+        toast.success("Added to wishlist!");
 
-        // Open wishlist sidebar on desktop
         if (window.innerWidth > 768) {
           setShowWishlistSidebar(true);
         }
       }
 
-      window.dispatchEvent(new Event('wishlistUpdated'));
+      // ✅ Refresh wishlist after delay to sync with server
+      setTimeout(() => {
+        fetchUserWishlist();
+      }, 500);
 
     } catch (error) {
       console.error("Error toggling wishlist:", error);
+
+      // ✅ ROLLBACK if error occurs
+      setWishlist(prev => ({
+        ...prev,
+        [productIdToUpdate]: isCurrentlyWishlisted
+      }));
+
+      setUpdatingProductId(null); // Reset flag
+
+      if (error.response?.data?.message) {
+        if (error.response.data.message.includes("already in your wishlist")) {
+          // Mark as wishlisted
+          setWishlist(prev => ({
+            ...prev,
+            [productIdToUpdate]: true
+          }));
+          toast.info("Already in your wishlist");
+        } else {
+          toast.error(error.response.data.message);
+        }
+      } else {
+        toast.error("Error updating wishlist. Please try again.");
+      }
     }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const createProductSlug = (productName) => {
+    return productName
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .replace(/\s+/g, '-');
   };
 
   if (loading) {
@@ -259,13 +419,25 @@ const RelatedProducts = ({
 
   return (
     <>
-      {/* Wishlist Sidebar */}
+      {/* Toast Container - Positioned at top center */}
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+
       <WishlistSidebar
         isOpen={showWishlistSidebar}
         onClose={() => setShowWishlistSidebar(false)}
       />
 
-      {/* Login Modal */}
       {showLoginModal && (
         <LoginModal
           onClose={() => {
@@ -276,7 +448,6 @@ const RelatedProducts = ({
         />
       )}
 
-      {/* Related Products Section */}
       <section className="related-products-showcase">
         <div className="section-header">
           <h2 className="section-title">You Might Also Like</h2>
@@ -294,54 +465,56 @@ const RelatedProducts = ({
               prevEl: ".related-prod-prev",
             }}
             breakpoints={{
-              0: { slidesPerView: 1 },
-              576: { slidesPerView: 2 },
-              992: { slidesPerView: 3 },
-              1200: { slidesPerView: 4 },
+              0: {
+                slidesPerView: 2,
+                spaceBetween: 15
+              },
+              576: {
+                slidesPerView: 2
+              },
+              992: {
+                slidesPerView: 3
+              },
+              1200: {
+                slidesPerView: 5
+              },
             }}
           >
             {relatedProducts.map((product) => {
               const color = product.colors?.[0];
-              const image = color?.images?.[0] || product.thumbnailImage;
-              const currentPrice = color?.currentPrice ?? 0;
-              const originalPrice = color?.originalPrice ?? 0;
-              const isWishlisted = wishlistStatus[product.productId] || false;
-
-              const discount =
-                originalPrice > currentPrice
-                  ? Math.round(
-                    ((originalPrice - currentPrice) / originalPrice) * 100
-                  )
-                  : 0;
-
+              const image = product.thumbnailImage || color?.images?.[0];
+              const isWishlisted = wishlist[product.productId] || false;
+              const isUpdating = updatingProductId === product.productId; // ✅ Check if updating
+              
+              const priceInfo = calculatePriceWithOffer(color);
+              
               return (
                 <SwiperSlide key={product.productId}>
                   <div
                     className="related-product-item"
                     onClick={() => {
-                      // Create URL-friendly name
-                      const urlName = product.productName
-                        .toLowerCase()
-                        .replace(/[^\w\s]/g, '') // Remove special chars
-                        .replace(/\s+/g, '-');   // Replace spaces with hyphens
-
-                      // Navigate with state
+                      const urlName = createProductSlug(product.productName);
                       navigate(`/product/${urlName}`, {
                         state: {
-                          productId: product.productId  // Pass ID in state
+                          productId: product.productId
                         }
                       });
                     }}
                   >
                     <div className="image-wrapper">
-                      {/* Wishlist Button */}
+                      {priceInfo.hasOffer && (
+                        <div className="special-offer-badge">
+                          {priceInfo.offerLabel || "Special Offer"}
+                        </div>
+                      )}
+                      
                       <button
-                        className={`wishlist-btn ${isWishlisted ? 'wishlisted' : ''}`}
+                        className={`wishlist-btn ${isWishlisted ? 'wishlisted' : ''} ${isUpdating ? 'updating' : ''}`}
                         onClick={(e) => toggleWishlist(product, e)}
                         aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-                        disabled={loadingWishlist}
+                        disabled={isUpdating} // ✅ Disable while updating
                       >
-                        {loadingWishlist ? (
+                        {isUpdating ? (
                           <span className="loading-spinner-small"></span>
                         ) : isWishlisted ? (
                           <FaHeart className="wishlist-icon filled" />
@@ -369,17 +542,17 @@ const RelatedProducts = ({
 
                     <div className="price-row">
                       <span className="price">
-                        ₹{currentPrice.toLocaleString()}
+                        ₹{formatCurrency(priceInfo.finalPrice)}
                       </span>
 
-                      {originalPrice > currentPrice && (
+                      {priceInfo.originalPrice > priceInfo.finalPrice && (
                         <>
                           <span className="original">
-                            ₹{originalPrice.toLocaleString()}
+                            ₹{formatCurrency(priceInfo.originalPrice)}
                           </span>
-                          {discount > 0 && (
+                          {priceInfo.discount > 0 && (
                             <span className="off-badge">
-                              {discount}% OFF
+                              {priceInfo.discount}% OFF
                             </span>
                           )}
                         </>

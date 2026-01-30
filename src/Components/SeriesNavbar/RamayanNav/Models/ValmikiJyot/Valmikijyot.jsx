@@ -1,5 +1,7 @@
 import React from "react";
 import "./Valmikijyot.scss";
+// import img from "../../../../../assets/images/home/models/valmiki.png"
+import img from "../../../../../assets/images/home/models/newvalmiki.jpeg"
 
 const Valmikijyot = () => {
   return (
@@ -22,7 +24,7 @@ const Valmikijyot = () => {
         {/* RIGHT IMAGE */}
         <div className="valmiki-model__image">
           <img
-            src="https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=1600&auto=format&fit=crop"
+            src= {img}
             alt="Valmiki Illustration"
           />
         </div>

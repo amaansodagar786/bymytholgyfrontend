@@ -177,7 +177,7 @@
     .fragrance {
       font-size: 11px;
       color: #666;
-      margin: 0 0 5px;
+      margin: 0 ;
     }
 
     .variants {
@@ -202,6 +202,7 @@
       align-items: center;
       gap: 8px;
       margin-bottom: 8px;
+      flex-wrap: wrap;
 
       .price {
         font-size: 14px;
@@ -213,6 +214,16 @@
         font-size: 12px;
         color: #999;
         text-decoration: line-through;
+      }
+
+      /* ✅ CHANGE 2: Added discount badge style */
+      .off-badge {
+        font-size: 10px;
+        font-weight: 600;
+        color: #fff;
+        background: #2ecc71;
+        padding: 2px 6px;
+        border-radius: 999px;
       }
     }
 
@@ -377,4 +388,111 @@
   .cart-sidebar-overlay {
     display: none;
   }
+}
+
+
+
+/* Add these styles to your existing CartSidebar.scss */
+
+/* Original Price with strikethrough */
+.summary-row.original-price {
+  color: #666;
+  font-size: 0.9em;
+  padding: 8px 0;
+  
+  .strikethrough {
+    text-decoration: line-through;
+    color: #999;
+  }
+}
+
+/* Discount row */
+.summary-row.discount {
+  color: #28a745;
+  font-weight: 600;
+  padding: 8px 0;
+  
+  .savings {
+    color: #28a745;
+    font-weight: bold;
+  }
+}
+
+/* Subtotal emphasis */
+.summary-row .subtotal {
+  font-weight: 600;
+  color: #333;
+}
+
+/* Item savings in product card */
+.item-savings {
+  font-size: 0.85em;
+  margin-top: 4px;
+  
+  .savings-text {
+    color: #28a745;
+    font-weight: 500;
+  }
+}
+
+/* Off badge styling */
+.off-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  font-size: 0.75em;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* Total savings summary */
+.savings-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 10px 0;
+  font-size: 0.9em;
+  color: #2e7d32;
+  
+  .savings-icon {
+    color: #4caf50;
+  }
+}
+
+/* Fragrance text */
+.fragrance {
+  color: #666;
+  font-size: 0.9em;
+  margin: 4px 0;
+  font-style: italic;
+}
+
+/* Loading spinner */
+.sidebar-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

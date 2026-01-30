@@ -1,13 +1,14 @@
 import React from "react";
 import { motion } from "framer-motion";
 import "./CtaSection.scss";
+import cta from "../../../assets/images/home/ctabg.png"
 
 const CtaSection = () => {
   // Text animation variants
   const textVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 40 
+    hidden: {
+      opacity: 0,
+      y: 40
     },
     visible: {
       opacity: 1,
@@ -51,23 +52,23 @@ const CtaSection = () => {
   const words = text.split(" ");
 
   // Background image URL (you can also import an image file)
-  const backgroundImage = "https://images.unsplash.com/photo-1602173574767-37ac01994b2a";
+  const backgroundImage = cta;
 
   return (
-    <section 
+    <section
       className="cta-section"
       style={{
         backgroundImage: `url(${backgroundImage})`
       }}
     >
-      <motion.div 
+      <motion.div
         className="cta-overlay"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}
         variants={overlayVariants}
       >
-        <motion.h2 
+        <motion.h2
           className="cta-text"
           variants={textVariants}
         >

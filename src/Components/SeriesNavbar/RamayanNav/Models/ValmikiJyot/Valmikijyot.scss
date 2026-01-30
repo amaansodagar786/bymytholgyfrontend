@@ -1,13 +1,12 @@
 @font-face {
-  font-family: "Heading";
-  src: url("../../../assets/fonts/TT Ramillas Trial Medium.ttf")
-    format("truetype");
+    font-family: "Bold";
+    src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+    font-style: normal;
 }
 
 @font-face {
-  font-family: "Content";
-  src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf")
-    format("truetype");
+    font-family: "Content";
+    src: url("../../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Regular.ttf") format("truetype");
 }
 
 /* ROOT SECTION */
@@ -15,28 +14,32 @@
   width: 100%;
   background: #fff;
   border-bottom: 1px solid #eee;
+  padding: 15px 0;
 }
 
 /* INNER WRAP */
 .valmiki-model__inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 10px 24px;
+  padding: 15px 70px 15px 100px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 40px;
+  min-height: 350px;
 }
 
 /* LEFT CONTENT */
 .valmiki-model__content {
-  flex: 1;
+  flex: 0.9;
+  padding: 5px 0;
+  
 }
 
 .valmiki-title {
-  font-family: "Heading";
-  font-size: 30px;
-  margin-bottom: 16px;
-  margin-top: 0px;
+  font-family: "Bold";
+  font-size: 28px;
+  margin-bottom: 12px;
+  margin-top: 25px;
 }
 
 /* LIST */
@@ -44,25 +47,31 @@
   list-style: disc;
   padding-left: 18px;
   font-family: "Content";
-  font-size: 17px;
-  line-height: 1.7;
+  font-size: 16px;
+  line-height: 1.5;
 
   li {
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 }
 
-/* RIGHT IMAGE */
+/* RIGHT IMAGE - FIXED DIMENSIONS */
 .valmiki-model__image {
-  flex: 1;
+  flex: 1.1;
   display: flex;
   justify-content: flex-end;
-
+  
   img {
-    width: 100%;
-    max-width: 520px;
-    height: auto;
-    object-fit: cover;
+    width: 880px;
+    height: 350px;
+    object-fit: contain;
+    object-position: center;
+    
+    /* Force these exact dimensions */
+    min-width: 750px;
+    max-width: 900px;
+    min-height: 350px;
+    max-height: 350px;
   }
 }
 

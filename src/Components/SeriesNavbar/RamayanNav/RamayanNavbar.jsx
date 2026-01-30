@@ -5,8 +5,16 @@ import {
   FiMenu,
   FiX,
 } from "react-icons/fi";
-import Valmikijyot from "./Models/ValmikiJyot/Valmikijyot"; // Import the Valmiki model component
+import Valmikijyot from "./Models/ValmikiJyot/Valmikijyot";
+import Dhanurveda from "./Models/Dhanurveda/Dhanurveda";
+import Dandakaranya from "./Models/Dandakaranya/Dandakaranya";
+import Kishkindha from "./Models/Kishkindha/Kishkindha";
+import AshokVatika from "./Models/AshokVatika/AshokVatika";
+import Ramsetu from "./Models/Ramsetu/Ramsetu";
+import Sanjeevani from "./Models/Sanjeevani/Sanjeevani";
+import Vijayagamanam from "./Models/Vijayagamanam/Vijayagamanam";
 import "./RamayanNavbar.scss";
+import logo from "../../../assets/logo/newlogo.png"
 
 const MENU = [
   "VALMIKI JYOT",
@@ -14,55 +22,77 @@ const MENU = [
   "DANDAKARANYA",
   "KISHKINDHA",
   "ASHOK VATIKA",
-  "RAM SETU",
+  "RAMSETU",
   "SANJEEVANI",
   "VIJAYAGAMANAM",
 ];
 
-const SUB_MENU = ["Crossandra", "Lavender", "Champagne", "Musk" , "Cedarwood"];
+// Updated: Separate submenus for each menu item
+const SUB_MENUS = {
+  "VALMIKI JYOT": ["Crossandra", "Lavender", "Champagne", "Musk", "Cedarwood"],
+  "DHANURVEDA": ["Lilly of The Valley", "Bitter Almond", "Cinnamon", "Strawberry", "Caramel"],
+  "DANDAKARANYA": ["White Amber", "Clove", "Nutmeg", "Jasmine", "Pinewood"],
+  "KISHKINDHA": ["Patchouli", "Black Agar", "Oud", "Rose", "Sandalwood"],
+  "ASHOK VATIKA": ["Madurai Malli", "Rose Damascone", "Cedarwood", "Citronella"],
+  "RAMSETU": ["Lemon", "Cardamom", "Musk Melon", "Cucumber", "Aqua"],
+  "SANJEEVANI": ["Marijuana", "Camphor", "Violet Leaf", "Seaweed", "Moss"],
+  "VIJAYAGAMANAM": ["Lilac", "Vanilla", "Grapefruit", "Sandalwood"]
+};
 
-const RamayanNavbar = () => {
+// Component mapping
+const MODEL_COMPONENTS = {
+  "VALMIKI JYOT": Valmikijyot,
+  "DHANURVEDA": Dhanurveda,
+  "DANDAKARANYA": Dandakaranya,
+  "KISHKINDHA": Kishkindha,
+  "ASHOK VATIKA": AshokVatika,
+  "RAMSETU": Ramsetu,
+  "SANJEEVANI": Sanjeevani,
+  "VIJAYAGAMANAM": Vijayagamanam,
+};
+
+const RamayanNavbar = ({ onMenuClick }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
-  const [showValmikiModel, setShowValmikiModel] = useState(false);
+  const [activeModel, setActiveModel] = useState(null);
   const navbarRef = useRef(null);
-  const valmikiModelRef = useRef(null);
+  const modelOverlayRef = useRef(null);
 
   const toggleSubMenu = (index) => {
     setActiveMenu(activeMenu === index ? null : index);
   };
 
-  const toggleValmikiModel = () => {
-    setShowValmikiModel(prev => !prev);
+  const handleMenuClick = (item) => {
+    // If clicked on currently active model, close it
+    if (activeModel === item) {
+      setActiveModel(null);
+      onMenuClick && onMenuClick(null);
+    } else {
+      // Open the clicked model
+      setActiveModel(item);
+      onMenuClick && onMenuClick(item);
+    }
+    
+    // Close mobile menu if open
+    setMobileOpen(false);
   };
 
-  // Close Valmiki model when clicking outside navbar or model
+  // Close model when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (showValmikiModel) {
-        // Check if click is outside both navbar and valmiki model
+      if (activeModel && modelOverlayRef.current && !modelOverlayRef.current.contains(e.target)) {
+        // Check if click is outside navbar and model overlay
         const isClickInNavbar = navbarRef.current?.contains(e.target);
-        const isClickInValmikiModel = valmikiModelRef.current?.contains(e.target);
-        
-        if (!isClickInNavbar && !isClickInValmikiModel) {
-          setShowValmikiModel(false);
+        if (!isClickInNavbar) {
+          setActiveModel(null);
+          onMenuClick && onMenuClick(null);
         }
       }
     };
 
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [showValmikiModel]);
-
-  // Close Valmiki model when clicking on any other menu item
-  const handleMenuClick = (item) => {
-    if (item === "VALMIKI JYOT") {
-      toggleValmikiModel();
-    } else {
-      // If any other menu item is clicked, close Valmiki model
-      setShowValmikiModel(false);
-    }
-  };
+  }, [activeModel, onMenuClick]);
 
   // Close mobile menu when clicking outside
   useEffect(() => {
@@ -76,14 +106,22 @@ const RamayanNavbar = () => {
     return () => document.removeEventListener('click', handleMobileClickOutside);
   }, [mobileOpen]);
 
+  // Get the active component
+  const ActiveComponent = activeModel ? MODEL_COMPONENTS[activeModel] : null;
+
   return (
     <>
       <nav className="ramayan-nav" ref={navbarRef}>
         {/* TOP BAR */}
         <div className="ramayan-nav__top">
           <div className="ramayan-nav__left">
-            <div className="ramayan-nav__logo">ॐ</div>
-            <h1 className="ramayan-nav__title">Ramayan Series</h1>
+            <div className="ramayan-nav__logo">
+              <img
+                src={logo}
+                alt="Ramayan Logo"
+              />
+            </div>
+            <h1 className="ramayan-nav__title newtitle">Ramayan Series</h1>
           </div>
 
           <div className="ramayan-nav__right ramayan-desktop-only">
@@ -103,7 +141,7 @@ const RamayanNavbar = () => {
           {MENU.map((item, index) => (
             <li
               key={index}
-              className={`ramayan-nav__menu-item ${item === "VALMIKI JYOT" && showValmikiModel ? 'active' : ''}`}
+              className={`ramayan-nav__menu-item ${activeModel === item ? 'active' : ''}`}
               onClick={() => handleMenuClick(item)}
             >
               <span>{item}</span>
@@ -112,7 +150,7 @@ const RamayanNavbar = () => {
           ))}
         </ul>
 
-        {/* MOBILE MENU */}
+        {/* MOBILE MENU - UPDATED with correct submenus */}
         {mobileOpen && (
           <div className="ramayan-nav__mobile">
             {MENU.map((item, i) => (
@@ -124,7 +162,7 @@ const RamayanNavbar = () => {
 
                 {activeMenu === i && (
                   <div className="ramayan-nav__submenu">
-                    {SUB_MENU.map((sub, j) => (
+                    {SUB_MENUS[item].map((sub, j) => (
                       <div key={j} className="ramayan-nav__submenu-item">
                         {sub}
                       </div>
@@ -137,10 +175,10 @@ const RamayanNavbar = () => {
         )}
       </nav>
 
-      {/* VALMIKI JYOT MODEL - Rendered directly from Navbar */}
-      {showValmikiModel && (
-        <div className="valmiki-model-overlay" ref={valmikiModelRef}>
-          <Valmikijyot />
+      {/* ACTIVE MODEL OVERLAY */}
+      {ActiveComponent && (
+        <div className="model-overlay" ref={modelOverlayRef}>
+          <ActiveComponent />
         </div>
       )}
     </>

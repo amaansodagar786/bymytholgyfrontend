@@ -96,21 +96,41 @@ const Checkout = () => {
     }
   }, [currentStep]);
 
-  // ==================== INITIAL DATA FETCHING ====================
   useEffect(() => {
     if (!token || !userId) {
       setShowLoginModal(true);
       return;
     }
 
+    console.log('📍 Checkout location.state:', location.state);
+
     if (location.state && location.state.buyNowMode) {
       setCheckoutMode('buy-now');
       setBuyNowData(location.state.productData);
       processBuyNowData(location.state.productData);
     } else if (location.state && location.state.cartMode) {
+
+
+      console.log('📍 Cart data received:', location.state.cartData);
+      console.log('📍 Cart summary:', location.state.cartData.summary);
       setCheckoutMode('cart');
       setCartItems(location.state.cartData.items);
-      setCartSummary(location.state.cartData.summary);
+
+      // Use the summary from cart directly
+      setCartSummary({
+        ...location.state.cartData.summary,
+        // Ensure all fields exist
+        subtotal: location.state.cartData.summary.subtotal || 0,
+        originalSubtotal: location.state.cartData.summary.originalSubtotal ||
+          location.state.cartData.summary.subtotal +
+          (location.state.cartData.summary.totalSavings || 0),
+        totalSavings: location.state.cartData.summary.totalSavings || 0,
+        shipping: location.state.cartData.summary.shipping || 0,
+        tax: location.state.cartData.summary.tax || 0,
+        total: location.state.cartData.summary.total || 0,
+        totalItems: location.state.cartData.summary.totalItems || 0
+      });
+
       fetchAddresses();
       setLoading(false);
     } else {
@@ -196,21 +216,37 @@ const Checkout = () => {
   };
 
   // Calculate cart summary
+  // Calculate cart summary - FIXED VERSION
   const calculateCartSummary = (items, apiSummary) => {
-    const subtotal = items.reduce((sum, item) => sum + (item.finalPrice * item.quantity), 0);
+    // Calculate discounted subtotal (price after offers)
+    const discountedSubtotal = items.reduce((sum, item) => sum + (item.finalPrice * item.quantity), 0);
+
+    // Calculate original subtotal (price before offers)
+    const originalSubtotal = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+
+    // Calculate total savings (difference between original and discounted)
     const totalSavings = items.reduce((sum, item) => {
-      if (item.hasOffer && item.offerDetails?.savedAmount) {
-        return sum + (item.offerDetails.savedAmount * item.quantity);
+      if (item.hasOffer) {
+        // Original total for this item
+        const originalTotal = item.unitPrice * item.quantity;
+        // Discounted total for this item
+        const discountedTotal = item.finalPrice * item.quantity;
+        return sum + (originalTotal - discountedTotal);
       }
       return sum;
     }, 0);
-    const shipping = subtotal > 1000 ? 0 : 50;
-    const tax = subtotal * 0.18;
-    const total = subtotal + shipping + tax;
+
+    // Or simpler: totalSavings = originalSubtotal - discountedSubtotal
+    // const totalSavings = originalSubtotal - discountedSubtotal;
+
+    const shipping = discountedSubtotal > 1000 ? 0 : 50;
+    const tax = discountedSubtotal * 0.18;
+    const total = discountedSubtotal + shipping + tax;
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
     setCartSummary({
-      subtotal,
+      subtotal: discountedSubtotal, // This should be the discounted subtotal
+      originalSubtotal: originalSubtotal, // Store original subtotal too
       totalSavings,
       shipping,
       tax,
@@ -619,6 +655,14 @@ const Checkout = () => {
         <h3 className="summary-title">Order Summary</h3>
 
         <div className="summary-content">
+          {/* Add Original Price Row */}
+          {cartSummary.totalSavings > 0 && (
+            <div className="summary-row original">
+              <span>Original Price</span>
+              <span className="strikethrough">₹{(cartSummary.subtotal + cartSummary.totalSavings).toLocaleString()}</span>
+            </div>
+          )}
+
           <div className="summary-row">
             <span>Subtotal ({cartSummary.totalItems} items)</span>
             <span>₹{cartSummary.subtotal.toLocaleString()}</span>
@@ -867,20 +911,38 @@ const Checkout = () => {
           </div>
 
           <div className="order-summary-final">
+            {/* Add Original Price Row */}
+            {cartSummary.totalSavings > 0 && (
+              <div className="summary-row original">
+                <span>Original Price:</span>
+                <span className="strikethrough">₹{(cartSummary.subtotal + cartSummary.totalSavings).toLocaleString()}</span>
+              </div>
+            )}
+
             <div className="summary-row">
               <span>Items Total:</span>
               <span>₹{cartSummary.subtotal.toLocaleString()}</span>
             </div>
+
+            {cartSummary.totalSavings > 0 && (
+              <div className="summary-row discount">
+                <span>Total Savings:</span>
+                <span className="savings">-₹{cartSummary.totalSavings.toLocaleString()}</span>
+              </div>
+            )}
+
             <div className="summary-row">
               <span>Shipping:</span>
               <span className={cartSummary.shipping === 0 ? 'free' : ''}>
                 {cartSummary.shipping === 0 ? 'FREE' : `₹${cartSummary.shipping}`}
               </span>
             </div>
+
             <div className="summary-row">
               <span>Tax (18% GST):</span>
               <span>₹{cartSummary.tax.toLocaleString()}</span>
             </div>
+
             <div className="summary-row total">
               <span>Total Amount:</span>
               <span className="total-price">₹{cartSummary.total.toLocaleString()}</span>

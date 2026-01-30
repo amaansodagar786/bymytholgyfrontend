@@ -21,7 +21,7 @@ function Home() {
       <About />
       <Products />
       <CtaSection />
-      <ImagesSection />
+      <ImagesSection />  
       <Showcase />
     </>
   );

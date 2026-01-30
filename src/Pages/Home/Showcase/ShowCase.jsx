@@ -1,6 +1,9 @@
 import React from "react";
 import "./Showcase.scss";
 
+import showcase1 from "../../../assets/images/home/showcase1.png"
+import showcase2 from "../../../assets/images/home/showcase2.png"
+
 const Showcase = () => {
   return (
     <div className="showcase">
@@ -8,7 +11,7 @@ const Showcase = () => {
         {/* LEFT CANDLE */}
         <div className="showcase__item">
           <img
-src="https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?q=80&w=1600&auto=format&fit=crop"
+            src={showcase1}
             alt="Elegant white candle with gold accents"
             className="showcase__image"
           />
@@ -17,7 +20,7 @@ src="https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?q=80&w=1600&au
         {/* RIGHT CANDLE */}
         <div className="showcase__item">
           <img
-            src="https://images.unsplash.com/photo-1587049352851-8d4e89133924?q=80&w=1600&auto=format&fit=crop"
+            src={showcase2}
             alt="Scented candle with herbs and spices"
             className="showcase__image"
           />

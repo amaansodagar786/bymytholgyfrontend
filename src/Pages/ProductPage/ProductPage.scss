@@ -11,8 +11,24 @@
   font-style: normal;
 }
 
+
+
+@font-face {
+  font-family: "LightHeading";
+  src: url("../../../assets/fonts/TT Ramillas Trial Light.ttf") format("truetype");
+}
+
+
+@font-face {
+  font-family: "Bold";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+  font-style: normal;
+  // font-weight: 500; 
+}
+
+
 // ===== VARIABLES =====
-$heading-font: "Heading", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+$heading-font: "Bold", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 $content-font: "Content", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
 $primary-black: #000000;
@@ -153,7 +169,7 @@ $transition-medium: 0.3s ease;
 
   // Desktop: Align with thumbnail images
   @media (min-width: 1024px) {
-    padding-left: 50px; 
+    padding-left: 50px;
     max-width: 1400px;
     margin: 0 auto 20px;
 
@@ -237,8 +253,8 @@ $transition-medium: 0.3s ease;
     @media (min-width: 1024px) {
       // 🔥 DESKTOP: Flex layout for ScrollTrigger
       display: flex;
-      gap: 40px;
-      max-width: 1400px;
+      gap: 0px;
+      max-width: 1350px;
       margin: 0 auto;
       align-items: flex-start;
       justify-content: center;
@@ -260,7 +276,7 @@ $transition-medium: 0.3s ease;
 
   // Desktop: 50% width
   @media (min-width: 1024px) {
-    width: 50%;
+    width: 45%;
     flex-shrink: 0;
 
     // Hide mobile view on desktop
@@ -286,7 +302,7 @@ $transition-medium: 0.3s ease;
 
       // Main Swiper Container
       .main-swiper {
-        width: 100% !important;
+         width:   60% !important;
         height: 350px !important;
         border-radius: 12px;
         overflow: hidden;
@@ -459,6 +475,7 @@ $transition-medium: 0.3s ease;
   .desktop-images-view {
     display: flex;
     width: 100%;
+    margin-left: 5rem !important;
 
     // Vertical Thumbnail Strip
     .thumbnail-strip {
@@ -499,10 +516,13 @@ $transition-medium: 0.3s ease;
       flex: 1;
       @include flex-column;
       gap: 30px;
-      padding: 0 8px 8px 30px;
+      padding: 0 8px 8px 20px;
+      width: 80%;
+      align-items: flex-start;
+
 
       .main-image-item {
-        width: 95%;
+        width: 77%;
         min-height: 350px;
         max-height: 500px;
         border-radius: $border-radius-lg;
@@ -510,10 +530,17 @@ $transition-medium: 0.3s ease;
         background: $light-gray;
         flex-shrink: 0;
 
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
         img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
+          width: auto !important; // Natural width of image
+          max-width: 100% !important; // 🔥 Reduce max width to crop blank sides
+          height: 100% !important; // Keep full height
+          object-fit: contain !important;
+          display: block;
         }
       }
 
@@ -545,10 +572,11 @@ $transition-medium: 0.3s ease;
   padding-bottom: 40px;
   width: 100%;
   box-sizing: border-box; // FIXED: Added box-sizing
+  margin-right: 5rem !important;
 
   // Desktop: 40% width, pinned by ScrollTrigger
   @media (min-width: 1024px) {
-    width: 40%;
+    width: 38%;
     flex-shrink: 0;
   }
 
@@ -712,8 +740,10 @@ $transition-medium: 0.3s ease;
   .stock-status-badge {
     font-family: $content-font;
     font-size: 0.9rem;
-    padding: 6px 0;
+    // padding: 6px 0; 
     width: 100%;
+    margin-bottom: 0px;
+
 
     @include responsive(mobile) {
       font-size: 0.85rem;
@@ -727,13 +757,20 @@ $transition-medium: 0.3s ease;
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  transition: all $transition-fast;
-  margin-bottom: 25px;
+  transition: all $transition-medium;
+  margin-bottom: 15px;
+  margin-top: 0px;
   width: 100%;
 
+
   &:hover {
+
     .reviews-arrow {
       transform: translateX(4px);
+    }
+
+    .reviews-count {
+      text-decoration: underline;
     }
   }
 
@@ -2092,5 +2129,176 @@ img {
     .reviews-list {
       padding: 16px;
     }
+  }
+}
+
+
+
+// ===== OFFER BADGE SECTION =====
+.offer-badges-section {
+  margin: 25px 0;
+  width: 100%;
+  animation: zoomIn 0.6s ease-out;
+
+  .offer-badges-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+
+    @include responsive(tablet) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @include responsive(mobile) {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .offer-badge-item {
+      padding: 16px 12px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border: 1px solid $border-gray;
+      border-radius: $border-radius-md;
+      text-align: center;
+      transition: all $transition-medium;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+
+      &:hover {
+        transform: scale(1.03);
+        box-shadow: $shadow-md;
+        border-color: $accent-color;
+      }
+
+      .badge-icon {
+        font-size: 1.8rem;
+        margin-bottom: 8px;
+        display: block;
+        color: $accent-color;
+      }
+
+      .badge-title {
+        font-family: $content-font;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: $primary-black;
+        margin-bottom: 4px;
+        @include truncate-text(2);
+      }
+
+      .badge-desc {
+        font-family: $content-font;
+        font-size: 0.85rem;
+        color: $medium-gray;
+        line-height: 1.4;
+        @include truncate-text(2);
+      }
+    }
+  }
+}
+
+// ===== ZOOM ANIMATION =====
+@keyframes zoomIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(255, 59, 48, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0);
+  }
+}
+
+// ===== EXTRA OFFER BADGE (for extra discount) =====
+.extra-offer-badge {
+  background: linear-gradient(135deg, #34C759 0%, #007AFF 100%);
+  color: $primary-white;
+  padding: 8px 16px;
+  border-radius: $border-radius-md;
+  font-family: $content-font;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-top: 10px;
+  display: inline-block;
+  width: fit-content;
+  animation: slideIn 0.5s ease-out;
+
+  &::before {
+    content: '⚡ ';
+  }
+
+  @include responsive(mobile) {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+// ===== CLEAN DISCOUNT STYLE =====
+.discount-percent {
+  background: $danger-color;
+  color: $primary-white;
+  padding: 4px 10px;
+  border-radius: $border-radius-sm;
+  font-family: $content-font;
+  font-size: 0.9rem;
+  font-weight: 600;
+
+  @include responsive(mobile) {
+    font-size: 0.85rem;
+    padding: 3px 8px;
+  }
+}
+
+// ===== OFFER BADGE AFTER DESCRIPTION =====
+.offer-badge-after-description {
+  display: inline-block;
+  background: linear-gradient(135deg, #FF3B30 0%, #FF9500 100%);
+  color: $primary-white;
+  padding: 8px 16px;
+  border-radius: $border-radius-md;
+  font-family: $content-font;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 20px 0 25px 0;
+  width: 100%;
+  text-align: center;
+  animation: pulse 2s infinite;
+
+  &::before {
+    content: '🎁 SPECIAL OFFER: ';
+  }
+
+  @include responsive(mobile) {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    margin: 15px 0 20px 0;
   }
 }

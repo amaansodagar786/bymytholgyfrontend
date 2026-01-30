@@ -959,26 +959,38 @@ const UserOrders = () => {
                     <div className="details-section">
                         <h3 className="section-title">Order Summary</h3>
                         <div className="order-summary-details">
-                            <div className="summary-row">
-                                <span>Subtotal ({selectedOrder.items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-                                <span>₹{selectedOrder.pricing.subtotal.toLocaleString()}</span>
+                            {/* Original Price */}
+                            <div className="summary-row original">
+                                <span>Original Price</span>
+                                <span className="strikethrough">₹{selectedOrder.pricing.subtotal.toLocaleString()}</span>
                             </div>
+
+                            {/* Total Savings */}
                             {selectedOrder.pricing.totalSavings > 0 && (
                                 <div className="summary-row discount">
                                     <span>Total Savings</span>
                                     <span className="savings">-₹{selectedOrder.pricing.totalSavings.toLocaleString()}</span>
                                 </div>
                             )}
+
+                            {/* Discounted Subtotal */}
+                            <div className="summary-row">
+                                <span>Items Total ({selectedOrder.items.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
+                                <span>₹{(selectedOrder.pricing.subtotal - selectedOrder.pricing.totalSavings).toLocaleString()}</span>
+                            </div>
+
                             <div className="summary-row">
                                 <span>Shipping</span>
                                 <span className={selectedOrder.pricing.shipping === 0 ? 'free' : ''}>
                                     {selectedOrder.pricing.shipping === 0 ? 'FREE' : `₹${selectedOrder.pricing.shipping}`}
                                 </span>
                             </div>
+
                             <div className="summary-row">
                                 <span>Tax (GST)</span>
                                 <span>₹{selectedOrder.pricing.tax.toLocaleString()}</span>
                             </div>
+
                             <div className="summary-row total">
                                 <span>Total Amount</span>
                                 <span className="total-amount">₹{selectedOrder.pricing.total.toLocaleString()}</span>

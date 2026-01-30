@@ -7,7 +7,7 @@ import { Autoplay } from "swiper/modules";
 import "swiper/css";
 
 // Hero Image
-import heroImage from "./images/hero.png";
+import heroImage from "../../../assets/images/home/hero.png";
 
 const HeroSection = () => {
   return (

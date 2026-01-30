@@ -211,6 +211,16 @@
     color: #999;
     text-decoration: line-through;
   }
+
+  /* ✅ CHANGE 2: Added discount badge style */
+  .off-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    background: #2ecc71;
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
 }
 
 /* ===================== WISHLIST ACTIONS ===================== */
@@ -429,6 +439,17 @@
     
     .view-details-btn {
       width: 100%;
+    }
+  }
+
+  /* Mobile price row adjustments */
+  .price-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    
+    .off-badge {
+      font-size: 11px;
+      padding: 2px 6px;
     }
   }
 }

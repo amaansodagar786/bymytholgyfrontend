@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate , useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -20,16 +20,16 @@ import RelatedProducts from "./RelatedProducts/RelatedProducts";
 gsap.registerPlugin(ScrollTrigger);
 
 function ProductPage() {
-  // const { productId } = useParams(); 
   const { productName } = useParams();
-   const location = useLocation();
+  const location = useLocation();
   const productId = location.state?.productId;
-
-
+  const fragranceFromWishlist = location.state?.fragranceFromWishlist; // Get fragrance from Wishlist
 
   console.log("Product ID received from Products.js:", productId);
   console.log("Product Name from URL:", productName);
   console.log("Full location state:", location.state);
+  console.log("Fragrance from Wishlist:", fragranceFromWishlist);
+  
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
@@ -233,7 +233,7 @@ function ProductPage() {
     fetchProductReviews(1);
   };
 
-  // Fetch product data AND offers
+  // Fetch product data AND offers - UPDATED TO HANDLE WISHLIST FRAGRANCE
   useEffect(() => {
     fetchProduct();
   }, [productId]);
@@ -257,10 +257,31 @@ function ProductPage() {
     }
   }, [inventoryStatus]);
 
+  // Function to get pre-selected fragrance with priority
+  const getPreSelectedFragrance = () => {
+    // Priority: 1. Wishlist state, 2. URL param, 3. None
+    if (fragranceFromWishlist) {
+      console.log("Using fragrance from wishlist state:", fragranceFromWishlist);
+      return fragranceFromWishlist;
+    }
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlFragrance = urlParams.get('fragrance');
+    if (urlFragrance) {
+      console.log("Using fragrance from URL param:", urlFragrance);
+      return urlFragrance;
+    }
+    
+    return null;
+  };
+
   const fetchProduct = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      // Get pre-selected fragrance BEFORE fetching
+      const preSelectedFragrance = getPreSelectedFragrance();
 
       // Fetch product details
       const productRes = await axios.get(
@@ -278,29 +299,37 @@ function ProductPage() {
       const offersData = offersRes.data;
       setOffers(offersData);
 
-      // Initialize selections based on product type
+      // Initialize selections based on product type with pre-selected fragrance
       if (productData.type === "simple") {
-        // Simple product - initialize with first fragrance
+        // Simple product
         if (productData.colors && productData.colors.length > 0) {
           const defaultColor = productData.colors[0];
 
           // Get fragrances from default color
           const fragrances = defaultColor.fragrances || [];
-          if (fragrances.length > 0) {
+          
+          // Check if pre-selected fragrance exists in available fragrances
+          if (preSelectedFragrance && fragrances.includes(preSelectedFragrance)) {
+            console.log("Setting pre-selected fragrance for simple product:", preSelectedFragrance);
+            setSelectedFragrance(preSelectedFragrance);
+            
+            // Check if pre-selected fragrance has offer
+            checkAndSetOfferWithData(productData, defaultColor, null, preSelectedFragrance, offersData);
+          } else if (fragrances.length > 0) {
+            // Fallback to first fragrance if pre-selected not available
             const firstFragrance = fragrances[0];
+            console.log("Setting default fragrance (first):", firstFragrance);
             setSelectedFragrance(firstFragrance);
-
-            // Check if first fragrance has offer
             checkAndSetOfferWithData(productData, defaultColor, null, firstFragrance, offersData);
+          }
 
-            // Set images from default color
-            if (defaultColor.images && defaultColor.images.length > 0) {
-              setMainImage(defaultColor.images[0]);
-              setImages(defaultColor.images);
-            } else if (productData.thumbnailImage) {
-              setMainImage(productData.thumbnailImage);
-              setImages([productData.thumbnailImage]);
-            }
+          // Set images from default color
+          if (defaultColor.images && defaultColor.images.length > 0) {
+            setMainImage(defaultColor.images[0]);
+            setImages(defaultColor.images);
+          } else if (productData.thumbnailImage) {
+            setMainImage(productData.thumbnailImage);
+            setImages([productData.thumbnailImage]);
           }
         } else {
           // No colors - use product thumbnail
@@ -310,7 +339,7 @@ function ProductPage() {
           }
         }
       } else if (productData.type === "variable") {
-        // Variable product - initialize with first model and its first fragrance
+        // Variable product
         if (productData.models && productData.models.length > 0) {
           const firstModel = productData.models[0];
           setSelectedModel(firstModel);
@@ -318,22 +347,29 @@ function ProductPage() {
           if (firstModel.colors && firstModel.colors.length > 0) {
             const defaultModelColor = firstModel.colors[0];
             const modelFragrances = defaultModelColor.fragrances || [];
-
-            if (modelFragrances.length > 0) {
+            
+            // Check if pre-selected fragrance exists in model fragrances
+            if (preSelectedFragrance && modelFragrances.includes(preSelectedFragrance)) {
+              console.log("Setting pre-selected fragrance for variable product:", preSelectedFragrance);
+              setSelectedModelFragrance(preSelectedFragrance);
+              
+              // Check if pre-selected model fragrance has offer
+              checkAndSetOfferWithData(productData, defaultModelColor, firstModel, preSelectedFragrance, offersData);
+            } else if (modelFragrances.length > 0) {
+              // Fallback to first fragrance
               const firstModelFragrance = modelFragrances[0];
+              console.log("Setting default model fragrance (first):", firstModelFragrance);
               setSelectedModelFragrance(firstModelFragrance);
-
-              // Check if first model fragrance has offer
               checkAndSetOfferWithData(productData, defaultModelColor, firstModel, firstModelFragrance, offersData);
+            }
 
-              // Set images from default model color
-              if (defaultModelColor.images && defaultModelColor.images.length > 0) {
-                setMainImage(defaultModelColor.images[0]);
-                setImages(defaultModelColor.images);
-              } else if (productData.thumbnailImage) {
-                setMainImage(productData.thumbnailImage);
-                setImages([productData.thumbnailImage]);
-              }
+            // Set images from default model color
+            if (defaultModelColor.images && defaultModelColor.images.length > 0) {
+              setMainImage(defaultModelColor.images[0]);
+              setImages(defaultModelColor.images);
+            } else if (productData.thumbnailImage) {
+              setMainImage(productData.thumbnailImage);
+              setImages([productData.thumbnailImage]);
             }
           }
         }
@@ -477,8 +513,14 @@ function ProductPage() {
     }
   }, [product, token, selectedFragrance, selectedModel, selectedModelFragrance, selectedSize, selectedModelSize]);
 
-  // Handle pre-selection from URL parameters
+  // Handle pre-selection from URL parameters - UPDATED to not interfere with wishlist state
   useEffect(() => {
+    // Skip if we already have fragrance from wishlist
+    if (fragranceFromWishlist) {
+      console.log("Skipping URL param check - using wishlist fragrance");
+      return;
+    }
+    
     const urlParams = new URLSearchParams(window.location.search);
 
     if (product) {
@@ -537,7 +579,15 @@ function ProductPage() {
         }
       }
     }
-  }, [product, window.location.search]);
+  }, [product, window.location.search, fragranceFromWishlist]);
+
+  // Clear location state after using it
+  useEffect(() => {
+    if (fragranceFromWishlist && location.state) {
+      // Clear the state to prevent re-use on refresh
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+  }, [fragranceFromWishlist, location, navigate]);
 
   // Handle fragrance selection for simple products
   const handleFragranceSelect = (fragrance) => {
@@ -672,13 +722,13 @@ function ProductPage() {
     return product.originalPrice || 0;
   };
 
-  // Get discount percentage
+  // Get FINAL discount percentage (after offer)
   const getDiscountPercent = () => {
     const originalPrice = getOriginalPrice();
-    const currentPrice = getBasePrice();
+    const finalPrice = hasOffer ? getOfferPrice() : getBasePrice();
 
-    if (originalPrice > 0 && originalPrice > currentPrice) {
-      return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+    if (originalPrice > 0 && originalPrice > finalPrice) {
+      return Math.round(((originalPrice - finalPrice) / originalPrice) * 100);
     }
     return 0;
   };
@@ -787,24 +837,28 @@ function ProductPage() {
   };
 
   // Toggle wishlist
+  // Toggle wishlist - FIXED VERSION
   const toggleWishlist = async () => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
 
     if (!token || !userId) {
-      // If not logged in, open login modal
-      // For simplicity, redirect to login
       navigate("/login");
       return;
     }
 
     const isCurrentlyWishlisted = wishlist;
 
+    // ✅ Get current fragrance based on product type
+    const currentFragrance = product.type === "simple"
+      ? selectedFragrance
+      : selectedModelFragrance;
+
     try {
       if (isCurrentlyWishlisted) {
-        // Remove from wishlist
+        // ✅ FIXED: Use currentFragrance instead of undefined selectedFragranceData
         await axios.delete(
-          `${import.meta.env.VITE_API_URL}/wishlist/remove/${product.productId}?userId=${userId}`,
+          `${import.meta.env.VITE_API_URL}/wishlist/remove/${product.productId}?userId=${userId}&fragrance=${currentFragrance}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -833,13 +887,11 @@ function ProductPage() {
           };
         }
 
-        // Add selected fragrance
-        const selectedFragranceData = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
-        if (selectedFragranceData) {
-          wishlistData.selectedFragrance = selectedFragranceData;
+        // Add selected fragrance - ✅ Use currentFragrance
+        if (currentFragrance) {
+          wishlistData.selectedFragrance = currentFragrance;
         }
 
-        // Add default color
         const defaultColor = product.type === "simple"
           ? product.colors?.[0]
           : selectedModel?.colors?.[0];
@@ -848,7 +900,7 @@ function ProductPage() {
           wishlistData.selectedColor = {
             colorId: defaultColor.colorId,
             colorName: defaultColor.colorName,
-            currentPrice: getBasePrice(),
+            currentPrice: getOfferPrice(),
             originalPrice: defaultColor.originalPrice || product.originalPrice || 0
           };
         }
@@ -1069,12 +1121,13 @@ function ProductPage() {
   const offerPrice = getOfferPrice();
   const totalPrice = getTotalPrice();
   const originalPrice = getOriginalPrice();
+  const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
   const discountPercent = getDiscountPercent();
   const description = getDescription();
   const specifications = getSpecifications();
   const availableSizes = getAvailableSizes();
   const availableFragrances = getAvailableFragrances();
-  const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
+
   const finalPrice = hasOffer ? offerPrice : basePrice;
 
   // Get purchase eligibility
@@ -1282,17 +1335,34 @@ function ProductPage() {
               {product.description || "Premium quality product with luxurious fragrance."}
             </div>
 
+            {/* SPECIAL OFFER BADGE AFTER DESCRIPTION */}
+            {hasOffer && currentOffer?.offerLabel && (
+              <div className="offer-badge-after-description">
+                {currentOffer.offerLabel}
+              </div>
+            )}
+
             {/* PRICE SECTION - Simple Row */}
             <div className="simple-price-section">
               <div className="price-row">
                 <span className="current-price">₹{finalPrice.toLocaleString()}</span>
+
+                {/* SHOW ORIGINAL PRICE WITH STRIKETHROUGH */}
                 {originalPrice > finalPrice && (
                   <>
                     <span className="original-price">₹{originalPrice.toLocaleString()}</span>
-                    <span className="discount-percent">{discountPercent}% OFF</span>
+
+                    {/* SHOW FINAL DISCOUNT % (60%) */}
+                    <span className="discount-percent">{getDiscountPercent()}% OFF</span>
                   </>
                 )}
+
+
+
+
               </div>
+
+
 
               {/* Stock Status */}
               <div className={`stock-status-badge ${inventoryStatus.status}`}>
@@ -1318,16 +1388,16 @@ function ProductPage() {
               <div className="reviews-count">
                 {reviewsStats.totalReviews} Review{reviewsStats.totalReviews !== 1 ? 's' : ''}
               </div>
-              <div className="reviews-arrow">→</div>
+              {/* <div className="reviews-arrow">→</div>  */}
             </div>
 
             {/* FRAGRANCE SELECTION */}
             <div className="fragrance-selection-section">
               <div className="section-header">
-                <h3>Select Fragrance</h3>
+                <h3>Select Fragrance :</h3>
                 {(selectedFragrance || selectedModelFragrance) && (
                   <span className="selected-indicator">
-                    Selected: <strong>{selectedFragrance || selectedModelFragrance}</strong>
+                    {/* Selected: <strong>{selectedFragrance || selectedModelFragrance}</strong> */}
                   </span>
                 )}
               </div>
