@@ -9,7 +9,7 @@ import Valmikijyot from "./Models/ValmikiJyot/Valmikijyot";
 import Dhanurveda from "./Models/Dhanurveda/Dhanurveda";
 import Dandakaranya from "./Models/Dandakaranya/Dandakaranya";
 import Kishkindha from "./Models/Kishkindha/Kishkindha";
-import AshokVatika from "./Models/AshokVatika/AshokVatika";
+import AshokVatika from "./Models/Ashokvatika/AshokVatika";
 import Ramsetu from "./Models/Ramsetu/Ramsetu";
 import Sanjeevani from "./Models/Sanjeevani/Sanjeevani";
 import Vijayagamanam from "./Models/Vijayagamanam/Vijayagamanam";
