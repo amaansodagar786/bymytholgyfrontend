@@ -7,7 +7,12 @@ $blue: #2196f3;
 $red: #dc3545;
 $border-color: #ddd;
 
-
+@font-face {
+  font-family: "Bold";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+  font-style: normal;
+  // font-weight: 500; 
+}
 
 /* ===================== LIST PRODUCTS SCSS ===================== */
 
@@ -49,7 +54,7 @@ $border-color: #ddd;
     }
     
     h2 {
-      font-family: "Heading", sans-serif;
+      font-family: "Bold", sans-serif;
       color: #2c3e50;
       margin-bottom: 12px;
       font-size: 24px;
@@ -111,7 +116,7 @@ $border-color: #ddd;
       }
       
       h1 {
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 24px;
         color: #222;
         margin: 0;
@@ -395,7 +400,7 @@ $border-color: #ddd;
       th {
         padding: 16px;
         text-align: left;
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 13px;
         color: #666;
         text-transform: uppercase;
@@ -476,7 +481,7 @@ $border-color: #ddd;
         
         .product-name-details {
           .product-name-display {
-            font-family: "Heading", sans-serif;
+            font-family: "Bold", sans-serif;
             font-size: 15px;
             color: #222;
             margin-bottom: 4px;
@@ -581,7 +586,7 @@ $border-color: #ddd;
         }
         
         .price-value-display {
-          font-family: "Heading", sans-serif;
+          font-family: "Bold", sans-serif;
           font-size: 15px;
           color: #222;
         }
@@ -742,7 +747,7 @@ $border-color: #ddd;
       }
       
       h2 {
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 20px;
         color: #222;
         margin: 0;
@@ -784,7 +789,7 @@ $border-color: #ddd;
         display: flex;
         align-items: center;
         gap: 10px;
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 16px;
         color: #222;
         margin: 0 0 16px 0;

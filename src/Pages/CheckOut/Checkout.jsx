@@ -106,8 +106,20 @@ const Checkout = () => {
 
     if (location.state && location.state.buyNowMode) {
       setCheckoutMode('buy-now');
-      setBuyNowData(location.state.productData);
-      processBuyNowData(location.state.productData);
+      const productData = location.state.productData;
+      setBuyNowData(productData);
+
+      // USE THE SUMMARY FROM YOUR productData, DON'T CALL API!
+      if (productData.summary) {
+        console.log('📍 Using summary from productData:', productData.summary);
+        setCartItems([productData]);  // Wrap in array for consistency
+        setCartSummary(productData.summary);
+        fetchAddresses();
+        setLoading(false);
+      } else {
+        // Fallback to old API call if no summary
+        processBuyNowData(productData);
+      }
     } else if (location.state && location.state.cartMode) {
 
 

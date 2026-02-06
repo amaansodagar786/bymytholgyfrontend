@@ -29,7 +29,7 @@ function ProductPage() {
   console.log("Product Name from URL:", productName);
   console.log("Full location state:", location.state);
   console.log("Fragrance from Wishlist:", fragranceFromWishlist);
-  
+
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
@@ -66,11 +66,16 @@ function ProductPage() {
   const [wishlist, setWishlist] = useState(false);
   const [wishlistItem, setWishlistItem] = useState(null);
 
-  const [inventoryStatus, setInventoryStatus] = useState({
+  // ========== CHANGED: Inventory State - PER FRAGRANCE ==========
+  // Track inventory for EACH fragrance separately
+  const [fragranceInventory, setFragranceInventory] = useState({});
+  // Current selected fragrance's inventory for display
+  const [currentFragranceInventory, setCurrentFragranceInventory] = useState({
     stock: 0,
     threshold: 0,
     status: 'checking'
   });
+  // ========== END CHANGED ==========
 
   // Max quantity based on stock
   const [maxQuantity, setMaxQuantity] = useState(99);
@@ -233,29 +238,157 @@ function ProductPage() {
     fetchProductReviews(1);
   };
 
+  // ========== CHANGED: Fetch ALL fragrances inventory ==========
+  const fetchAllFragrancesInventory = async () => {
+    if (!product) return;
+
+    try {
+      const allFragrances = getAvailableFragrances();
+      const inventoryMap = {};
+
+      // Fetch inventory for each fragrance
+      for (const fragrance of allFragrances) {
+        const params = new URLSearchParams();
+
+        // Get default color ID
+        const defaultColorId = product.type === "simple"
+          ? (product.colors?.[0]?.colorId)
+          : (selectedModel?.colors?.[0]?.colorId);
+
+        if (defaultColorId) {
+          params.append('colorId', defaultColorId);
+        }
+
+        // Add THIS fragrance
+        params.append('fragrance', fragrance);
+
+        if (product.type === "variable" && selectedModel?._id) {
+          params.append('modelId', selectedModel._id);
+        }
+
+        try {
+          const response = await axios.get(
+            `${import.meta.env.VITE_API_URL}/inventory/product/${product.productId}/status?${params.toString()}`
+          );
+
+          inventoryMap[fragrance] = {
+            stock: response.data.stock,
+            threshold: response.data.threshold,
+            status: response.data.status
+          };
+        } catch (error) {
+          console.error(`Error fetching inventory for ${fragrance}:`, error);
+          inventoryMap[fragrance] = {
+            stock: 0,
+            threshold: 10,
+            status: 'error'
+          };
+        }
+      }
+
+      setFragranceInventory(inventoryMap);
+
+      // Set current fragrance's inventory
+      const currentFragrance = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
+      if (currentFragrance && inventoryMap[currentFragrance]) {
+        setCurrentFragranceInventory(inventoryMap[currentFragrance]);
+      }
+
+    } catch (error) {
+      console.error('Error fetching all fragrances inventory:', error);
+    }
+  };
+  // ========== END CHANGED ==========
+
+  // ========== CHANGED: Smart select initial fragrance based on inventory ==========
+  const smartSelectInitialFragrance = (productData, preSelectedFragrance) => {
+    const availableFragrances = getAvailableFragrances();
+
+    // Priority 1: Pre-selected fragrance if it has stock
+    if (preSelectedFragrance &&
+      fragranceInventory[preSelectedFragrance] &&
+      fragranceInventory[preSelectedFragrance].status !== 'out-of-stock') {
+      console.log("Using pre-selected fragrance with stock:", preSelectedFragrance);
+      if (productData.type === "simple") {
+        setSelectedFragrance(preSelectedFragrance);
+      } else {
+        setSelectedModelFragrance(preSelectedFragrance);
+      }
+      return;
+    }
+
+    // Priority 2: Find first fragrance with stock
+    for (const fragrance of availableFragrances) {
+      if (fragranceInventory[fragrance] &&
+        fragranceInventory[fragrance].status !== 'out-of-stock') {
+        console.log("Selecting first in-stock fragrance:", fragrance);
+        if (productData.type === "simple") {
+          setSelectedFragrance(fragrance);
+        } else {
+          setSelectedModelFragrance(fragrance);
+        }
+        return;
+      }
+    }
+
+    // Priority 3: If all are out of stock, select first one (will show out of stock)
+    if (availableFragrances.length > 0) {
+      const firstFragrance = availableFragrances[0];
+      console.log("All fragrances out of stock, selecting:", firstFragrance);
+      if (productData.type === "simple") {
+        setSelectedFragrance(firstFragrance);
+      } else {
+        setSelectedModelFragrance(firstFragrance);
+      }
+    }
+  };
+  // ========== END CHANGED ==========
+
   // Fetch product data AND offers - UPDATED TO HANDLE WISHLIST FRAGRANCE
   useEffect(() => {
     fetchProduct();
   }, [productId]);
 
+  // ========== CHANGED: Inventory fetching logic ==========
+  // Fetch ALL fragrances inventory when product loads
   useEffect(() => {
-    if (product && (selectedFragrance || selectedModelFragrance)) {
-      fetchInventoryStatus();
+    if (product) {
+      fetchAllFragrancesInventory();
     }
-  }, [product, selectedFragrance, selectedModel, selectedModelFragrance]);
+  }, [product]);
 
-  // Update max quantity when inventory status changes
+  // Update current fragrance inventory when selection changes
   useEffect(() => {
-    if (inventoryStatus.status === 'in-stock' || inventoryStatus.status === 'low-stock') {
-      setMaxQuantity(inventoryStatus.stock);
-      if (quantity > inventoryStatus.stock) {
-        setQuantity(inventoryStatus.stock);
+    const currentFragrance = product?.type === "simple"
+      ? selectedFragrance
+      : selectedModelFragrance;
+
+    if (currentFragrance && fragranceInventory[currentFragrance]) {
+      setCurrentFragranceInventory(fragranceInventory[currentFragrance]);
+    } else {
+      // Default if not found
+      setCurrentFragranceInventory({
+        stock: 0,
+        threshold: 10,
+        status: 'checking'
+      });
+    }
+  }, [selectedFragrance, selectedModelFragrance, fragranceInventory, product]);
+  // ========== END CHANGED ==========
+
+  // ========== CHANGED: Update max quantity when current fragrance inventory changes ==========
+  useEffect(() => {
+    if (currentFragranceInventory.status === 'in-stock' || currentFragranceInventory.status === 'low-stock') {
+      setMaxQuantity(currentFragranceInventory.stock);
+      if (quantity > currentFragranceInventory.stock) {
+        setQuantity(currentFragranceInventory.stock);
       }
-    } else if (inventoryStatus.status === 'out-of-stock') {
+    } else if (currentFragranceInventory.status === 'out-of-stock') {
       setMaxQuantity(0);
       setQuantity(0);
     }
-  }, [inventoryStatus]);
+  }, [currentFragranceInventory]);
+  // ========== END CHANGED ==========
 
   // Function to get pre-selected fragrance with priority
   const getPreSelectedFragrance = () => {
@@ -264,14 +397,14 @@ function ProductPage() {
       console.log("Using fragrance from wishlist state:", fragranceFromWishlist);
       return fragranceFromWishlist;
     }
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const urlFragrance = urlParams.get('fragrance');
     if (urlFragrance) {
       console.log("Using fragrance from URL param:", urlFragrance);
       return urlFragrance;
     }
-    
+
     return null;
   };
 
@@ -307,12 +440,12 @@ function ProductPage() {
 
           // Get fragrances from default color
           const fragrances = defaultColor.fragrances || [];
-          
+
           // Check if pre-selected fragrance exists in available fragrances
           if (preSelectedFragrance && fragrances.includes(preSelectedFragrance)) {
             console.log("Setting pre-selected fragrance for simple product:", preSelectedFragrance);
             setSelectedFragrance(preSelectedFragrance);
-            
+
             // Check if pre-selected fragrance has offer
             checkAndSetOfferWithData(productData, defaultColor, null, preSelectedFragrance, offersData);
           } else if (fragrances.length > 0) {
@@ -347,12 +480,12 @@ function ProductPage() {
           if (firstModel.colors && firstModel.colors.length > 0) {
             const defaultModelColor = firstModel.colors[0];
             const modelFragrances = defaultModelColor.fragrances || [];
-            
+
             // Check if pre-selected fragrance exists in model fragrances
             if (preSelectedFragrance && modelFragrances.includes(preSelectedFragrance)) {
               console.log("Setting pre-selected fragrance for variable product:", preSelectedFragrance);
               setSelectedModelFragrance(preSelectedFragrance);
-              
+
               // Check if pre-selected model fragrance has offer
               checkAndSetOfferWithData(productData, defaultModelColor, firstModel, preSelectedFragrance, offersData);
             } else if (modelFragrances.length > 0) {
@@ -375,58 +508,18 @@ function ProductPage() {
         }
       }
 
+      // ========== CHANGED: Smart select after product loads ==========
+      // Wait for inventory to load, then smart select fragrance
+      setTimeout(() => {
+        smartSelectInitialFragrance(productData, preSelectedFragrance);
+      }, 500);
+      // ========== END CHANGED ==========
+
     } catch (err) {
       console.error("Error fetching product:", err);
       setError("Product not found or error loading product details.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchInventoryStatus = async () => {
-    if (!product) return;
-
-    try {
-      setInventoryStatus(prev => ({ ...prev, status: 'checking' }));
-
-      const params = new URLSearchParams();
-
-      // Get default color ID (always first color)
-      const defaultColorId = product.type === "simple"
-        ? (product.colors?.[0]?.colorId)
-        : (selectedModel?.colors?.[0]?.colorId);
-
-      if (defaultColorId) {
-        params.append('colorId', defaultColorId);
-      }
-
-      // Add fragrance parameter
-      const currentFragrance = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
-      if (currentFragrance) {
-        params.append('fragrance', currentFragrance);
-      }
-
-      if (product.type === "variable" && selectedModel?._id) {
-        params.append('modelId', selectedModel._id);
-      }
-
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/inventory/product/${product.productId}/status?${params.toString()}`
-      );
-
-      setInventoryStatus({
-        stock: response.data.stock,
-        threshold: response.data.threshold,
-        status: response.data.status
-      });
-
-    } catch (error) {
-      console.error('Error fetching inventory:', error);
-      setInventoryStatus({
-        stock: 0,
-        threshold: 10,
-        status: 'error'
-      });
     }
   };
 
@@ -520,7 +613,7 @@ function ProductPage() {
       console.log("Skipping URL param check - using wishlist fragrance");
       return;
     }
-    
+
     const urlParams = new URLSearchParams(window.location.search);
 
     if (product) {
@@ -658,18 +751,18 @@ function ProductPage() {
     }
   };
 
-  // Handle quantity change with stock validation
+  // ========== CHANGED: Handle quantity change with stock validation ==========
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
 
-    // Check if product is out of stock
-    if (inventoryStatus.status === 'out-of-stock') {
+    // Check if current fragrance is out of stock
+    if (currentFragranceInventory.status === 'out-of-stock') {
       return;
     }
 
     // Check if new quantity exceeds available stock
-    if (inventoryStatus.status === 'low-stock' || inventoryStatus.status === 'in-stock') {
-      if (newQuantity > inventoryStatus.stock) {
+    if (currentFragranceInventory.status === 'low-stock' || currentFragranceInventory.status === 'in-stock') {
+      if (newQuantity > currentFragranceInventory.stock) {
         return;
       }
     }
@@ -678,29 +771,36 @@ function ProductPage() {
       setQuantity(newQuantity);
     }
   };
+  // ========== END CHANGED ==========
 
-  // Check if product can be purchased
+  // ========== CHANGED: Check if product can be purchased ==========
   const canPurchaseProduct = () => {
     // Check if fragrance is selected
-    if (!selectedFragrance && !selectedModelFragrance) {
+    const currentFragrance = product?.type === "simple" ? selectedFragrance : selectedModelFragrance;
+    if (!currentFragrance) {
       return false;
     }
 
-    // Check stock status
-    if (inventoryStatus.status === 'checking' || inventoryStatus.status === 'error') {
+    // Get THIS fragrance's inventory
+    const fragranceStock = fragranceInventory[currentFragrance];
+
+    // If no inventory data yet, allow purchase (will be validated on server)
+    if (!fragranceStock || fragranceStock.status === 'checking' || fragranceStock.status === 'error') {
       return true;
     }
 
-    if (inventoryStatus.status === 'out-of-stock') {
+    // Check stock status
+    if (fragranceStock.status === 'out-of-stock') {
       return false;
     }
 
-    if (inventoryStatus.status === 'low-stock' || inventoryStatus.status === 'in-stock') {
-      return quantity <= inventoryStatus.stock && quantity > 0;
+    if (fragranceStock.status === 'low-stock' || fragranceStock.status === 'in-stock') {
+      return quantity <= fragranceStock.stock && quantity > 0;
     }
 
     return true;
   };
+  // ========== END CHANGED ==========
 
   // Get base price
   const getBasePrice = () => {
@@ -805,7 +905,10 @@ function ProductPage() {
 
   // Check if out of stock
   const isOutOfStock = () => {
-    return inventoryStatus.status === 'out-of-stock';
+    const currentFragrance = product?.type === "simple" ? selectedFragrance : selectedModelFragrance;
+    if (!currentFragrance) return true;
+
+    return fragranceInventory[currentFragrance]?.status === 'out-of-stock';
   };
 
   // Check if current selections match wishlist item
@@ -837,7 +940,6 @@ function ProductPage() {
   };
 
   // Toggle wishlist
-  // Toggle wishlist - FIXED VERSION
   const toggleWishlist = async () => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
@@ -849,14 +951,13 @@ function ProductPage() {
 
     const isCurrentlyWishlisted = wishlist;
 
-    // ✅ Get current fragrance based on product type
+    // Get current fragrance based on product type
     const currentFragrance = product.type === "simple"
       ? selectedFragrance
       : selectedModelFragrance;
 
     try {
       if (isCurrentlyWishlisted) {
-        // ✅ FIXED: Use currentFragrance instead of undefined selectedFragranceData
         await axios.delete(
           `${import.meta.env.VITE_API_URL}/wishlist/remove/${product.productId}?userId=${userId}&fragrance=${currentFragrance}`,
           {
@@ -887,7 +988,7 @@ function ProductPage() {
           };
         }
 
-        // Add selected fragrance - ✅ Use currentFragrance
+        // Add selected fragrance
         if (currentFragrance) {
           wishlistData.selectedFragrance = currentFragrance;
         }
@@ -1024,7 +1125,7 @@ function ProductPage() {
     }
   };
 
-  // Handle buy now
+  // Handle buy now - KEEP SAME STRUCTURE, JUST ENHANCE DATA
   const handleBuyNow = () => {
     // Check fragrance selection
     if (!selectedFragrance && !selectedModelFragrance) {
@@ -1048,6 +1149,15 @@ function ProductPage() {
     const basePrice = getBasePrice();
     const offerPrice = getOfferPrice();
     const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
+    const originalPrice = getOriginalPrice();
+
+    // Calculate summary data
+    const subtotal = offerPrice * quantity;
+    const shipping = subtotal > 1000 ? 0 : 120;
+    const tax = subtotal * 0.18;
+    const total = subtotal + shipping + tax;
+    const originalSubtotal = originalPrice * quantity;
+    const totalSavings = originalSubtotal - subtotal;
 
     // Get default color
     const defaultColor = product.type === "simple"
@@ -1058,15 +1168,15 @@ function ProductPage() {
     const selectedSizeData = product.type === "simple" ? selectedSize : selectedModelSize;
     const thumbnailImage = defaultColor?.images?.[0] || product.thumbnailImage;
 
-    // Prepare Buy Now data
+    // Prepare Buy Now data - SAME STRUCTURE AS BEFORE, JUST ADD EXTRA FIELDS
     const buyNowData = {
       userId,
       productId: product.productId,
       productName: product.productName,
       quantity: quantity,
-      unitPrice: getOriginalPrice(),
+      unitPrice: originalPrice,
       finalPrice: offerPrice,
-      totalPrice: getTotalPrice(),
+      totalPrice: subtotal,
       selectedColor: defaultColor,
       selectedFragrance: selectedFragranceData,
       selectedSize: selectedSizeData,
@@ -1082,16 +1192,32 @@ function ProductPage() {
         offerLabel: currentOffer.offerLabel,
         originalPrice: basePrice,
         offerPrice: offerPrice,
-        savedAmount: (basePrice - offerPrice) * quantity
+        savedAmount: totalSavings
       } : null,
-      thumbnailImage: thumbnailImage
+      thumbnailImage: thumbnailImage,
+
+      // ADD THESE EXTRA FIELDS FOR CHECKOUT
+      summary: {
+        totalItems: quantity,
+        subtotal: subtotal,
+        originalSubtotal: originalSubtotal,
+        totalSavings: totalSavings,
+        shipping: shipping,
+        tax: tax,
+        total: total
+      },
+      grandTotal: total,
+      productSKU: selectedModel?.SKU || product.SKU || null,
+      inStock: true
     };
 
-    // Navigate to checkout with Buy Now data
+    console.log('📍 Buy Now Data being sent:', buyNowData);
+
+    // Navigate to checkout with SAME STRUCTURE as before
     navigate('/checkout', {
       state: {
         buyNowMode: true,
-        productData: buyNowData
+        productData: buyNowData  // ← KEEP SAME KEY "productData"
       }
     });
   };
@@ -1356,28 +1482,29 @@ function ProductPage() {
                     <span className="discount-percent">{getDiscountPercent()}% OFF</span>
                   </>
                 )}
-
-
-
-
               </div>
 
-
-
-              {/* Stock Status */}
-              <div className={`stock-status-badge ${inventoryStatus.status}`}>
-                {inventoryStatus.status === 'checking' ? (
-                  <>Checking stock...</>
-                ) : inventoryStatus.status === 'error' ? (
-                  <>Stock check failed</>
-                ) : inventoryStatus.status === 'out-of-stock' ? (
-                  <>Out of Stock</>
-                ) : inventoryStatus.status === 'low-stock' ? (
-                  <>Low Stock </>
-                ) : (
-                  <>In Stock </>
-                )}
-              </div>
+              {/* ========== CHANGED: Stock Status for CURRENT fragrance ========== */}
+              {selectedFragrance || selectedModelFragrance ? (
+                <div className={`stock-status-badge ${currentFragranceInventory.status}`}>
+                  {currentFragranceInventory.status === 'checking' ? (
+                    <>Checking stock...</>
+                  ) : currentFragranceInventory.status === 'error' ? (
+                    <>Stock check failed</>
+                  ) : currentFragranceInventory.status === 'out-of-stock' ? (
+                    <>Out of Stock</>
+                  ) : currentFragranceInventory.status === 'low-stock' ? (
+                    <>Low Stock: {currentFragranceInventory.stock} left</>
+                  ) : (
+                    <>In Stock: {currentFragranceInventory.stock} available</>
+                  )}
+                </div>
+              ) : (
+                <div className="stock-status-badge no-selection">
+                  Select a fragrance to see stock
+                </div>
+              )}
+              {/* ========== END CHANGED ========== */}
             </div>
 
             {/* REVIEWS ROW */}
@@ -1388,7 +1515,6 @@ function ProductPage() {
               <div className="reviews-count">
                 {reviewsStats.totalReviews} Review{reviewsStats.totalReviews !== 1 ? 's' : ''}
               </div>
-              {/* <div className="reviews-arrow">→</div>  */}
             </div>
 
             {/* FRAGRANCE SELECTION */}
@@ -1409,13 +1535,23 @@ function ProductPage() {
                       ? selectedFragrance === fragrance
                       : selectedModelFragrance === fragrance;
 
+                    // ========== CHANGED: Get THIS fragrance's inventory ==========
+                    const fragranceStock = fragranceInventory[fragrance];
+                    const isOutOfStock = fragranceStock?.status === 'out-of-stock';
+                    const isLowStock = fragranceStock?.status === 'low-stock';
+                    // ========== END CHANGED ==========
+
                     return (
                       <div
                         key={index}
-                        className={`fragrance-box ${isSelected ? 'selected' : ''} ${inventoryStatus.status === 'out-of-stock' ? 'out-of-stock' : ''
+                        className={`fragrance-box ${isSelected ? 'selected' : ''} ${isOutOfStock ? 'out-of-stock' : ''
+                          } ${isLowStock ? 'low-stock' : ''
                           }`}
                         onClick={() => {
-                          if (inventoryStatus.status === 'out-of-stock') return;
+                          // ========== CHANGED: Only prevent if THIS fragrance is out of stock ==========
+                          if (isOutOfStock) return;
+                          // ========== END CHANGED ==========
+
                           if (product.type === "simple") {
                             handleFragranceSelect(fragrance);
                           } else {
@@ -1424,9 +1560,18 @@ function ProductPage() {
                         }}
                       >
                         <div className="fragrance-name">{fragrance}</div>
-                        {inventoryStatus.status === 'out-of-stock' && (
-                          <div className="out-of-stock-overlay">Out of Stock</div>
-                        )}
+
+                        {/* ========== CHANGED: Show stock status for EACH fragrance ========== */}
+                        {/* {fragranceStock && (
+                          <div className={`fragrance-stock-badge ${fragranceStock.status === 'out-of-stock' ? 'out' :
+                              fragranceStock.status === 'low-stock' ? 'low' : 'in'
+                            }`}>
+                            {fragranceStock.status === 'out-of-stock' ? 'Out of Stock' :
+                              fragranceStock.status === 'low-stock' ? 'Low Stock' :
+                                fragranceStock.status === 'in-stock' ? 'In Stock' : 'Checking...'}
+                          </div>
+                        )} */}
+                        {/* ========== END CHANGED ========== */}
                       </div>
                     );
                   })}
@@ -1454,7 +1599,7 @@ function ProductPage() {
                 <button
                   className="quantity-btn minus"
                   onClick={() => handleQuantityChange(-1)}
-                  disabled={quantity <= 1 || inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
+                  disabled={quantity <= 1 || currentFragranceInventory.status === 'out-of-stock' || !selectedFragrance}
                 >
                   −
                 </button>
@@ -1465,8 +1610,8 @@ function ProductPage() {
                   value={quantity}
                   onChange={(e) => {
                     const value = parseInt(e.target.value) || 1;
-                    if (inventoryStatus.status === 'low-stock' || inventoryStatus.status === 'in-stock') {
-                      if (value > inventoryStatus.stock) {
+                    if (currentFragranceInventory.status === 'low-stock' || currentFragranceInventory.status === 'in-stock') {
+                      if (value > currentFragranceInventory.stock) {
                         return;
                       }
                     }
@@ -1475,12 +1620,12 @@ function ProductPage() {
                     }
                   }}
                   className="quantity-input"
-                  disabled={inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
+                  disabled={currentFragranceInventory.status === 'out-of-stock' || !selectedFragrance}
                 />
                 <button
                   className="quantity-btn plus"
                   onClick={() => handleQuantityChange(1)}
-                  disabled={quantity >= maxQuantity || inventoryStatus.status === 'out-of-stock' || !selectedFragrance}
+                  disabled={quantity >= maxQuantity || currentFragranceInventory.status === 'out-of-stock' || !selectedFragrance}
                 >
                   +
                 </button>
@@ -1562,11 +1707,11 @@ function ProductPage() {
                 className={`add-to-cart-btn ${!canPurchase || !selectedFragrance ? 'disabled' : ''}`}
                 onClick={handleAddToCart}
                 disabled={!canPurchase || !selectedFragrance}
-                title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : '')}
+                title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (currentFragranceInventory.status === 'out-of-stock' ? 'Out of Stock' : `Only ${currentFragranceInventory.stock} available`) : '')}
               >
                 {!selectedFragrance && !selectedModelFragrance
                   ? 'Select Fragrance First'
-                  : inventoryStatus.status === 'out-of-stock'
+                  : currentFragranceInventory.status === 'out-of-stock'
                     ? 'Out of Stock'
                     : `Add to Cart`}
               </button>
@@ -1575,11 +1720,11 @@ function ProductPage() {
                 className={`buy-now-btn ${!canPurchase || !selectedFragrance ? 'disabled' : ''}`}
                 onClick={handleBuyNow}
                 disabled={!canPurchase || !selectedFragrance}
-                title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (inventoryStatus.status === 'out-of-stock' ? 'Out of Stock' : `Only ${inventoryStatus.stock} available`) : '')}
+                title={!selectedFragrance ? 'Please select a fragrance' : (!canPurchase ? (currentFragranceInventory.status === 'out-of-stock' ? 'Out of Stock' : `Only ${currentFragranceInventory.stock} available`) : '')}
               >
                 {!selectedFragrance && !selectedModelFragrance
                   ? 'Select Fragrance First'
-                  : inventoryStatus.status === 'out-of-stock'
+                  : currentFragranceInventory.status === 'out-of-stock'
                     ? 'Out of Stock'
                     : `Buy Now`}
               </button>

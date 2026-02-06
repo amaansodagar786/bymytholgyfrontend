@@ -1,4 +1,11 @@
 /* ===================== ADMIN ORDERS SCSS - NO GLOBAL CONFLICTS ===================== */
+@font-face {
+  font-family: "Bold";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+  font-style: normal;
+  // font-weight: 500; 
+}
+
 
 /* Container - Specific to Admin Orders */
 .admin-orders-container {
@@ -38,7 +45,7 @@
     }
     
     h2 {
-      font-family: "Heading", sans-serif;
+      font-family: "Bold", sans-serif;
       color: #2c3e50;
       margin-bottom: 12px;
       font-size: 24px;
@@ -100,7 +107,7 @@
       }
       
       h1 {
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 24px;
         color: #222;
         margin: 0;
@@ -241,7 +248,7 @@
     
     .stat-card-content {
       h3 {
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 20px;
         color: #222;
         margin: 0 0 4px 0;
@@ -441,7 +448,7 @@
       th {
         padding: 16px;
         text-align: left;
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 13px;
         color: #666;
         text-transform: uppercase;
@@ -500,7 +507,7 @@
         gap: 4px;
         
         strong {
-          font-family: "Heading", sans-serif;
+          font-family: "Bold", sans-serif;
           color: #222;
           font-size: 14px;
         }
@@ -599,7 +606,7 @@
         }
         
         .amount-value-display {
-          font-family: "Heading", sans-serif;
+          font-family: "Bold", sans-serif;
           font-size: 15px;
           color: #222;
         }
@@ -871,7 +878,7 @@
       }
       
       h2 {
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 20px;
         color: #222;
         margin: 0;
@@ -913,7 +920,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 16px;
         color: #222;
         margin: 0 0 16px 0;
@@ -946,7 +953,7 @@
         }
         
         .overview-value-section {
-          font-family: "Heading", sans-serif;
+          font-family: "Bold", sans-serif;
           font-size: 14px;
           color: #222;
           
@@ -1128,7 +1135,7 @@
           gap: 8px;
           
           .item-name-section {
-            font-family: "Heading", sans-serif;
+            font-family: "Bold", sans-serif;
             font-size: 15px;
             color: #222;
             flex: 1;
@@ -1191,7 +1198,7 @@
             }
             
             &.total-section {
-              font-family: "Heading", sans-serif;
+              font-family: "Bold", sans-serif;
               color: #222;
               font-size: 15px;
               padding-top: 12px;
@@ -1234,7 +1241,7 @@
         
         &.total-section {
           border-bottom: 2px solid #e5e5e5;
-          font-family: "Heading", sans-serif;
+          font-family: "Bold", sans-serif;
           font-size: 16px;
           color: #222;
           padding-top: 16px;

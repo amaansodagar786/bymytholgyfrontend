@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -20,8 +20,9 @@ const Products = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [updatingProductId, setUpdatingProductId] = useState(null); // ✅ Track which product is updating
+  const [updatingProductId, setUpdatingProductId] = useState(null);
 
+  const swiperRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,18 +36,38 @@ const Products = () => {
     }
   }, [products]);
 
-  // ❌ REMOVE THIS EVENT LISTENER - It's causing the problem!
-  // useEffect(() => {
-  //   const handleWishlistUpdate = () => {
-  //     fetchUserWishlist();
-  //   };
-  //   window.addEventListener("wishlistUpdated", handleWishlistUpdate);
-  //   return () => {
-  //     window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
-  //   };
-  // }, []);
+  const fetchUserWishlist = async () => {
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
 
-  // ✅ FETCH PRODUCTS WITH DEBUG
+    if (!token || !userId) {
+      return;
+    }
+
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/wishlist/my-wishlist`,
+        {
+          params: { userId },
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      const wishlistStatus = {};
+      if (response.data?.wishlist?.length > 0) {
+        response.data.wishlist.forEach(item => {
+          if (item.productId && item.isActive) {
+            wishlistStatus[item.productId] = true;
+          }
+        });
+      }
+
+      setWishlist(wishlistStatus);
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+    }
+  };
+
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
@@ -74,69 +95,8 @@ const Products = () => {
     }
   };
 
-  // ✅ UPDATED: Fetch wishlist
-  const fetchUserWishlist = async () => {
-    const token = localStorage.getItem("token");
-    const userId = localStorage.getItem("userId");
-
-    if (!token || !userId) {
-      return;
-    }
-
-    try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/wishlist/my-wishlist`,
-        {
-          params: { userId },
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      const wishlistStatus = {};
-
-      if (response.data && response.data.wishlist && Array.isArray(response.data.wishlist)) {
-        // Create a map of productId -> wishlist items with FIRST FRAGRANCE
-        const firstFragranceWishlistMap = {};
-
-        response.data.wishlist.forEach(item => {
-          if (item.productId && item.isActive) {
-            const product = products.find(p => p.productId === item.productId);
-            if (product) {
-              const firstFragrance = product.colors?.[0]?.fragrances?.[0] || null;
-              if (item.selectedFragrance === firstFragrance) {
-                firstFragranceWishlistMap[item.productId] = true;
-              }
-            }
-          }
-        });
-
-        // Set wishlist status based on the map
-        products.forEach(product => {
-          const productId = product.productId;
-          // ✅ Don't update if this product is currently being updated
-          if (productId !== updatingProductId) {
-            wishlistStatus[productId] = firstFragranceWishlistMap[productId] || false;
-          }
-        });
-      }
-
-      setWishlist(prev => ({
-        ...prev,
-        ...wishlistStatus
-      }));
-
-      setUpdatingProductId(null); // ✅ Reset updating flag
-
-    } catch (error) {
-      console.error("Error fetching wishlist:", error);
-      setUpdatingProductId(null); // ✅ Reset on error too
-    }
-  };
-
-  // ✅ SIMPLE PRICE CALCULATION
   const calculatePrice = (color) => {
     if (!color) return { finalPrice: 0, discount: 0, hasOffer: false };
-
     const originalPrice = Number(color.originalPrice) || 0;
     let currentPrice = Number(color.currentPrice) || originalPrice;
     let discount = 0;
@@ -168,7 +128,6 @@ const Products = () => {
 
   const toggleWishlist = async (product, e) => {
     e.stopPropagation();
-
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
 
@@ -180,22 +139,18 @@ const Products = () => {
 
     const isCurrentlyWishlisted = wishlist[product.productId];
     const productId = product.productId;
-
-    // ✅ Get FIRST FRAGRANCE from product
     const firstFragrance = product.colors?.[0]?.fragrances?.[0] || null;
 
-    // ✅ Set updating flag
-    setUpdatingProductId(productId);
+    setUpdatingProductId(productId); // ✅ Set updating
 
     try {
-      // ✅ Update UI IMMEDIATELY and PERSISTENTLY
+      // ✅ Update UI immediately
       setWishlist(prev => ({
         ...prev,
-        [productId]: !isCurrentlyWishlisted // Toggle state
+        [productId]: !isCurrentlyWishlisted
       }));
 
       if (isCurrentlyWishlisted) {
-        // ✅ Remove with FIRST FRAGRANCE
         await axios.delete(
           `${import.meta.env.VITE_API_URL}/wishlist/remove/${productId}?userId=${userId}&fragrance=${firstFragrance}`,
           {
@@ -205,14 +160,10 @@ const Products = () => {
             }
           }
         );
-
         toast.success("Removed from wishlist");
-
       } else {
-        // ✅ Add to wishlist with FIRST FRAGRANCE
         const color = product.colors?.[0];
         const priceInfo = calculatePrice(color);
-
         const wishlistData = {
           userId,
           productId: productId,
@@ -241,36 +192,35 @@ const Products = () => {
             }
           }
         );
-
         toast.success("Added to wishlist!");
-
         if (window.innerWidth > 768) {
           setShowWishlistSidebar(true);
         }
       }
 
-      // ✅ FIX: ADD THIS LINE - Dispatch event to update navbar
-      window.dispatchEvent(new Event('wishlistUpdated'));
+      // ✅ IMPORTANT: Reset updating flag after successful operation
+      setUpdatingProductId(null);
 
-      // ✅ You can remove this setTimeout if you want instant update
-      // setTimeout(() => {
-      //   fetchUserWishlist();
-      // }, 500);
+      // Refresh wishlist to sync with server
+      fetchUserWishlist();
+
+      window.dispatchEvent(new Event('wishlistUpdated'));
 
     } catch (error) {
       console.error("Error toggling wishlist:", error);
 
-      // ✅ ROLLBACK if error occurs
+      // ✅ Rollback UI on error
       setWishlist(prev => ({
         ...prev,
         [productId]: isCurrentlyWishlisted
       }));
 
-      setUpdatingProductId(null); // Reset flag
+      // ✅ Reset updating flag on error too
+      setUpdatingProductId(null);
 
       if (error.response?.data?.message) {
         if (error.response.data.message.includes("already in your wishlist")) {
-          // Mark as wishlisted
+          // If already in wishlist, mark it as wishlisted
           setWishlist(prev => ({
             ...prev,
             [productId]: true
@@ -285,9 +235,15 @@ const Products = () => {
     }
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   return (
     <>
-      {/* Toast Container - Positioned at top center */}
       <ToastContainer
         position="top-center"
         autoClose={3000}
@@ -316,133 +272,165 @@ const Products = () => {
         />
       )}
 
-      <section className="products-showcase">
-        <div className="products-slider-container">
+      <section className="product-showcase">
+        <div className="product-section-header">
+          <h2 className="product-section-title">Our Products</h2>
+          <p className="product-section-subtitle">Discover our exclusive collection</p>
+        </div>
+
+        <div className="product-slider-container">
           {isLoading ? (
-            <div className="loading-products">
-              <div className="loading-spinner"></div>
+            <div className="product-loading">
+              <div className="product-loading-spinner"></div>
               <p>Loading products...</p>
             </div>
           ) : error ? (
-            <div className="error-state">
-              <p className="error-message">{error}</p>
-              <button className="retry-btn" onClick={fetchProducts}>
+            <div className="product-error-state">
+              <p className="product-error-message">{error}</p>
+              <button className="product-retry-btn" onClick={fetchProducts}>
                 Try Again
               </button>
             </div>
           ) : products.length === 0 ? (
-            <div className="empty-state">
+            <div className="product-empty-state">
               <p>No products found</p>
             </div>
           ) : (
-            <Swiper
-              modules={[Navigation]}
-              slidesPerView={5}
-              spaceBetween={32}
-              navigation={{
-                nextEl: ".prod-next",
-                prevEl: ".prod-prev",
-              }}
-              breakpoints={{
-                0: { slidesPerView: 2, spaceBetween: 15 },
-                768: { slidesPerView: 2, spaceBetween: 20 },
-                1024: { slidesPerView: 5, spaceBetween: 32 },
-              }}
-            >
-              {products.map((product) => {
-                const color = product.colors?.[0];
-                const image = product.thumbnailImage || color?.images?.[0];
-                const isWishlisted = wishlist[product.productId] || false;
-                const isUpdating = updatingProductId === product.productId; // ✅ Check if updating
+            <>
+              <Swiper
+                ref={swiperRef}
+                modules={[Navigation]}
+                slidesPerView={5}
+                spaceBetween={48}
+                loop={false}
+                navigation={{
+                  nextEl: ".product-next",
+                  prevEl: ".product-prev",
+                }}
+                breakpoints={{
+                  0: {
+                    slidesPerView: 1,
+                    spaceBetween: 15
+                  },
+                  576: {
+                    slidesPerView: 2,
+                    spaceBetween: 20
+                  },
+                  768: {
+                    slidesPerView: 2,
+                    spaceBetween: 20
+                  },
+                  992: {
+                    slidesPerView: 3,
+                    spaceBetween: 30
+                  },
+                  1200: {
+                    slidesPerView: 5,
+                    spaceBetween: 48
+                  },
+                }}
+              >
+                {products.map((product) => {
+                  const color = product.colors?.[0];
+                  const image = product.thumbnailImage || color?.images?.[0];
+                  const isWishlisted = wishlist[product.productId] || false;
+                  const isUpdating = updatingProductId === product.productId;
+                  const priceInfo = calculatePrice(color);
 
-                const priceInfo = calculatePrice(color);
-
-                return (
-                  <SwiperSlide key={product.productId}>
-                    <div
-                      className="product-item"
-                      onClick={() => {
-                        const urlName = product.productName
-                          .toLowerCase()
-                          .replace(/[^\w\s]/g, '')
-                          .replace(/\s+/g, '-');
-
-                        navigate(`/product/${urlName}`, {
-                          state: { productId: product.productId }
-                        });
-                      }}
-                    >
-                      <div className="image-wrapper">
-                        {priceInfo.hasOffer && (
-                          <div className="special-offer-badge">
-                            {priceInfo.offerLabel}
-                          </div>
-                        )}
-
-                        <button
-                          className={`wishlist-btn ${isWishlisted ? 'wishlisted' : ''} ${isUpdating ? 'updating' : ''}`}
-                          onClick={(e) => toggleWishlist(product, e)}
-                          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-                          disabled={isUpdating} // ✅ Disable while updating
-                        >
-                          {isUpdating ? (
-                            <span className="loading-spinner-small"></span>
-                          ) : isWishlisted ? (
-                            <FaHeart className="wishlist-icon filled" />
-                          ) : (
-                            <FaRegHeart className="wishlist-icon" />
+                  return (
+                    <SwiperSlide key={product.productId}>
+                      <div
+                        className="product-card"
+                        onClick={() => {
+                          const urlName = product.productName
+                            .toLowerCase()
+                            .replace(/[^\w\s]/g, '')
+                            .replace(/\s+/g, '-');
+                          navigate(`/product/${urlName}`, {
+                            state: { productId: product.productId }
+                          });
+                        }}
+                      >
+                        <div className="product-image-container">
+                          {priceInfo.hasOffer && (
+                            <div className="product-special-badge">
+                              {priceInfo.offerLabel}
+                            </div>
                           )}
-                        </button>
 
-                        {image && (
-                          <img
-                            src={image}
-                            alt={product.productName}
-                            loading="lazy"
-                          />
-                        )}
-                      </div>
+                          <button
+                            className={`product-wishlist-btn ${isWishlisted ? 'product-wishlisted' : ''} ${isUpdating ? 'product-updating' : ''}`}
+                            onClick={(e) => toggleWishlist(product, e)}
+                            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? (
+                              <span className="product-loading-small"></span>
+                            ) : isWishlisted ? (
+                              <FaHeart className="product-wishlist-icon product-filled" />
+                            ) : (
+                              <FaRegHeart className="product-wishlist-icon" />
+                            )}
+                          </button>
 
-                      <h3 className="product-name">
-                        {product.productName}
-                      </h3>
+                          {image && (
+                            <img
+                              src={image}
+                              alt={product.productName}
+                              loading="lazy"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://via.placeholder.com/300x300?text=No+Image";
+                              }}
+                            />
+                          )}
+                        </div>
 
-                      <p className="desc">
-                        {product.description || " "}
-                      </p>
+                        <h3 className="product-card-name">
+                          {product.productName}
+                        </h3>
 
-                      <div className="price-row">
-                        <span className="price">
-                          ₹{priceInfo.finalPrice}
-                        </span>
+                        <p className="product-card-desc">
+                          {product.description || "Premium quality product"}
+                        </p>
 
-                        {priceInfo.originalPrice > priceInfo.finalPrice && (
-                          <span className="original">
-                            ₹{priceInfo.originalPrice}
+                        <div className="product-price-container">
+                          <span className="product-price-current">
+                            ₹{formatCurrency(priceInfo.finalPrice)}
                           </span>
-                        )}
 
-                        {priceInfo.discount > 0 && (
-                          <span className="off-badge">
-                            {priceInfo.discount}% OFF
-                          </span>
-                        )}
+                          {priceInfo.originalPrice > priceInfo.finalPrice && (
+                            <>
+                              <span className="product-price-original">
+                                ₹{formatCurrency(priceInfo.originalPrice)}
+                              </span>
+                              {priceInfo.discount > 0 && (
+                                <span className="product-discount-badge">
+                                  {priceInfo.discount}% OFF
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </SwiperSlide>
-                );
-              })}
-            </Swiper>
+                    </SwiperSlide>
+                  );
+                })}
+              </Swiper>
+
+              {/* ✅ ARROWS - Show only when there are enough products */}
+              {products.length > 5 && (
+                <div className="product-slider-arrows">
+                  <button className="product-prev" aria-label="Previous">
+                    <FaArrowLeft className="product-arrow-icon" />
+                  </button>
+                  <button className="product-next" aria-label="Next">
+                    <FaArrowRight className="product-arrow-icon" />
+                  </button>
+                </div>
+              )}
+            </>
           )}
-
-          <div className="slider-arrows">
-            <button className="prod-prev" aria-label="Previous">
-              <FaArrowLeft className="arrow-icon" />
-            </button>
-            <button className="prod-next" aria-label="Next">
-              <FaArrowRight className="arrow-icon" />
-            </button>
-          </div>
         </div>
       </section>
     </>

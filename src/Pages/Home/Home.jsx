@@ -19,7 +19,7 @@ function Home() {
       {showValmiki && <Valmikijyot />}
       <HeroSection />
       <About />
-      <Products />
+      <Products />  
       <CtaSection />
       <ImagesSection />  
       <Showcase />

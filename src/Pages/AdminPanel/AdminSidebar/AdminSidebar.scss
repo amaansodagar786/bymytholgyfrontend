@@ -14,6 +14,16 @@
   font-style: normal;
 }
 
+
+@font-face {
+  font-family: "Bold";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+  font-style: normal;
+  // font-weight: 500; 
+}
+
+
+
 // Variables
 $sidebar-bg: #5a3ec8;
 $page-bg: #f4f6ff;
@@ -107,7 +117,8 @@ $red: #e74c3c;
       margin: 0;
       white-space: nowrap;
       letter-spacing: 0.5px;
-      font-family: "Heading";
+      font-family: "Bold", sans-serif;
+
     }
   }
 
@@ -172,7 +183,8 @@ $red: #e74c3c;
     transition: all 0.2s ease;
     border-radius: 0;
     width: 100%;
-    font-family: "Content";
+            font-family: "Content", sans-serif;
+
 
     &:hover {
       color: #fff;

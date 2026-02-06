@@ -260,7 +260,7 @@ const ProductOffers = () => {
   const colorStats = getColorStats();
 
   return (
-    <div className="product-offers-container">
+    <div className="color-offer-container">
       <ToastContainer
         position="top-center"
         autoClose={3000}
@@ -275,21 +275,21 @@ const ProductOffers = () => {
       />
 
       {/* Header */}
-      <header className="offers-header">
-        <div className="header-content">
-          <div className="header-title">
-            <FiTag className="header-icon" />
+      <header className="color-offer-header">
+        <div className="color-offer-header-content">
+          <div className="color-offer-header-title">
+            <FiTag className="color-offer-header-icon" />
             <h1>Offers Management</h1>
-            <span className="offers-badge">{products.length}</span>
+            <span className="color-offer-badge">{products.length}</span>
           </div>
 
-          <div className="header-actions">
+          <div className="color-offer-header-actions">
             <button
-              className="refresh-offers-btn"
+              className="color-offer-refresh-btn"
               onClick={fetchProducts}
               disabled={loading}
             >
-              <FiRefreshCw className={loading ? "spinning" : ""} />
+              <FiRefreshCw className={loading ? "color-offer-spinning" : ""} />
               Refresh
             </button>
           </div>
@@ -297,32 +297,32 @@ const ProductOffers = () => {
       </header>
 
       {/* Stats Cards - Showing color stats */}
-      <div className="offers-stats-grid">
-        <div className="offers-stat-card">
-          <div className="stat-icon-card total-products">
+      <div className="color-offer-stats-grid">
+        <div className="color-offer-stat-card">
+          <div className="color-offer-stat-icon-card color-offer-total-products">
             <FiPackage />
           </div>
-          <div className="stat-card-content">
+          <div className="color-offer-stat-card-content">
             <h3>{products.length || 0}</h3>
             <p>Total Products</p>
           </div>
         </div>
 
-        <div className="offers-stat-card">
-          <div className="stat-icon-card colors-with-offers">
+        <div className="color-offer-stat-card">
+          <div className="color-offer-stat-icon-card color-offer-colors-with-offers">
             <FiTag />
           </div>
-          <div className="stat-card-content">
+          <div className="color-offer-stat-card-content">
             <h3>{colorStats.colorsWithOffers || 0}</h3>
             <p>Products with Offers</p>
           </div>
         </div>
 
-        <div className="offers-stat-card">
-          <div className="stat-icon-card active-offers">
+        <div className="color-offer-stat-card">
+          <div className="color-offer-stat-icon-card color-offer-active-offers">
             <FiPercent />
           </div>
-          <div className="stat-card-content">
+          <div className="color-offer-stat-card-content">
             <h3>{colorStats.activeOffers || 0}</h3>
             <p>Active Offers</p>
           </div>
@@ -330,21 +330,21 @@ const ProductOffers = () => {
       </div>
 
       {/* Products List */}
-      <div className="offers-table-wrapper">
+      <div className="color-offer-table-wrapper">
         {loading && products.length === 0 ? (
-          <div className="offers-loading-overlay">
-            <div className="offers-loading-spinner"></div>
+          <div className="color-offer-loading-overlay">
+            <div className="color-offer-loading-spinner"></div>
             <p>Loading products with color offers...</p>
           </div>
         ) : products.length === 0 ? (
-          <div className="offers-no-data">
-            <div className="offers-empty-state">
+          <div className="color-offer-no-data">
+            <div className="color-offer-empty-state">
               <FiTag />
               <p>No products found</p>
             </div>
           </div>
         ) : (
-          <div className="offers-list-container">
+          <div className="color-offer-list-container">
             {products.map(product => {
               const isExpanded = expandedProduct === product.productId;
               
@@ -361,52 +361,52 @@ const ProductOffers = () => {
               }
 
               return (
-                <div key={product.productId} className="product-offer-card">
+                <div key={product.productId} className="color-offer-product-card">
                   {/* PRODUCT HEADER */}
                   <div 
-                    className="product-offer-header"
+                    className="color-offer-product-header"
                     onClick={() => toggleProductExpansion(product.productId)}
                   >
-                    <div className="product-offer-info">
-                      <div className="product-image-container">
+                    <div className="color-offer-product-info">
+                      <div className="color-offer-product-image-container">
                         {product.thumbnailImage ? (
                           <img
                             src={product.thumbnailImage}
                             alt={product.productName}
-                            className="product-thumbnail"
+                            className="color-offer-product-thumbnail"
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src = "https://via.placeholder.com/50x50?text=No+Image";
                             }}
                           />
                         ) : (
-                          <div className="product-image-placeholder">
+                          <div className="color-offer-product-image-placeholder">
                             <FiPackage />
                           </div>
                         )}
                       </div>
 
-                      <div className="product-details">
-                        <div className="product-name-row">
-                          <h3 className="product-name">{product.productName}</h3>
-                          <span className="product-type-badge">
+                      <div className="color-offer-product-details">
+                        <div className="color-offer-product-name-row">
+                          <h3 className="color-offer-product-name">{product.productName}</h3>
+                          <span className="color-offer-product-type-badge">
                             {product.type === "simple" ? "Simple Product" : "Variable Product"}
                           </span>
-                          <span className="offers-count-badge">
+                          <span className="color-offer-offers-count-badge">
                             {productOffersCount} Offer(s)
                           </span>
                         </div>
 
-                        <div className="product-meta-row">
-                          <span className="product-category">
+                        <div className="color-offer-product-meta-row">
+                          <span className="color-offer-product-category">
                             {product.categoryName || "Uncategorized"}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="product-offer-actions">
-                      <div className="expand-icon">
+                    <div className="color-offer-product-actions">
+                      <div className="color-offer-expand-icon">
                         {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
                       </div>
                     </div>
@@ -414,63 +414,63 @@ const ProductOffers = () => {
 
                   {/* EXPANDED CONTENT - COLOR LIST */}
                   {isExpanded && (
-                    <div className="product-colors-section">
+                    <div className="color-offer-colors-section">
                       {/* SIMPLE PRODUCT COLORS */}
                       {product.type === "simple" && product.colors && (
-                        <div className="simple-colors-container">
-                          <h4 className="section-title">
+                        <div className="color-offer-simple-colors-container">
+                          <h4 className="color-offer-section-title">
                             <FiSquare />
                             Product ({product.colors.length})
                           </h4>
-                          <div className="colors-grid">
+                          <div className="color-offer-colors-grid">
                             {product.colors.map(color => {
                               const hasOffer = color.hasOffer;
                               const isActive = hasOffer && color.offer?.isCurrentlyValid;
 
                               return (
-                                <div key={color.colorId} className="color-card">
-                                  <div className="color-card-header">
-                                    <div className="color-info">
-                                      <div className="color-name-row">
+                                <div key={color.colorId} className="color-offer-color-card">
+                                  <div className="color-offer-color-card-header">
+                                    <div className="color-offer-color-info">
+                                      <div className="color-offer-color-name-row">
                                         {hasOffer && (
-                                          <span className={`color-offer-status ${isActive ? 'active' : 'inactive'}`}>
+                                          <span className={`color-offer-color-offer-status ${isActive ? 'color-offer-active' : 'color-offer-inactive'}`}>
                                             {isActive ? (
                                               <>
-                                                <FiCheck className="status-icon" />
+                                                <FiCheck className="color-offer-status-icon" />
                                                 Active
                                               </>
                                             ) : (
                                               <>
-                                                <FiAlertCircle className="status-icon" />
+                                                <FiAlertCircle className="color-offer-status-icon" />
                                                 Inactive
                                               </>
                                             )}
                                           </span>
                                         )}
                                       </div>
-                                      <div className="color-pricing">
+                                      <div className="color-offer-color-pricing">
                                         {hasOffer && color.offerPrice ? (
-                                          <div className="offer-pricing">
-                                            <span className="original-price">
+                                          <div className="color-offer-offer-pricing">
+                                            <span className="color-offer-original-price">
                                               ₹{color.originalPriceDisplay?.toFixed(2) || color.currentPrice?.toFixed(2)}
                                             </span>
-                                            <span className="current-price">
+                                            <span className="color-offer-current-price">
                                               ₹{color.offerPrice.toFixed(2)}
                                             </span>
-                                            <span className="discount-badge">
+                                            <span className="color-offer-discount-badge">
                                               {color.offer.offerPercentage}% OFF
                                             </span>
                                           </div>
                                         ) : (
-                                          <span className="regular-price">
+                                          <span className="color-offer-regular-price">
                                             ₹{color.currentPrice?.toFixed(2) || "0.00"}
                                           </span>
                                         )}
                                       </div>
                                     </div>
-                                    <div className="color-actions">
+                                    <div className="color-offer-color-actions">
                                       <button
-                                        className={`offer-action-btn ${hasOffer ? 'edit' : 'add'}`}
+                                        className={`color-offer-action-btn ${hasOffer ? 'color-offer-edit' : 'color-offer-add'}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           openAddOffer(product, color, product.modelName || "Default");
@@ -490,7 +490,7 @@ const ProductOffers = () => {
                                       </button>
                                       {hasOffer && color.offer && (
                                         <button
-                                          className="remove-offer-btn"
+                                          className="color-offer-remove-btn"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             openRemoveConfirmModal(
@@ -511,18 +511,18 @@ const ProductOffers = () => {
                                   
                                   {/* Offer Details */}
                                   {hasOffer && color.offer && (
-                                    <div className="offer-details">
-                                      <div className="offer-details-grid">
-                                        <div className="offer-detail-item">
-                                          <span className="offer-label">Label:</span>
+                                    <div className="color-offer-details">
+                                      <div className="color-offer-details-grid">
+                                        <div className="color-offer-detail-item">
+                                          <span className="color-offer-label">Label:</span>
                                           <span>{color.offer.offerLabel}</span>
                                         </div>
-                                        <div className="offer-detail-item">
-                                          <span className="offer-label">Start Date:</span>
+                                        <div className="color-offer-detail-item">
+                                          <span className="color-offer-label">Start Date:</span>
                                           <span>{formatDate(color.offer.startDate)}</span>
                                         </div>
-                                        <div className="offer-detail-item">
-                                          <span className="offer-label">End Date:</span>
+                                        <div className="color-offer-detail-item">
+                                          <span className="color-offer-label">End Date:</span>
                                           <span>{formatDate(color.offer.endDate)}</span>
                                         </div>
                                       </div>
@@ -537,66 +537,66 @@ const ProductOffers = () => {
 
                       {/* VARIABLE PRODUCT MODELS */}
                       {product.type === "variable" && product.models && (
-                        <div className="variable-models-container">
+                        <div className="color-offer-variable-models-container">
                           {product.models.map((model, modelIndex) => (
-                            <div key={modelIndex} className="model-section">
-                              <h4 className="section-title">
+                            <div key={modelIndex} className="color-offer-model-section">
+                              <h4 className="color-offer-section-title">
                                 <FiType />
                                 {model.modelName} 
-                                <span className="model-sku"> ({model.SKU})</span>
+                                <span className="color-offer-model-sku"> ({model.SKU})</span>
                               </h4>
-                              <div className="model-colors">
+                              <div className="color-offer-model-colors">
                                 {model.colors && model.colors.length > 0 ? (
-                                  <div className="colors-grid">
+                                  <div className="color-offer-colors-grid">
                                     {model.colors.map(color => {
                                       const hasOffer = color.hasOffer;
                                       const isActive = hasOffer && color.offer?.isCurrentlyValid;
 
                                       return (
-                                        <div key={color.colorId} className="color-card">
-                                          <div className="color-card-header">
-                                            <div className="color-info">
-                                              <div className="color-name-row">
-                                                <span className="color-name">{color.colorName}</span>
+                                        <div key={color.colorId} className="color-offer-color-card">
+                                          <div className="color-offer-color-card-header">
+                                            <div className="color-offer-color-info">
+                                              <div className="color-offer-color-name-row">
+                                                <span className="color-offer-color-name">{color.colorName}</span>
                                                 {hasOffer && (
-                                                  <span className={`color-offer-status ${isActive ? 'active' : 'inactive'}`}>
+                                                  <span className={`color-offer-color-offer-status ${isActive ? 'color-offer-active' : 'color-offer-inactive'}`}>
                                                     {isActive ? (
                                                       <>
-                                                        <FiCheck className="status-icon" />
+                                                        <FiCheck className="color-offer-status-icon" />
                                                         Active
                                                       </>
                                                     ) : (
                                                       <>
-                                                        <FiAlertCircle className="status-icon" />
+                                                        <FiAlertCircle className="color-offer-status-icon" />
                                                         Inactive
                                                       </>
                                                     )}
                                                   </span>
                                                 )}
                                               </div>
-                                              <div className="color-pricing">
+                                              <div className="color-offer-color-pricing">
                                                 {hasOffer && color.offerPrice ? (
-                                                  <div className="offer-pricing">
-                                                    <span className="original-price">
+                                                  <div className="color-offer-offer-pricing">
+                                                    <span className="color-offer-original-price">
                                                       ₹{color.originalPriceDisplay?.toFixed(2) || color.currentPrice?.toFixed(2)}
                                                     </span>
-                                                    <span className="current-price">
+                                                    <span className="color-offer-current-price">
                                                       ₹{color.offerPrice.toFixed(2)}
                                                     </span>
-                                                    <span className="discount-badge">
+                                                    <span className="color-offer-discount-badge">
                                                       {color.offer.offerPercentage}% OFF
                                                     </span>
                                                   </div>
                                                 ) : (
-                                                  <span className="regular-price">
+                                                  <span className="color-offer-regular-price">
                                                     ₹{color.currentPrice?.toFixed(2) || "0.00"}
                                                   </span>
                                                 )}
                                               </div>
                                             </div>
-                                            <div className="color-actions">
+                                            <div className="color-offer-color-actions">
                                               <button
-                                                className={`offer-action-btn ${hasOffer ? 'edit' : 'add'}`}
+                                                className={`color-offer-action-btn ${hasOffer ? 'color-offer-edit' : 'color-offer-add'}`}
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   openAddOffer(
@@ -621,7 +621,7 @@ const ProductOffers = () => {
                                               </button>
                                               {hasOffer && color.offer && (
                                                 <button
-                                                  className="remove-offer-btn"
+                                                  className="color-offer-remove-btn"
                                                   onClick={(e) => {
                                                     e.stopPropagation();
                                                     openRemoveConfirmModal(
@@ -642,22 +642,22 @@ const ProductOffers = () => {
                                           
                                           {/* Offer Details */}
                                           {hasOffer && color.offer && (
-                                            <div className="offer-details">
-                                              <div className="offer-details-grid">
-                                                <div className="offer-detail-item">
-                                                  <span className="offer-label">Label:</span>
+                                            <div className="color-offer-details">
+                                              <div className="color-offer-details-grid">
+                                                <div className="color-offer-detail-item">
+                                                  <span className="color-offer-label">Label:</span>
                                                   <span>{color.offer.offerLabel}</span>
                                                 </div>
-                                                <div className="offer-detail-item">
-                                                  <span className="offer-label">Model:</span>
+                                                <div className="color-offer-detail-item">
+                                                  <span className="color-offer-label">Model:</span>
                                                   <span>{color.offer.modelName}</span>
                                                 </div>
-                                                <div className="offer-detail-item">
-                                                  <span className="offer-label">Start Date:</span>
+                                                <div className="color-offer-detail-item">
+                                                  <span className="color-offer-label">Start Date:</span>
                                                   <span>{formatDate(color.offer.startDate)}</span>
                                                 </div>
-                                                <div className="offer-detail-item">
-                                                  <span className="offer-label">End Date:</span>
+                                                <div className="color-offer-detail-item">
+                                                  <span className="color-offer-label">End Date:</span>
                                                   <span>{formatDate(color.offer.endDate)}</span>
                                                 </div>
                                               </div>
@@ -668,7 +668,7 @@ const ProductOffers = () => {
                                     })}
                                   </div>
                                 ) : (
-                                  <p className="no-colors-text">No colors available for this model</p>
+                                  <p className="color-offer-no-colors-text">No colors available for this model</p>
                                 )}
                               </div>
                             </div>
@@ -686,18 +686,18 @@ const ProductOffers = () => {
 
       {/* ADD/EDIT OFFER MODAL - COLOR LEVEL */}
       {showAddOffer && selectedProduct && selectedColor && (
-        <div className="offers-modal-overlay">
-          <div className="modal-backdrop" onClick={() => setShowAddOffer(false)}></div>
-          <div className="offers-modal-content">
-            <div className="modal-header-section">
-              <div className="modal-title-section">
+        <div className="color-offer-modal-overlay">
+          <div className="color-offer-modal-backdrop" onClick={() => setShowAddOffer(false)}></div>
+          <div className="color-offer-modal-content">
+            <div className="color-offer-modal-header">
+              <div className="color-offer-modal-title">
                 <FiTag />
                 <h2>
                   {selectedColor.hasOffer ? 'Edit Offer' : 'Add Offer'}
                 </h2>
               </div>
               <button
-                className="modal-close-btn"
+                className="color-offer-modal-close-btn"
                 onClick={() => setShowAddOffer(false)}
                 disabled={loading}
               >
@@ -705,21 +705,21 @@ const ProductOffers = () => {
               </button>
             </div>
 
-            <div className="modal-body-section">
+            <div className="color-offer-modal-body">
               {/* Product & Color Info */}
-              <div className="modal-section-item">
-                <h3 className="section-title-item">
+              <div className="color-offer-modal-section">
+                <h3 className="color-offer-modal-section-title">
                   <FiPackage />
                   Product & Color Details
                 </h3>
-                <div className="product-info-grid-section">
-                  <div className="info-item-section">
-                    <span className="info-label-section">Product Name</span>
-                    <span className="info-value-section">{selectedProduct.productName}</span>
+                <div className="color-offer-product-info-grid">
+                  <div className="color-offer-info-item">
+                    <span className="color-offer-info-label">Product Name</span>
+                    <span className="color-offer-info-value">{selectedProduct.productName}</span>
                   </div>
-                  <div className="info-item-section">
-                    <span className="info-label-section">Current Price</span>
-                    <span className="info-value-section">
+                  <div className="color-offer-info-item">
+                    <span className="color-offer-info-label">Current Price</span>
+                    <span className="color-offer-info-value">
                       ₹{selectedColor.currentPrice?.toFixed(2) || "0.00"}
                     </span>
                   </div>
@@ -727,15 +727,15 @@ const ProductOffers = () => {
               </div>
 
               {/* Offer Form */}
-              <div className="modal-section-item">
-                <h3 className="section-title-item">
+              <div className="color-offer-modal-section">
+                <h3 className="color-offer-modal-section-title">
                   <FiPercent />
                   Offer Details
                 </h3>
-                <div className="form-section">
-                  <div className="form-group-section">
+                <div className="color-offer-form-section">
+                  <div className="color-offer-form-group">
                     <label>Discount Percentage *</label>
-                    <div className="percentage-input-section">
+                    <div className="color-offer-percentage-input">
                       <input
                         type="number"
                         name="offerPercentage"
@@ -746,14 +746,14 @@ const ProductOffers = () => {
                         onChange={handleFormChange}
                         placeholder="e.g., 20"
                         disabled={loading}
-                        className="form-input-section"
+                        className="color-offer-form-input"
                       />
-                      <span className="percent-symbol-section">%</span>
+                      <span className="color-offer-percent-symbol">%</span>
                     </div>
-                    <small className="input-hint">Enter discount percentage (0-100)</small>
+                    <small className="color-offer-input-hint">Enter discount percentage (0-100)</small>
                   </div>
 
-                  <div className="form-group-section">
+                  <div className="color-offer-form-group">
                     <label>Offer Label</label>
                     <input
                       type="text"
@@ -762,11 +762,11 @@ const ProductOffers = () => {
                       onChange={handleFormChange}
                       placeholder="e.g., Summer Sale, Clearance, etc."
                       disabled={loading}
-                      className="form-input-section"
+                      className="color-offer-form-input"
                     />
                   </div>
 
-                  <div className="form-group-section">
+                  <div className="color-offer-form-group">
                     <label>Start Date</label>
                     <input
                       type="date"
@@ -774,12 +774,12 @@ const ProductOffers = () => {
                       value={offerForm.startDate}
                       onChange={handleFormChange}
                       disabled={loading}
-                      className="form-input-section"
+                      className="color-offer-form-input"
                     />
                   </div>
 
-                  <div className="form-group-section">
-                    <label className="checkbox-label-section">
+                  <div className="color-offer-form-group">
+                    <label className="color-offer-checkbox-label">
                       <input
                         type="checkbox"
                         name="hasEndDate"
@@ -788,12 +788,12 @@ const ProductOffers = () => {
                         disabled={loading}
                       />
                       Set End Date
-                      <span className="checkbox-hint">(Leave unchecked for ongoing offer)</span>
+                      <span className="color-offer-checkbox-hint">(Leave unchecked for ongoing offer)</span>
                     </label>
                   </div>
 
                   {offerForm.hasEndDate && (
-                    <div className="form-group-section">
+                    <div className="color-offer-form-group">
                       <label>End Date</label>
                       <input
                         type="date"
@@ -802,28 +802,28 @@ const ProductOffers = () => {
                         onChange={handleFormChange}
                         min={offerForm.startDate}
                         disabled={loading}
-                        className="form-input-section"
+                        className="color-offer-form-input"
                       />
-                      <small className="input-hint">Leave blank if no end date</small>
+                      <small className="color-offer-input-hint">Leave blank if no end date</small>
                     </div>
                   )}
 
                   {/* Price Preview */}
                   {selectedColor.currentPrice && offerForm.offerPercentage && (
-                    <div className="price-preview-section">
-                      <div className="preview-row-section">
+                    <div className="color-offer-price-preview">
+                      <div className="color-offer-preview-row">
                         <span>Original Price:</span>
                         <span>₹{selectedColor.currentPrice.toFixed(2)}</span>
                       </div>
-                      <div className="preview-row-section">
+                      <div className="color-offer-preview-row">
                         <span>Discount ({offerForm.offerPercentage}%):</span>
-                        <span className="discount-preview">
+                        <span className="color-offer-discount-preview">
                           -₹{(selectedColor.currentPrice * (parseFloat(offerForm.offerPercentage) / 100)).toFixed(2)}
                         </span>
                       </div>
-                      <div className="preview-row-section total-section">
+                      <div className="color-offer-preview-row color-offer-total-row">
                         <span>Offer Price:</span>
-                        <strong className="final-price">
+                        <strong className="color-offer-final-price">
                           ₹{(selectedColor.currentPrice - (selectedColor.currentPrice * (parseFloat(offerForm.offerPercentage) / 100))).toFixed(2)}
                         </strong>
                       </div>
@@ -833,22 +833,22 @@ const ProductOffers = () => {
               </div>
             </div>
 
-            <div className="modal-footer-section">
+            <div className="color-offer-modal-footer">
               <button
-                className="btn-secondary-section"
+                className="color-offer-btn-secondary"
                 onClick={() => setShowAddOffer(false)}
                 disabled={loading}
               >
                 Cancel
               </button>
               <button
-                className="btn-primary-section"
+                className="color-offer-btn-primary"
                 onClick={handleAddColorOffer}
                 disabled={loading || !offerForm.offerPercentage}
               >
                 {loading ? (
                   <>
-                    <FiRefreshCw className="spinning" />
+                    <FiRefreshCw className="color-offer-spinning" />
                     {selectedColor.hasOffer ? 'Updating...' : 'Adding...'}
                   </>
                 ) : (
@@ -862,45 +862,44 @@ const ProductOffers = () => {
 
       {/* CONFIRMATION MODAL */}
       {showConfirmModal && (
-        <div className="confirmation-modal-overlay">
-          <div className="modal-backdrop" onClick={() => setShowConfirmModal(false)}></div>
-          <div className="confirmation-modal-content">
-            <div className="confirmation-modal-header">
-              <div className="confirmation-modal-title">
-                <FiAlertTriangle className="warning-icon" />
+        <div className="color-offer-confirmation-modal-overlay">
+          <div className="color-offer-confirmation-modal-backdrop" onClick={() => setShowConfirmModal(false)}></div>
+          <div className="color-offer-confirmation-modal-content">
+            <div className="color-offer-confirmation-modal-header">
+              <div className="color-offer-confirmation-modal-title">
+                <FiAlertTriangle className="color-offer-warning-icon" />
                 <h2>Confirm Action</h2>
               </div>
               <button
-                className="confirmation-modal-close"
+                className="color-offer-confirmation-modal-close"
                 onClick={() => setShowConfirmModal(false)}
               >
                 <FiX />
               </button>
             </div>
 
-            <div className="confirmation-modal-body">
+            <div className="color-offer-confirmation-modal-body">
               {confirmAction.type === "remove_offer" && (
                 <>
-                  <p className="confirmation-message">
+                  <p className="color-offer-confirmation-message">
                     Are you sure you want to remove this offer?
                   </p>
-                  <div className="confirmation-details">
-                    {/* <p><strong>Color:</strong> {confirmAction.colorName}</p> */}
+                  <div className="color-offer-confirmation-details">
                     <p>This action cannot be undone.</p>
                   </div>
                 </>
               )}
             </div>
 
-            <div className="confirmation-modal-footer">
+            <div className="color-offer-confirmation-modal-footer">
               <button
-                className="confirmation-btn-secondary"
+                className="color-offer-confirmation-btn-secondary"
                 onClick={() => setShowConfirmModal(false)}
               >
                 Cancel
               </button>
               <button
-                className="confirmation-btn-primary"
+                className="color-offer-confirmation-btn-primary"
                 onClick={handleConfirmAction}
               >
                 {confirmAction.type === "remove_offer" ? 'Remove Offer' : 'Confirm'}

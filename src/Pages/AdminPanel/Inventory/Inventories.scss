@@ -1,3 +1,17 @@
+@font-face {
+  font-family: "Bold";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+  font-style: normal;
+  // font-weight: 500; 
+}
+
+@font-face {
+  font-family: "Content";
+  src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf") format("truetype");
+}
+
+
+
 // Variables - Matching Products Page
 $primary-purple: #7366ff;
 $secondary-purple: #3f3f91;
@@ -57,7 +71,7 @@ $in-stock-color: #4caf50;
       }
 
       h1 {
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 24px;
         color: #222;
         margin: 0;
@@ -193,7 +207,7 @@ $in-stock-color: #4caf50;
 
     .stat-card-content {
       h3 {
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 20px;
         color: #222;
         margin: 0 0 4px 0;
@@ -361,7 +375,7 @@ $in-stock-color: #4caf50;
       th {
         padding: 16px;
         text-align: left;
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 13px;
         color: #666;
         text-transform: uppercase;
@@ -487,7 +501,7 @@ $in-stock-color: #4caf50;
         gap: 12px;
 
         .stock-number {
-          font-family: "Heading", sans-serif;
+          font-family: "Bold", sans-serif;
           font-size: 18px;
           color: #222;
           min-width: 40px;
@@ -773,7 +787,7 @@ $in-stock-color: #4caf50;
       }
 
       h2 {
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 20px;
         color: #222;
         margin: 0;
@@ -820,7 +834,7 @@ $in-stock-color: #4caf50;
         display: flex;
         align-items: center;
         gap: 10px;
-        font-family: "Heading", sans-serif;
+        font-family: "Bold", sans-serif;
         font-size: 16px;
         color: #222;
         margin: 0 0 16px 0;
@@ -923,7 +937,7 @@ $in-stock-color: #4caf50;
           }
 
           &.total-section {
-            font-family: "Heading", sans-serif;
+            font-family: "Bold", sans-serif;
             color: #222;
             font-size: 15px;
             padding-top: 12px;
@@ -967,7 +981,7 @@ $in-stock-color: #4caf50;
           th {
             padding: 12px;
             text-align: left;
-            font-family: "Heading", sans-serif;
+            font-family: "Bold", sans-serif;
             color: #666;
             text-transform: uppercase;
             letter-spacing: 0.5px;

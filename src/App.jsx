@@ -22,8 +22,8 @@ import Checkout from "./Pages/CheckOut/Checkout";
 import UserOrders from "./Pages/Profile/UserOrders/UserOrders";
 import AdminOrders from "./Pages/AdminPanel/AdminOrders/AdminOrders";
 import UserReviews from "./Pages/Profile/UserReviews/UserReviews";
-import AllProducts from "./Pages/AllProducts/AllProducts";
-import CategoryProducts from "./Pages/CategoryProducts/CategoryProducts";
+// import AllProducts from "./Pages/AllProducts/AllProducts"; 
+// import CategoryProducts from "./Pages/CategoryProducts/CategoryProducts";
 import Footer from "./Components/Footer/Footer";
 import ScrollToTop from "./Components/GoToTop/ScrollToTop";
 import Cart from "./Pages/Cart/Cart";
@@ -50,10 +50,10 @@ function App() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<UserOrders />} />
         <Route path="/my-reviews" element={<UserReviews />} />
-        <Route path="/products" element={<AllProducts />} />
+        {/* <Route path="/products" element={<AllProducts />} /> */}
         <Route path="/dummy" element={<Scroll />} />
 
-        <Route path="/category/:categoryId" element={<CategoryProducts />} />
+        {/* <Route path="/category/:categoryId" element={<CategoryProducts />} /> */}
 
 
         <Route
