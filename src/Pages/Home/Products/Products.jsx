@@ -12,6 +12,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "react-toastify/dist/ReactToastify.css";
 import "./Products.scss";
+import placeholderimg from "../../../assets/logo/logo.png"
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -94,6 +95,30 @@ const Products = () => {
       setIsLoading(false);
     }
   };
+
+
+  // Add this debug useEffect
+  useEffect(() => {
+    if (products.length > 0) {
+      console.log("======= PRODUCT IMAGE DEBUG =======");
+      products.forEach((product, index) => {
+        const color = product.colors?.[0];
+        const image = product.thumbnailImage || color?.images?.[0];
+        console.log(`Product ${index + 1}:`, {
+          name: product.productName,
+          id: product.productId,
+          thumbnailImage: product.thumbnailImage,
+          colorImages: color?.images,
+          finalImageUrl: image,
+          fullUrl: image ? `${window.location.origin}${image}` : 'No image',
+          // Check if URL is relative or absolute
+          isRelativeUrl: image?.startsWith('/') || image?.startsWith('./') || image?.startsWith('../'),
+          isAbsoluteUrl: image?.startsWith('http')
+        });
+      });
+      console.log("====================================");
+    }
+  }, [products]);
 
   const calculatePrice = (color) => {
     if (!color) return { finalPrice: 0, discount: 0, hasOffer: false };
@@ -379,8 +404,11 @@ const Products = () => {
                               alt={product.productName}
                               loading="lazy"
                               onError={(e) => {
+                                console.log("❌ Failed to load image URL:", e.target.src); // 👈 ADD THIS
+                                console.log("Product:", product.productName, "Product ID:", product.productId); // 👈 ADD THIS
+                                console.log("Full image path that failed:", image); // 👈 ADD THIS
                                 e.target.onerror = null;
-                                e.target.src = "https://via.placeholder.com/300x300?text=No+Image";
+                                e.target.src = placeholderimg;
                               }}
                             />
                           )}
