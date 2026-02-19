@@ -1318,7 +1318,7 @@ function ProductPage() {
 
           <div className="product-details-column" ref={rightRef}>
             <div className="best-seller-badge">
-              BEST SELLER
+              BEST SELLERS
             </div>
 
             <div className="product-header-section">
