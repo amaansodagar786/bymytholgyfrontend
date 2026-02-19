@@ -10,7 +10,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/thumbs";
 import "./ProductPage.scss";
-import fallback from "../../assets/logo/newlogo.png"
+import fallback from "../../assets/logo/newlogo.png";
 
 // Import Sidebars
 import WishlistSidebar from "../../Pages/Wishlist/Sidebar/WishlistSidebar";
@@ -24,19 +24,16 @@ function ProductPage() {
   const { productName } = useParams();
   const location = useLocation();
   const productId = location.state?.productId;
-  const fragranceFromWishlist = location.state?.fragranceFromWishlist; // Get fragrance from Wishlist
+  const fragranceFromWishlist = location.state?.fragranceFromWishlist;
 
-  console.log("Product ID received from Products.js:", productId);
-  console.log("Product Name from URL:", productName);
-  console.log("Full location state:", location.state);
-  console.log("Fragrance from Wishlist:", fragranceFromWishlist);
-
+  // Single product info console log (only when product loads)
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
   // GSAP ScrollTrigger refs
-  const sectionRef = useRef(null); // For the entire product section
-  const rightRef = useRef(null);   // For the right column (product details)
+  const sectionRef = useRef(null);
+  const rightRef = useRef(null);
+  const leftColumnRef = useRef(null); // New ref for left column
 
   // Sidebar states
   const [showWishlistSidebar, setShowWishlistSidebar] = useState(false);
@@ -67,16 +64,13 @@ function ProductPage() {
   const [wishlist, setWishlist] = useState(false);
   const [wishlistItem, setWishlistItem] = useState(null);
 
-  // ========== CHANGED: Inventory State - PER FRAGRANCE ==========
-  // Track inventory for EACH fragrance separately
+  // Inventory State - PER FRAGRANCE
   const [fragranceInventory, setFragranceInventory] = useState({});
-  // Current selected fragrance's inventory for display
   const [currentFragranceInventory, setCurrentFragranceInventory] = useState({
     stock: 0,
     threshold: 0,
     status: 'checking'
   });
-  // ========== END CHANGED ==========
 
   // Max quantity based on stock
   const [maxQuantity, setMaxQuantity] = useState(99);
@@ -98,7 +92,6 @@ function ProductPage() {
 
   // Initialize GSAP ScrollTrigger
   useEffect(() => {
-    // Only run on desktop (screen width >= 1024px)
     if (window.innerWidth >= 1024 && !loading && product) {
       const section = sectionRef.current;
       const right = rightRef.current;
@@ -106,15 +99,14 @@ function ProductPage() {
       if (section && right) {
         const trigger = ScrollTrigger.create({
           trigger: right,
-          start: "bottom bottom",        // 🔥 Changed from "bottom bottom" to "top top"
+          start: "bottom bottom",
           endTrigger: section,
           end: "bottom bottom",
           pin: right,
           pinSpacing: true,
-          markers: false,          // Set to true temporarily to DEBUG
+          markers: false,
         });
 
-        // Cleanup function
         return () => {
           trigger.kill();
         };
@@ -122,31 +114,11 @@ function ProductPage() {
     }
   }, [loading, product]);
 
-
-  // Add this near your other useEffect hooks
-  useEffect(() => {
-    // Debug swiper on mobile
-    if (window.innerWidth < 768 && images.length > 0) {
-      console.log('Mobile Swiper Debug:');
-      console.log('Images count:', images.length);
-      console.log('Main Swiper should be visible');
-
-      // Force update after mount
-      setTimeout(() => {
-        if (thumbsSwiper && !thumbsSwiper.destroyed) {
-          console.log('Thumbs swiper initialized');
-        }
-      }, 1000);
-    }
-  }, [images, thumbsSwiper]);
-
-
-
+  // Mobile swiper debug removed
 
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      // Kill existing ScrollTrigger instances on mobile
       if (window.innerWidth < 1024) {
         ScrollTrigger.getAll().forEach(trigger => trigger.kill());
       }
@@ -156,85 +128,32 @@ function ProductPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-
-
+  // ===== FIX: Force page to start at top =====
   useEffect(() => {
-    // Only run on desktop and when we have images
-    if (window.innerWidth >= 1024 && images.length > 0) {
-      // Create an array of promises that resolve when each image loads
-      const imageLoadPromises = images.map(src => {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.src = src;
-          img.onload = resolve;
-          img.onerror = resolve; // Resolve even on error to avoid hanging
-        });
-      });
+    window.scrollTo(0, 0);
+  }, []);
 
-      // Wait for all images to load
-      Promise.all(imageLoadPromises).then(() => {
-        console.log("All images loaded, refreshing ScrollTrigger");
+  // ===== FIX: ResizeObserver to refresh ScrollTrigger when left column height changes =====
+  useEffect(() => {
+    if (!leftColumnRef.current || window.innerWidth < 1024) return;
+
+    const leftColumn = leftColumnRef.current;
+    let timeoutId = null;
+
+    const observer = new ResizeObserver(entries => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
         ScrollTrigger.refresh();
-      });
-    }
-  }, [images]); // Run whenever images array changes
-
-
-  // ===== FIX 1: Force page to start at top =====
-  useEffect(() => {
-    
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth' 
+      }, 200);
     });
-  }, []); // Empty array = runs once on mount 
 
+    observer.observe(leftColumn);
 
-  // ===== FIX 2: Wait for images to load, then refresh ScrollTrigger =====
-useEffect(() => {
-  // Only run on desktop and when we have images
-  if (window.innerWidth < 1024 || !images.length) return;
-
-  console.log('Setting up image load detection');
-
-  // Select all images in the left column (both main and thumbnails)
-  const imageElements = document.querySelectorAll(
-    '.main-images-container img, .thumbnail-strip img'
-  );
-
-  if (imageElements.length === 0) return;
-
-  let loadedCount = 0;
-  const totalImages = imageElements.length;
-
-  const handleImageLoad = () => {
-    loadedCount++;
-    if (loadedCount === totalImages) {
-      console.log('All images loaded, refreshing ScrollTrigger');
-      ScrollTrigger.refresh(); // This recalculates all pin positions
-    }
-  };
-
-  // Check each image
-  imageElements.forEach(img => {
-    if (img.complete) {
-      // Image already loaded (maybe from cache)
-      handleImageLoad();
-    } else {
-      // Wait for load or error
-      img.addEventListener('load', handleImageLoad);
-      img.addEventListener('error', handleImageLoad); // Even if error, count it
-    }
-  });
-
-  // Cleanup to prevent memory leaks
-  return () => {
-    imageElements.forEach(img => {
-      img.removeEventListener('load', handleImageLoad);
-      img.removeEventListener('error', handleImageLoad);
-    });
-  };
-}, [images]); // Re-run when images array changes
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, [images]); // Re-run if images array changes (new images added)
 
   // Fetch reviews for the product
   const fetchProductReviews = async (page = 1) => {
@@ -265,18 +184,15 @@ useEffect(() => {
     }
   };
 
-  // Call this in useEffect when product loads
   useEffect(() => {
     if (productId) {
       fetchProductReviews();
     }
   }, [productId]);
 
-  // Render star rating - FIXED to handle number properly
+  // Render star rating
   const renderRatingStars = (rating, size = 'medium') => {
-    // Ensure rating is a number
     const numericRating = typeof rating === 'number' ? rating : parseFloat(rating) || 0;
-
     const stars = [];
     const starSize = size === 'small' ? '1.2rem' : size === 'large' ? '1.8rem' : '1.5rem';
 
@@ -319,7 +235,7 @@ useEffect(() => {
     fetchProductReviews(1);
   };
 
-  // ========== CHANGED: Fetch ALL fragrances inventory ==========
+  // Fetch ALL fragrances inventory
   const fetchAllFragrancesInventory = async () => {
     if (!product) return;
 
@@ -327,11 +243,9 @@ useEffect(() => {
       const allFragrances = getAvailableFragrances();
       const inventoryMap = {};
 
-      // Fetch inventory for each fragrance
       for (const fragrance of allFragrances) {
         const params = new URLSearchParams();
 
-        // Get default color ID
         const defaultColorId = product.type === "simple"
           ? (product.colors?.[0]?.colorId)
           : (selectedModel?.colors?.[0]?.colorId);
@@ -340,7 +254,6 @@ useEffect(() => {
           params.append('colorId', defaultColorId);
         }
 
-        // Add THIS fragrance
         params.append('fragrance', fragrance);
 
         if (product.type === "variable" && selectedModel?._id) {
@@ -369,7 +282,6 @@ useEffect(() => {
 
       setFragranceInventory(inventoryMap);
 
-      // Set current fragrance's inventory
       const currentFragrance = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
       if (currentFragrance && inventoryMap[currentFragrance]) {
         setCurrentFragranceInventory(inventoryMap[currentFragrance]);
@@ -379,17 +291,14 @@ useEffect(() => {
       console.error('Error fetching all fragrances inventory:', error);
     }
   };
-  // ========== END CHANGED ==========
 
-  // ========== CHANGED: Smart select initial fragrance based on inventory ==========
+  // Smart select initial fragrance based on inventory
   const smartSelectInitialFragrance = (productData, preSelectedFragrance) => {
     const availableFragrances = getAvailableFragrances();
 
-    // Priority 1: Pre-selected fragrance if it has stock
     if (preSelectedFragrance &&
       fragranceInventory[preSelectedFragrance] &&
       fragranceInventory[preSelectedFragrance].status !== 'out-of-stock') {
-      console.log("Using pre-selected fragrance with stock:", preSelectedFragrance);
       if (productData.type === "simple") {
         setSelectedFragrance(preSelectedFragrance);
       } else {
@@ -398,11 +307,9 @@ useEffect(() => {
       return;
     }
 
-    // Priority 2: Find first fragrance with stock
     for (const fragrance of availableFragrances) {
       if (fragranceInventory[fragrance] &&
         fragranceInventory[fragrance].status !== 'out-of-stock') {
-        console.log("Selecting first in-stock fragrance:", fragrance);
         if (productData.type === "simple") {
           setSelectedFragrance(fragrance);
         } else {
@@ -412,10 +319,8 @@ useEffect(() => {
       }
     }
 
-    // Priority 3: If all are out of stock, select first one (will show out of stock)
     if (availableFragrances.length > 0) {
       const firstFragrance = availableFragrances[0];
-      console.log("All fragrances out of stock, selecting:", firstFragrance);
       if (productData.type === "simple") {
         setSelectedFragrance(firstFragrance);
       } else {
@@ -423,15 +328,13 @@ useEffect(() => {
       }
     }
   };
-  // ========== END CHANGED ==========
 
-  // Fetch product data AND offers - UPDATED TO HANDLE WISHLIST FRAGRANCE
+  // Fetch product data AND offers
   useEffect(() => {
     fetchProduct();
   }, [productId]);
 
-  // ========== CHANGED: Inventory fetching logic ==========
-  // Fetch ALL fragrances inventory when product loads
+  // Inventory fetching logic
   useEffect(() => {
     if (product) {
       fetchAllFragrancesInventory();
@@ -447,7 +350,6 @@ useEffect(() => {
     if (currentFragrance && fragranceInventory[currentFragrance]) {
       setCurrentFragranceInventory(fragranceInventory[currentFragrance]);
     } else {
-      // Default if not found
       setCurrentFragranceInventory({
         stock: 0,
         threshold: 10,
@@ -455,9 +357,8 @@ useEffect(() => {
       });
     }
   }, [selectedFragrance, selectedModelFragrance, fragranceInventory, product]);
-  // ========== END CHANGED ==========
 
-  // ========== CHANGED: Update max quantity when current fragrance inventory changes ==========
+  // Update max quantity when current fragrance inventory changes
   useEffect(() => {
     if (currentFragranceInventory.status === 'in-stock' || currentFragranceInventory.status === 'low-stock') {
       setMaxQuantity(currentFragranceInventory.stock);
@@ -469,20 +370,16 @@ useEffect(() => {
       setQuantity(0);
     }
   }, [currentFragranceInventory]);
-  // ========== END CHANGED ==========
 
   // Function to get pre-selected fragrance with priority
   const getPreSelectedFragrance = () => {
-    // Priority: 1. Wishlist state, 2. URL param, 3. None
     if (fragranceFromWishlist) {
-      console.log("Using fragrance from wishlist state:", fragranceFromWishlist);
       return fragranceFromWishlist;
     }
 
     const urlParams = new URLSearchParams(window.location.search);
     const urlFragrance = urlParams.get('fragrance');
     if (urlFragrance) {
-      console.log("Using fragrance from URL param:", urlFragrance);
       return urlFragrance;
     }
 
@@ -494,10 +391,8 @@ useEffect(() => {
       setLoading(true);
       setError(null);
 
-      // Get pre-selected fragrance BEFORE fetching
       const preSelectedFragrance = getPreSelectedFragrance();
 
-      // Fetch product details
       const productRes = await axios.get(
         `${import.meta.env.VITE_API_URL}/products/${productId}`
       );
@@ -505,7 +400,9 @@ useEffect(() => {
       const productData = productRes.data;
       setProduct(productData);
 
-      // Fetch offers for this product
+      // Single product info log
+      console.log('Product loaded:', { productId, productName, productData });
+
       const offersRes = await axios.get(
         `${import.meta.env.VITE_API_URL}/productoffers/product-color-offers/${productId}`
       );
@@ -513,31 +410,20 @@ useEffect(() => {
       const offersData = offersRes.data;
       setOffers(offersData);
 
-      // Initialize selections based on product type with pre-selected fragrance
       if (productData.type === "simple") {
-        // Simple product
         if (productData.colors && productData.colors.length > 0) {
           const defaultColor = productData.colors[0];
-
-          // Get fragrances from default color
           const fragrances = defaultColor.fragrances || [];
 
-          // Check if pre-selected fragrance exists in available fragrances
           if (preSelectedFragrance && fragrances.includes(preSelectedFragrance)) {
-            console.log("Setting pre-selected fragrance for simple product:", preSelectedFragrance);
             setSelectedFragrance(preSelectedFragrance);
-
-            // Check if pre-selected fragrance has offer
             checkAndSetOfferWithData(productData, defaultColor, null, preSelectedFragrance, offersData);
           } else if (fragrances.length > 0) {
-            // Fallback to first fragrance if pre-selected not available
             const firstFragrance = fragrances[0];
-            console.log("Setting default fragrance (first):", firstFragrance);
             setSelectedFragrance(firstFragrance);
             checkAndSetOfferWithData(productData, defaultColor, null, firstFragrance, offersData);
           }
 
-          // Set images from default color
           if (defaultColor.images && defaultColor.images.length > 0) {
             setMainImage(defaultColor.images[0]);
             setImages(defaultColor.images);
@@ -546,14 +432,12 @@ useEffect(() => {
             setImages([productData.thumbnailImage]);
           }
         } else {
-          // No colors - use product thumbnail
           if (productData.thumbnailImage) {
             setMainImage(productData.thumbnailImage);
             setImages([productData.thumbnailImage]);
           }
         }
       } else if (productData.type === "variable") {
-        // Variable product
         if (productData.models && productData.models.length > 0) {
           const firstModel = productData.models[0];
           setSelectedModel(firstModel);
@@ -562,22 +446,15 @@ useEffect(() => {
             const defaultModelColor = firstModel.colors[0];
             const modelFragrances = defaultModelColor.fragrances || [];
 
-            // Check if pre-selected fragrance exists in model fragrances
             if (preSelectedFragrance && modelFragrances.includes(preSelectedFragrance)) {
-              console.log("Setting pre-selected fragrance for variable product:", preSelectedFragrance);
               setSelectedModelFragrance(preSelectedFragrance);
-
-              // Check if pre-selected model fragrance has offer
               checkAndSetOfferWithData(productData, defaultModelColor, firstModel, preSelectedFragrance, offersData);
             } else if (modelFragrances.length > 0) {
-              // Fallback to first fragrance
               const firstModelFragrance = modelFragrances[0];
-              console.log("Setting default model fragrance (first):", firstModelFragrance);
               setSelectedModelFragrance(firstModelFragrance);
               checkAndSetOfferWithData(productData, defaultModelColor, firstModel, firstModelFragrance, offersData);
             }
 
-            // Set images from default model color
             if (defaultModelColor.images && defaultModelColor.images.length > 0) {
               setMainImage(defaultModelColor.images[0]);
               setImages(defaultModelColor.images);
@@ -589,12 +466,9 @@ useEffect(() => {
         }
       }
 
-      // ========== CHANGED: Smart select after product loads ==========
-      // Wait for inventory to load, then smart select fragrance
       setTimeout(() => {
         smartSelectInitialFragrance(productData, preSelectedFragrance);
       }, 500);
-      // ========== END CHANGED ==========
 
     } catch (err) {
       console.error("Error fetching product:", err);
@@ -604,7 +478,6 @@ useEffect(() => {
     }
   };
 
-  // Function to check and set offer with data
   const checkAndSetOfferWithData = (productData, color, model, fragrance, offersArray) => {
     if (!color || !color.colorId) {
       setCurrentOffer(null);
@@ -613,7 +486,6 @@ useEffect(() => {
 
     const variableModelId = model ? (model._id || model.modelId) : "";
 
-    // Find offer for this color (fragrance offers are based on color)
     const offer = offersArray.find(offer =>
       offer.productId === productData.productId &&
       offer.colorId === color.colorId &&
@@ -624,7 +496,6 @@ useEffect(() => {
     setCurrentOffer(offer || null);
   };
 
-  // Function to check and set offer
   const checkAndSetOffer = (productData, color, model, fragrance) => {
     checkAndSetOfferWithData(productData, color, model, fragrance, offers);
   };
@@ -637,17 +508,14 @@ useEffect(() => {
           const userId = localStorage.getItem("userId");
           if (!userId) return;
 
-          // Build query parameters for specific variant
           const params = new URLSearchParams();
           params.append('userId', userId);
 
-          // Add fragrance details if available
           const currentFragrance = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
           if (currentFragrance) {
             params.append('fragrance', currentFragrance);
           }
 
-          // Add default color ID
           const defaultColorId = product.type === "simple"
             ? (product.colors?.[0]?.colorId)
             : (selectedModel?.colors?.[0]?.colorId);
@@ -665,7 +533,6 @@ useEffect(() => {
             params.append('size', currentSize);
           }
 
-          // Check if SPECIFIC VARIANT is in wishlist
           const response = await axios.get(
             `${import.meta.env.VITE_API_URL}/wishlist/check/${product.productId}?${params.toString()}`,
             {
@@ -687,18 +554,15 @@ useEffect(() => {
     }
   }, [product, token, selectedFragrance, selectedModel, selectedModelFragrance, selectedSize, selectedModelSize]);
 
-  // Handle pre-selection from URL parameters - UPDATED to not interfere with wishlist state
+  // Handle pre-selection from URL parameters
   useEffect(() => {
-    // Skip if we already have fragrance from wishlist
     if (fragranceFromWishlist) {
-      console.log("Skipping URL param check - using wishlist fragrance");
       return;
     }
 
     const urlParams = new URLSearchParams(window.location.search);
 
     if (product) {
-      // Check for model selection
       const modelId = urlParams.get('model');
       if (modelId && product.type === "variable" && product.models) {
         const model = product.models.find(m =>
@@ -707,15 +571,12 @@ useEffect(() => {
         if (model) {
           setSelectedModel(model);
 
-          // Check for fragrance within this model
           const fragrance = urlParams.get('fragrance');
           if (fragrance && model.colors && model.colors.length > 0) {
             const modelColor = model.colors[0];
             if (modelColor.fragrances && modelColor.fragrances.includes(fragrance)) {
               setSelectedModelFragrance(fragrance);
-              // Check offer for this selection
               checkAndSetOffer(product, modelColor, model, fragrance);
-              // Set images
               if (modelColor.images && modelColor.images.length > 0) {
                 setMainImage(modelColor.images[0]);
                 setImages(modelColor.images);
@@ -725,16 +586,13 @@ useEffect(() => {
         }
       }
 
-      // Check for fragrance selection (for simple products or if model not specified)
       const fragrance = urlParams.get('fragrance');
       if (fragrance && !urlParams.get('model')) {
         if (product.type === "simple" && product.colors && product.colors.length > 0) {
           const defaultColor = product.colors[0];
           if (defaultColor.fragrances && defaultColor.fragrances.includes(fragrance)) {
             setSelectedFragrance(fragrance);
-            // Check offer for this selection
             checkAndSetOffer(product, defaultColor, null, fragrance);
-            // Set images
             if (defaultColor.images && defaultColor.images.length > 0) {
               setMainImage(defaultColor.images[0]);
               setImages(defaultColor.images);
@@ -743,7 +601,6 @@ useEffect(() => {
         }
       }
 
-      // Check for size selection
       const size = urlParams.get('size');
       if (size) {
         if (product.type === "simple") {
@@ -758,7 +615,6 @@ useEffect(() => {
   // Clear location state after using it
   useEffect(() => {
     if (fragranceFromWishlist && location.state) {
-      // Clear the state to prevent re-use on refresh
       navigate(location.pathname + location.search, { replace: true, state: {} });
     }
   }, [fragranceFromWishlist, location, navigate]);
@@ -767,14 +623,11 @@ useEffect(() => {
   const handleFragranceSelect = (fragrance) => {
     setSelectedFragrance(fragrance);
 
-    // Get default color
     const defaultColor = product.colors?.[0];
     if (defaultColor) {
-      // Check offer for selected fragrance (based on default color)
       checkAndSetOffer(product, defaultColor, null, fragrance);
     }
 
-    // Reset size selection
     if (defaultColor?.sizes && defaultColor.sizes.length > 0) {
       setSelectedSize(defaultColor.sizes[0]);
     } else {
@@ -786,11 +639,9 @@ useEffect(() => {
   const handleModelSelect = (model) => {
     setSelectedModel(model);
 
-    // Reset fragrance and size selections
     setSelectedModelFragrance(null);
     setSelectedModelSize(null);
 
-    // Get first fragrance from model's default color
     if (model.colors && model.colors.length > 0) {
       const modelColor = model.colors[0];
       const fragrances = modelColor.fragrances || [];
@@ -798,7 +649,6 @@ useEffect(() => {
         const firstFragrance = fragrances[0];
         setSelectedModelFragrance(firstFragrance);
 
-        // Check offer for this model's first fragrance
         checkAndSetOffer(product, modelColor, model, firstFragrance);
 
         if (modelColor.images && modelColor.images.length > 0) {
@@ -817,14 +667,11 @@ useEffect(() => {
   const handleModelFragranceSelect = (fragrance) => {
     setSelectedModelFragrance(fragrance);
 
-    // Get default color from selected model
     const modelColor = selectedModel?.colors?.[0];
     if (modelColor) {
-      // Check offer for selected fragrance
       checkAndSetOffer(product, modelColor, selectedModel, fragrance);
     }
 
-    // Reset size selection
     if (modelColor?.sizes && modelColor.sizes.length > 0) {
       setSelectedModelSize(modelColor.sizes[0]);
     } else {
@@ -832,16 +679,14 @@ useEffect(() => {
     }
   };
 
-  // ========== CHANGED: Handle quantity change with stock validation ==========
+  // Handle quantity change with stock validation
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
 
-    // Check if current fragrance is out of stock
     if (currentFragranceInventory.status === 'out-of-stock') {
       return;
     }
 
-    // Check if new quantity exceeds available stock
     if (currentFragranceInventory.status === 'low-stock' || currentFragranceInventory.status === 'in-stock') {
       if (newQuantity > currentFragranceInventory.stock) {
         return;
@@ -852,25 +697,20 @@ useEffect(() => {
       setQuantity(newQuantity);
     }
   };
-  // ========== END CHANGED ==========
 
-  // ========== CHANGED: Check if product can be purchased ==========
+  // Check if product can be purchased
   const canPurchaseProduct = () => {
-    // Check if fragrance is selected
     const currentFragrance = product?.type === "simple" ? selectedFragrance : selectedModelFragrance;
     if (!currentFragrance) {
       return false;
     }
 
-    // Get THIS fragrance's inventory
     const fragranceStock = fragranceInventory[currentFragrance];
 
-    // If no inventory data yet, allow purchase (will be validated on server)
     if (!fragranceStock || fragranceStock.status === 'checking' || fragranceStock.status === 'error') {
       return true;
     }
 
-    // Check stock status
     if (fragranceStock.status === 'out-of-stock') {
       return false;
     }
@@ -881,7 +721,6 @@ useEffect(() => {
 
     return true;
   };
-  // ========== END CHANGED ==========
 
   // Get base price
   const getBasePrice = () => {
@@ -996,13 +835,11 @@ useEffect(() => {
   const isCurrentSelectionInWishlist = () => {
     if (!wishlistItem) return false;
 
-    // Check if fragrance matches
     const currentFragrance = product.type === "simple" ? selectedFragrance : selectedModelFragrance;
     if (currentFragrance && wishlistItem.selectedFragrance && wishlistItem.selectedFragrance !== currentFragrance) {
       return false;
     }
 
-    // Check if model matches for variable products
     if (product.type === "variable" && selectedModel && wishlistItem.selectedModel) {
       const wishlistModelId = wishlistItem.selectedModel.modelId;
       const currentModelId = selectedModel._id || selectedModel.modelId;
@@ -1011,7 +848,6 @@ useEffect(() => {
       }
     }
 
-    // Check if size matches
     const currentSize = product.type === "simple" ? selectedSize : selectedModelSize;
     if (currentSize && wishlistItem.selectedSize && wishlistItem.selectedSize !== currentSize) {
       return false;
@@ -1032,7 +868,6 @@ useEffect(() => {
 
     const isCurrentlyWishlisted = wishlist;
 
-    // Get current fragrance based on product type
     const currentFragrance = product.type === "simple"
       ? selectedFragrance
       : selectedModelFragrance;
@@ -1053,14 +888,12 @@ useEffect(() => {
         setWishlistItem(null);
 
       } else {
-        // Add to wishlist
         const wishlistData = {
           userId,
           productId: product.productId,
           addedFrom: "product"
         };
 
-        // Add selected model for variable products
         if (product.type === "variable" && selectedModel) {
           wishlistData.selectedModel = {
             modelId: selectedModel._id || selectedModel.modelId,
@@ -1069,7 +902,6 @@ useEffect(() => {
           };
         }
 
-        // Add selected fragrance
         if (currentFragrance) {
           wishlistData.selectedFragrance = currentFragrance;
         }
@@ -1087,7 +919,6 @@ useEffect(() => {
           };
         }
 
-        // Add selected size
         const selectedSizeData = product.type === "simple" ? selectedSize : selectedModelSize;
         if (selectedSizeData) {
           wishlistData.selectedSize = selectedSizeData;
@@ -1110,7 +941,6 @@ useEffect(() => {
 
       window.dispatchEvent(new Event('wishlistUpdated'));
 
-      // OPEN WISHLIST SIDEBAR (Desktop only)
       if (window.innerWidth > 768) {
         setShowWishlistSidebar(true);
       }
@@ -1122,22 +952,18 @@ useEffect(() => {
 
   // Handle add to cart with stock validation
   const handleAddToCart = async () => {
-    // Check fragrance selection
     if (!selectedFragrance && !selectedModelFragrance) {
       return;
     }
 
-    // Check stock
     if (!canPurchaseProduct()) {
       return;
     }
 
-    // Check if user is logged in
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
 
     if (!token || !userId) {
-      // If not logged in, redirect to login
       navigate("/login");
       return;
     }
@@ -1146,12 +972,10 @@ useEffect(() => {
     const offerPrice = getOfferPrice();
     const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
 
-    // Get default color
     const defaultColor = product.type === "simple"
       ? product.colors?.[0]
       : selectedModel?.colors?.[0];
 
-    // Prepare cart data
     const cartData = {
       userId,
       productId: product.productId,
@@ -1196,7 +1020,6 @@ useEffect(() => {
 
       window.dispatchEvent(new Event('cartUpdated'));
 
-      // OPEN CART SIDEBAR (Desktop only)
       if (window.innerWidth > 768) {
         setShowCartSidebar(true);
       }
@@ -1206,19 +1029,16 @@ useEffect(() => {
     }
   };
 
-  // Handle buy now - KEEP SAME STRUCTURE, JUST ENHANCE DATA
+  // Handle buy now
   const handleBuyNow = () => {
-    // Check fragrance selection
     if (!selectedFragrance && !selectedModelFragrance) {
       return;
     }
 
-    // Check stock
     if (!canPurchaseProduct()) {
       return;
     }
 
-    // Check if user is logged in
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
 
@@ -1232,7 +1052,6 @@ useEffect(() => {
     const hasOffer = currentOffer && currentOffer.offerPercentage > 0;
     const originalPrice = getOriginalPrice();
 
-    // Calculate summary data
     const subtotal = offerPrice * quantity;
     const shipping = subtotal > 1000 ? 0 : 120;
     const tax = subtotal * 0.18;
@@ -1240,7 +1059,6 @@ useEffect(() => {
     const originalSubtotal = originalPrice * quantity;
     const totalSavings = originalSubtotal - subtotal;
 
-    // Get default color
     const defaultColor = product.type === "simple"
       ? product.colors?.[0]
       : selectedModel?.colors?.[0];
@@ -1249,7 +1067,6 @@ useEffect(() => {
     const selectedSizeData = product.type === "simple" ? selectedSize : selectedModelSize;
     const thumbnailImage = defaultColor?.images?.[0] || product.thumbnailImage;
 
-    // Prepare Buy Now data - SAME STRUCTURE AS BEFORE, JUST ADD EXTRA FIELDS
     const buyNowData = {
       userId,
       productId: product.productId,
@@ -1276,8 +1093,6 @@ useEffect(() => {
         savedAmount: totalSavings
       } : null,
       thumbnailImage: thumbnailImage,
-
-      // ADD THESE EXTRA FIELDS FOR CHECKOUT
       summary: {
         totalItems: quantity,
         subtotal: subtotal,
@@ -1292,13 +1107,10 @@ useEffect(() => {
       inStock: true
     };
 
-    console.log('📍 Buy Now Data being sent:', buyNowData);
-
-    // Navigate to checkout with SAME STRUCTURE as before
     navigate('/checkout', {
       state: {
         buyNowMode: true,
-        productData: buyNowData  // ← KEEP SAME KEY "productData"
+        productData: buyNowData
       }
     });
   };
@@ -1336,18 +1148,13 @@ useEffect(() => {
   const availableFragrances = getAvailableFragrances();
 
   const finalPrice = hasOffer ? offerPrice : basePrice;
-
-  // Get purchase eligibility
   const canPurchase = canPurchaseProduct();
-
-  // Fix for reviewsStats.averageRating - ensure it's a number
   const averageRating = typeof reviewsStats.averageRating === 'number'
     ? reviewsStats.averageRating
     : parseFloat(reviewsStats.averageRating) || 0;
 
   return (
     <div className="product-page">
-      {/* SIDEBARS */}
       <WishlistSidebar
         isOpen={showWishlistSidebar}
         onClose={() => setShowWishlistSidebar(false)}
@@ -1357,7 +1164,6 @@ useEffect(() => {
         onClose={() => setShowCartSidebar(false)}
       />
 
-      {/* Back Button - Styled */}
       <div className="product-page-back-button">
         <button
           className="styled-back-button"
@@ -1369,14 +1175,11 @@ useEffect(() => {
         </button>
       </div>
 
-      {/* PRODUCT SECTION WITH SCROLL TRIGGER */}
       <section className="product-scroll-section" ref={sectionRef}>
         <div className="columns-wrapper">
-          {/* LEFT COLUMN - Images Section (LONG) */}
-          <div className="product-images-column">
-            {/* Desktop View - Vertical Stack */}
+          {/* LEFT COLUMN with ref attached */}
+          <div className="product-images-column" ref={leftColumnRef}>
             <div className="desktop-images-view">
-              {/* Thumbnail Strip (Vertical) */}
               {images.length > 0 && (
                 <div className="thumbnail-strip">
                   {images.map((img, index) => (
@@ -1390,7 +1193,7 @@ useEffect(() => {
                         alt={`${product.productName} - View ${index + 1}`}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = {fallback};
+                          e.target.src = fallback;
                         }}
                       />
                     </div>
@@ -1398,7 +1201,6 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* Main Images Container (Stacked Vertically) */}
               <div className="main-images-container">
                 {images.length > 0 ? (
                   images.map((img, index) => (
@@ -1408,7 +1210,7 @@ useEffect(() => {
                         alt={`${product.productName} - ${index + 1}`}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = {fallback};
+                          e.target.src = fallback;
                         }}
                       />
                     </div>
@@ -1422,7 +1224,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Mobile View - Swiper Slider */}
             <div className="mobile-images-view">
               {images && images.length > 0 ? (
                 <>
@@ -1453,7 +1254,7 @@ useEffect(() => {
                             alt={`${product.productName} - ${index + 1}`}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = {fallback};
+                              e.target.src = fallback;
                             }}
                             loading="eager"
                             style={{
@@ -1468,7 +1269,6 @@ useEffect(() => {
                     ))}
                   </Swiper>
 
-                  {/* Thumbnail Swiper */}
                   <Swiper
                     key={`thumbs-${images.length}`}
                     onSwiper={setThumbsSwiper}
@@ -1489,10 +1289,10 @@ useEffect(() => {
                         <div className="swiper-thumbnail">
                           <img
                             src={img}
-                            alt={fallback}
+                            alt={`Thumbnail ${index + 1}`}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = {fallback};
+                              e.target.src = fallback;
                             }}
                             loading="lazy"
                             style={{
@@ -1516,14 +1316,11 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* RIGHT COLUMN - Product Details (SHORT) */}
           <div className="product-details-column" ref={rightRef}>
-            {/* BEST SELLER BADGE */}
             <div className="best-seller-badge">
               BEST SELLER
             </div>
 
-            {/* PRODUCT HEADER with Wishlist Icon */}
             <div className="product-header-section">
               <h1 className="product-title">
                 {product.productName}
@@ -1537,35 +1334,28 @@ useEffect(() => {
               </h1>
             </div>
 
-            {/* SHORT DESCRIPTION */}
             <div className="short-description">
               {product.description || "Premium quality product with luxurious fragrance."}
             </div>
 
-            {/* SPECIAL OFFER BADGE AFTER DESCRIPTION */}
             {hasOffer && currentOffer?.offerLabel && (
               <div className="offer-badge-after-description">
                 {currentOffer.offerLabel}
               </div>
             )}
 
-            {/* PRICE SECTION - Simple Row */}
             <div className="simple-price-section">
               <div className="price-row">
                 <span className="current-price">₹{finalPrice.toLocaleString()}</span>
 
-                {/* SHOW ORIGINAL PRICE WITH STRIKETHROUGH */}
                 {originalPrice > finalPrice && (
                   <>
                     <span className="original-price">₹{originalPrice.toLocaleString()}</span>
-
-                    {/* SHOW FINAL DISCOUNT % (60%) */}
                     <span className="discount-percent">{getDiscountPercent()}% OFF</span>
                   </>
                 )}
               </div>
 
-              {/* ========== CHANGED: Stock Status for CURRENT fragrance ========== */}
               {selectedFragrance || selectedModelFragrance ? (
                 <div className={`stock-status-badge ${currentFragranceInventory.status}`}>
                   {currentFragranceInventory.status === 'checking' ? (
@@ -1585,10 +1375,8 @@ useEffect(() => {
                   Select a fragrance to see stock
                 </div>
               )}
-              {/* ========== END CHANGED ========== */}
             </div>
 
-            {/* REVIEWS ROW */}
             <div className="reviews-row" onClick={handleOpenReviewsModal}>
               <div className="stars-container">
                 {renderRatingStars(averageRating, 'medium')}
@@ -1598,7 +1386,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* FRAGRANCE SELECTION */}
             <div className="fragrance-selection-section">
               <div className="section-header">
                 <h3>Select Fragrance :</h3>
@@ -1616,11 +1403,9 @@ useEffect(() => {
                       ? selectedFragrance === fragrance
                       : selectedModelFragrance === fragrance;
 
-                    // ========== CHANGED: Get THIS fragrance's inventory ==========
                     const fragranceStock = fragranceInventory[fragrance];
                     const isOutOfStock = fragranceStock?.status === 'out-of-stock';
                     const isLowStock = fragranceStock?.status === 'low-stock';
-                    // ========== END CHANGED ==========
 
                     return (
                       <div
@@ -1629,9 +1414,7 @@ useEffect(() => {
                           } ${isLowStock ? 'low-stock' : ''
                           }`}
                         onClick={() => {
-                          // ========== CHANGED: Only prevent if THIS fragrance is out of stock ==========
                           if (isOutOfStock) return;
-                          // ========== END CHANGED ==========
 
                           if (product.type === "simple") {
                             handleFragranceSelect(fragrance);
@@ -1641,18 +1424,6 @@ useEffect(() => {
                         }}
                       >
                         <div className="fragrance-name">{fragrance}</div>
-
-                        {/* ========== CHANGED: Show stock status for EACH fragrance ========== */}
-                        {/* {fragranceStock && (
-                          <div className={`fragrance-stock-badge ${fragranceStock.status === 'out-of-stock' ? 'out' :
-                              fragranceStock.status === 'low-stock' ? 'low' : 'in'
-                            }`}>
-                            {fragranceStock.status === 'out-of-stock' ? 'Out of Stock' :
-                              fragranceStock.status === 'low-stock' ? 'Low Stock' :
-                                fragranceStock.status === 'in-stock' ? 'In Stock' : 'Checking...'}
-                          </div>
-                        )} */}
-                        {/* ========== END CHANGED ========== */}
                       </div>
                     );
                   })}
@@ -1663,7 +1434,6 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* Fragrance selection required message */}
               {!selectedFragrance && !selectedModelFragrance && (
                 <div className="selection-required-message">
                   ⚠️ Please select a fragrance to proceed
@@ -1671,7 +1441,6 @@ useEffect(() => {
               )}
             </div>
 
-            {/* QUANTITY SELECTOR */}
             <div className="quantity-selector-section">
               <div className="section-header">
                 <h3>Quantity</h3>
@@ -1717,7 +1486,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* MODEL SELECTION (for variable products) */}
             {product.type === "variable" && product.models && product.models.length > 0 && (
               <div className="model-selection-section">
                 <div className="section-header">
@@ -1745,7 +1513,6 @@ useEffect(() => {
               </div>
             )}
 
-            {/* SIZE SELECTION */}
             {availableSizes.length > 0 && (
               <div className="size-selection-section">
                 <div className="section-header">
@@ -1782,7 +1549,6 @@ useEffect(() => {
               </div>
             )}
 
-            {/* ACTION BUTTONS - Add to Cart & Buy Now in same row */}
             <div className="action-buttons-section">
               <button
                 className={`add-to-cart-btn ${!canPurchase || !selectedFragrance ? 'disabled' : ''}`}
@@ -1811,7 +1577,6 @@ useEffect(() => {
               </button>
             </div>
 
-            {/* DELIVERY INFORMATION - Static Lines */}
             <div className="delivery-info-section">
               <div className="delivery-header">
                 <h3>Delivery Information</h3>
@@ -1826,7 +1591,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* FULL DESCRIPTION */}
             <div className="full-description-section">
               <div className="section-header">
                 <h3>Description</h3>
@@ -1838,7 +1602,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* SPECIFICATIONS */}
             {specifications.length > 0 && (
               <div className="specifications-section">
                 <div className="section-header">
@@ -1858,19 +1621,16 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* NEXT SECTION */}
-      {/* RELATED PRODUCTS SECTION */}
       <section className="related-products-section">
         <RelatedProducts
           productId={productId}
-          currentFragrances={getAvailableFragrances()} // Pass current product's fragrances
+          currentFragrances={getAvailableFragrances()}
           categoryId={product.categoryId}
           currentProductType={product.type}
           currentModelId={selectedModel?._id}
         />
       </section>
 
-      {/* REVIEWS MODAL */}
       {showReviewsModal && (
         <div className="premium-reviews-modal">
           <div className="modal-overlay" onClick={() => setShowReviewsModal(false)}></div>
@@ -1889,7 +1649,6 @@ useEffect(() => {
             </div>
 
             <div className="modal-body">
-              {/* Stats Sidebar */}
               <div className="reviews-stats-sidebar">
                 <div className="overall-rating-box">
                   <div className="overall-rating-score">{averageRating.toFixed(1)}</div>
@@ -1925,7 +1684,6 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Reviews List */}
               <div className="reviews-list-container">
                 <div className="reviews-filter-bar">
                   <div className="filter-options">
@@ -1947,7 +1705,6 @@ useEffect(() => {
                   ) : reviews.length > 0 ? (
                     <>
                       {reviews.map((review, index) => {
-                        // Ensure review.rating is a number
                         const reviewRating = typeof review.rating === 'number'
                           ? review.rating
                           : parseFloat(review.rating) || 0;
@@ -1977,7 +1734,6 @@ useEffect(() => {
                         );
                       })}
 
-                      {/* Load More Button */}
                       {reviews.length < reviewsStats.totalReviews && (
                         <button
                           className="load-more-reviews-btn"
