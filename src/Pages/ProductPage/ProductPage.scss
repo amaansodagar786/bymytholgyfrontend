@@ -302,7 +302,7 @@ $transition-medium: 0.3s ease;
 
       // Main Swiper Container
       .main-swiper {
-         width:   60% !important;
+        width: 60% !important;
         height: 350px !important;
         border-radius: 12px;
         overflow: hidden;
@@ -573,6 +573,12 @@ $transition-medium: 0.3s ease;
   width: 100%;
   box-sizing: border-box; // FIXED: Added box-sizing
   margin-right: 5rem !important;
+
+
+  min-height: 100vh; // ← ADD THIS - forces column to be full screen height
+  display: flex; // ← ADD THIS (already there but ensure it's there)
+  flex-direction: column; // ← ADD THIS (already there but ensure it's there)
+  justify-content: flex-start;
 
   // Desktop: 40% width, pinned by ScrollTrigger
   @media (min-width: 1024px) {
@@ -2205,6 +2211,7 @@ img {
     opacity: 0;
     transform: scale(0.9);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -2217,9 +2224,11 @@ img {
   0% {
     box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4);
   }
+
   70% {
     box-shadow: 0 0 0 6px rgba(255, 59, 48, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(255, 59, 48, 0);
   }
@@ -2254,6 +2263,7 @@ img {
     opacity: 0;
     transform: translateX(-10px);
   }
+
   100% {
     opacity: 1;
     transform: translateX(0);

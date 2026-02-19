@@ -105,12 +105,12 @@ function ProductPage() {
       if (section && right) {
         const trigger = ScrollTrigger.create({
           trigger: right,
-          start: "bottom bottom",
+          start: "bottom bottom",        // 🔥 Changed from "bottom bottom" to "top top"
           endTrigger: section,
           end: "bottom bottom",
           pin: right,
           pinSpacing: true,
-          markers: false,
+          markers: false,          // Set to true temporarily to DEBUG
         });
 
         // Cleanup function
@@ -154,6 +154,29 @@ function ProductPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+
+
+  useEffect(() => {
+    // Only run on desktop and when we have images
+    if (window.innerWidth >= 1024 && images.length > 0) {
+      // Create an array of promises that resolve when each image loads
+      const imageLoadPromises = images.map(src => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.src = src;
+          img.onload = resolve;
+          img.onerror = resolve; // Resolve even on error to avoid hanging
+        });
+      });
+
+      // Wait for all images to load
+      Promise.all(imageLoadPromises).then(() => {
+        console.log("All images loaded, refreshing ScrollTrigger");
+        ScrollTrigger.refresh();
+      });
+    }
+  }, [images]); // Run whenever images array changes
 
   // Fetch reviews for the product
   const fetchProductReviews = async (page = 1) => {
