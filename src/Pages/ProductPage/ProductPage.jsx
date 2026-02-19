@@ -10,6 +10,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/thumbs";
 import "./ProductPage.scss";
+import fallback from "../../assets/logo/newlogo.png"
 
 // Import Sidebars
 import WishlistSidebar from "../../Pages/Wishlist/Sidebar/WishlistSidebar";
@@ -177,6 +178,63 @@ function ProductPage() {
       });
     }
   }, [images]); // Run whenever images array changes
+
+
+  // ===== FIX 1: Force page to start at top =====
+  useEffect(() => {
+    
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth' 
+    });
+  }, []); // Empty array = runs once on mount 
+
+
+  // ===== FIX 2: Wait for images to load, then refresh ScrollTrigger =====
+useEffect(() => {
+  // Only run on desktop and when we have images
+  if (window.innerWidth < 1024 || !images.length) return;
+
+  console.log('Setting up image load detection');
+
+  // Select all images in the left column (both main and thumbnails)
+  const imageElements = document.querySelectorAll(
+    '.main-images-container img, .thumbnail-strip img'
+  );
+
+  if (imageElements.length === 0) return;
+
+  let loadedCount = 0;
+  const totalImages = imageElements.length;
+
+  const handleImageLoad = () => {
+    loadedCount++;
+    if (loadedCount === totalImages) {
+      console.log('All images loaded, refreshing ScrollTrigger');
+      ScrollTrigger.refresh(); // This recalculates all pin positions
+    }
+  };
+
+  // Check each image
+  imageElements.forEach(img => {
+    if (img.complete) {
+      // Image already loaded (maybe from cache)
+      handleImageLoad();
+    } else {
+      // Wait for load or error
+      img.addEventListener('load', handleImageLoad);
+      img.addEventListener('error', handleImageLoad); // Even if error, count it
+    }
+  });
+
+  // Cleanup to prevent memory leaks
+  return () => {
+    imageElements.forEach(img => {
+      img.removeEventListener('load', handleImageLoad);
+      img.removeEventListener('error', handleImageLoad);
+    });
+  };
+}, [images]); // Re-run when images array changes
 
   // Fetch reviews for the product
   const fetchProductReviews = async (page = 1) => {
@@ -1332,7 +1390,7 @@ function ProductPage() {
                         alt={`${product.productName} - View ${index + 1}`}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = "https://via.placeholder.com/80x80?text=No+Image";
+                          e.target.src = {fallback};
                         }}
                       />
                     </div>
@@ -1350,7 +1408,7 @@ function ProductPage() {
                         alt={`${product.productName} - ${index + 1}`}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = "https://via.placeholder.com/600x600?text=No+Image";
+                          e.target.src = {fallback};
                         }}
                       />
                     </div>
@@ -1395,7 +1453,7 @@ function ProductPage() {
                             alt={`${product.productName} - ${index + 1}`}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = "https://via.placeholder.com/600x600/ffffff/000000?text=No+Image";
+                              e.target.src = {fallback};
                             }}
                             loading="eager"
                             style={{
@@ -1431,10 +1489,10 @@ function ProductPage() {
                         <div className="swiper-thumbnail">
                           <img
                             src={img}
-                            alt={`${product.productName} - Thumb ${index + 1}`}
+                            alt={fallback}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = "https://via.placeholder.com/80x80/ffffff/000000?text=No+Image";
+                              e.target.src = {fallback};
                             }}
                             loading="lazy"
                             style={{
