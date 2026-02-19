@@ -42,7 +42,7 @@ const Checkout = () => {
   const stepRef = useRef(null);
   const [filledSteps, setFilledSteps] = useState([1]); // Track filled steps for line animation
   const [showLoginModal, setShowLoginModal] = useState(false); // ← ADD THIS STATE
-
+  const [orderPlaced, setOrderPlaced] = useState(false);
 
 
   // Cart Data
@@ -469,7 +469,6 @@ const Checkout = () => {
     }
   };
 
-  // ==================== ORDER CREATION ====================
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       toast.warning('Please select a delivery address');
@@ -477,8 +476,14 @@ const Checkout = () => {
       return;
     }
 
+    // Prevent multiple submissions
+    if (saving || orderPlaced) {
+      return;
+    }
+
     try {
       setSaving(true);
+      // Don't set orderPlaced yet - wait for successful response
 
       const orderData = {
         userId,
@@ -514,6 +519,9 @@ const Checkout = () => {
       );
 
       if (response.data.success) {
+        // Set orderPlaced to true immediately after successful response
+        setOrderPlaced(true);
+
         toast.success(
           <div>
             <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>✅ Order Placed Successfully!</p>
@@ -563,9 +571,11 @@ const Checkout = () => {
         }
       }
       toast.error(errorMessage);
-    } finally {
+      // Reset saving state on error
       setSaving(false);
+      // DO NOT reset orderPlaced here as it's false anyway
     }
+    // Note: Don't setSaving(false) here on success - it will be reset by navigation
   };
 
   // ==================== RENDER FUNCTIONS ====================
@@ -1112,12 +1122,17 @@ const Checkout = () => {
           <button
             className="place-order-btn"
             onClick={handlePlaceOrder}
-            disabled={saving}
+            disabled={saving || orderPlaced}
           >
             {saving ? (
               <>
                 <span className="loading-spinner-small"></span>
                 Processing...
+              </>
+            ) : orderPlaced ? (
+              <>
+                <FiCheck size={18} />
+                Order Placed!
               </>
             ) : (
               'Place Order'

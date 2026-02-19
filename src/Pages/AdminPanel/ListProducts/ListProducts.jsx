@@ -607,12 +607,7 @@ const ListProducts = () => {
 
       if (!deleteProductId) return;
 
-      const shouldDelete = window.confirm("Are you sure you want to delete this product? This action cannot be undone.");
-      if (!shouldDelete) {
-        setDeleteProductId(null);
-        return;
-      }
-
+     
       setIsLoading(true);
 
       const response = await axios.delete(
