@@ -672,7 +672,6 @@ $transition-medium: 0.3s ease;
   }
 }
 
-// ===== SHORT DESCRIPTION =====
 .short-description {
   font-family: $content-font;
   font-size: 1rem;
@@ -681,6 +680,7 @@ $transition-medium: 0.3s ease;
   margin-bottom: 15px;
   width: 100%;
   word-wrap: break-word;
+  @include truncate-text(2); // ← ADD THIS LINE
 
   @include responsive(mobile) {
     font-size: 0.95rem;

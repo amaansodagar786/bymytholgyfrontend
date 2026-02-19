@@ -23,17 +23,16 @@ gsap.registerPlugin(ScrollTrigger);
 function ProductPage() {
   const { productName } = useParams();
   const location = useLocation();
-  const productId = location.state?.productId;
+  const productIdFromState = location.state?.productId;
   const fragranceFromWishlist = location.state?.fragranceFromWishlist;
 
-  // Single product info console log (only when product loads)
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
   // GSAP ScrollTrigger refs
   const sectionRef = useRef(null);
   const rightRef = useRef(null);
-  const leftColumnRef = useRef(null); // New ref for left column
+  const leftColumnRef = useRef(null);
 
   // Sidebar states
   const [showWishlistSidebar, setShowWishlistSidebar] = useState(false);
@@ -90,6 +89,11 @@ function ProductPage() {
   // Swiper states for mobile
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
 
+  // ===== FIX: Force page to start at top =====
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Initialize GSAP ScrollTrigger
   useEffect(() => {
     if (window.innerWidth >= 1024 && !loading && product) {
@@ -114,8 +118,6 @@ function ProductPage() {
     }
   }, [loading, product]);
 
-  // Mobile swiper debug removed
-
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -126,11 +128,6 @@ function ProductPage() {
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // ===== FIX: Force page to start at top =====
-  useEffect(() => {
-    window.scrollTo(0, 0);
   }, []);
 
   // ===== FIX: ResizeObserver to refresh ScrollTrigger when left column height changes =====
@@ -153,14 +150,15 @@ function ProductPage() {
       if (timeoutId) clearTimeout(timeoutId);
       observer.disconnect();
     };
-  }, [images]); // Re-run if images array changes (new images added)
+  }, [images]);
 
   // Fetch reviews for the product
   const fetchProductReviews = async (page = 1) => {
+    if (!product?.productId) return;
     try {
       setReviewsLoading(true);
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/reviews/product/${productId}`,
+        `${import.meta.env.VITE_API_URL}/reviews/product/${product.productId}`,
         {
           params: {
             page,
@@ -185,10 +183,10 @@ function ProductPage() {
   };
 
   useEffect(() => {
-    if (productId) {
+    if (product?.productId) {
       fetchProductReviews();
     }
-  }, [productId]);
+  }, [product?.productId]);
 
   // Render star rating
   const renderRatingStars = (rating, size = 'medium') => {
@@ -329,48 +327,6 @@ function ProductPage() {
     }
   };
 
-  // Fetch product data AND offers
-  useEffect(() => {
-    fetchProduct();
-  }, [productId]);
-
-  // Inventory fetching logic
-  useEffect(() => {
-    if (product) {
-      fetchAllFragrancesInventory();
-    }
-  }, [product]);
-
-  // Update current fragrance inventory when selection changes
-  useEffect(() => {
-    const currentFragrance = product?.type === "simple"
-      ? selectedFragrance
-      : selectedModelFragrance;
-
-    if (currentFragrance && fragranceInventory[currentFragrance]) {
-      setCurrentFragranceInventory(fragranceInventory[currentFragrance]);
-    } else {
-      setCurrentFragranceInventory({
-        stock: 0,
-        threshold: 10,
-        status: 'checking'
-      });
-    }
-  }, [selectedFragrance, selectedModelFragrance, fragranceInventory, product]);
-
-  // Update max quantity when current fragrance inventory changes
-  useEffect(() => {
-    if (currentFragranceInventory.status === 'in-stock' || currentFragranceInventory.status === 'low-stock') {
-      setMaxQuantity(currentFragranceInventory.stock);
-      if (quantity > currentFragranceInventory.stock) {
-        setQuantity(currentFragranceInventory.stock);
-      }
-    } else if (currentFragranceInventory.status === 'out-of-stock') {
-      setMaxQuantity(0);
-      setQuantity(0);
-    }
-  }, [currentFragranceInventory]);
-
   // Function to get pre-selected fragrance with priority
   const getPreSelectedFragrance = () => {
     if (fragranceFromWishlist) {
@@ -386,7 +342,9 @@ function ProductPage() {
     return null;
   };
 
-  const fetchProduct = async () => {
+  // ========== UPDATED FETCH LOGIC ==========
+  // Fetch product by ID (existing logic)
+  const fetchProductById = async (id) => {
     try {
       setLoading(true);
       setError(null);
@@ -394,17 +352,16 @@ function ProductPage() {
       const preSelectedFragrance = getPreSelectedFragrance();
 
       const productRes = await axios.get(
-        `${import.meta.env.VITE_API_URL}/products/${productId}`
+        `${import.meta.env.VITE_API_URL}/products/${id}`
       );
 
       const productData = productRes.data;
       setProduct(productData);
 
-      // Single product info log
-      console.log('Product loaded:', { productId, productName, productData });
+      console.log('Product loaded by ID:', { productId: id, productName, productData });
 
       const offersRes = await axios.get(
-        `${import.meta.env.VITE_API_URL}/productoffers/product-color-offers/${productId}`
+        `${import.meta.env.VITE_API_URL}/productoffers/product-color-offers/${id}`
       );
 
       const offersData = offersRes.data;
@@ -477,6 +434,156 @@ function ProductPage() {
       setLoading(false);
     }
   };
+
+  // New function to fetch product by name (for direct URL access)
+  const fetchProductByName = async (name) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/products/by-name/${name}`
+      );
+
+      const productData = response.data.product; // assuming the route returns the product object directly
+      setProduct(productData);
+
+      console.log('Product loaded by name:', { productId: productData.productId, productName: name, productData });
+
+      // Now fetch offers using the obtained productId
+      const offersRes = await axios.get(
+        `${import.meta.env.VITE_API_URL}/productoffers/product-color-offers/${productData.productId}`
+      );
+
+      const offersData = offersRes.data;
+      setOffers(offersData);
+
+      // Set initial selections and images similar to fetchProductById
+      const preSelectedFragrance = getPreSelectedFragrance();
+
+      if (productData.type === "simple") {
+        if (productData.colors && productData.colors.length > 0) {
+          const defaultColor = productData.colors[0];
+          const fragrances = defaultColor.fragrances || [];
+
+          if (preSelectedFragrance && fragrances.includes(preSelectedFragrance)) {
+            setSelectedFragrance(preSelectedFragrance);
+            checkAndSetOfferWithData(productData, defaultColor, null, preSelectedFragrance, offersData);
+          } else if (fragrances.length > 0) {
+            const firstFragrance = fragrances[0];
+            setSelectedFragrance(firstFragrance);
+            checkAndSetOfferWithData(productData, defaultColor, null, firstFragrance, offersData);
+          }
+
+          if (defaultColor.images && defaultColor.images.length > 0) {
+            setMainImage(defaultColor.images[0]);
+            setImages(defaultColor.images);
+          } else if (productData.thumbnailImage) {
+            setMainImage(productData.thumbnailImage);
+            setImages([productData.thumbnailImage]);
+          }
+        } else {
+          if (productData.thumbnailImage) {
+            setMainImage(productData.thumbnailImage);
+            setImages([productData.thumbnailImage]);
+          }
+        }
+      } else if (productData.type === "variable") {
+        if (productData.models && productData.models.length > 0) {
+          const firstModel = productData.models[0];
+          setSelectedModel(firstModel);
+
+          if (firstModel.colors && firstModel.colors.length > 0) {
+            const defaultModelColor = firstModel.colors[0];
+            const modelFragrances = defaultModelColor.fragrances || [];
+
+            if (preSelectedFragrance && modelFragrances.includes(preSelectedFragrance)) {
+              setSelectedModelFragrance(preSelectedFragrance);
+              checkAndSetOfferWithData(productData, defaultModelColor, firstModel, preSelectedFragrance, offersData);
+            } else if (modelFragrances.length > 0) {
+              const firstModelFragrance = modelFragrances[0];
+              setSelectedModelFragrance(firstModelFragrance);
+              checkAndSetOfferWithData(productData, defaultModelColor, firstModel, firstModelFragrance, offersData);
+            }
+
+            if (defaultModelColor.images && defaultModelColor.images.length > 0) {
+              setMainImage(defaultModelColor.images[0]);
+              setImages(defaultModelColor.images);
+            } else if (productData.thumbnailImage) {
+              setMainImage(productData.thumbnailImage);
+              setImages([productData.thumbnailImage]);
+            }
+          }
+        }
+      }
+
+      setTimeout(() => {
+        smartSelectInitialFragrance(productData, preSelectedFragrance);
+      }, 500);
+
+    } catch (err) {
+      console.error("Error fetching product by name:", err);
+      if (err.response?.status === 404) {
+        setError("Product not found. Please check the URL.");
+      } else {
+        setError("Error loading product. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Main data loading effect – decide which fetch to use
+  useEffect(() => {
+    if (productIdFromState) {
+      // Came from navigation with state
+      fetchProductById(productIdFromState);
+    } else if (productName) {
+      // Direct URL access
+      fetchProductByName(productName);
+    } else {
+      // No identifier – show error
+      setError("No product identifier provided.");
+      setLoading(false);
+    }
+  }, [productIdFromState, productName]); // Dependencies
+
+  // Inventory fetching logic
+  useEffect(() => {
+    if (product) {
+      fetchAllFragrancesInventory();
+    }
+  }, [product]);
+
+  // Update current fragrance inventory when selection changes
+  useEffect(() => {
+    const currentFragrance = product?.type === "simple"
+      ? selectedFragrance
+      : selectedModelFragrance;
+
+    if (currentFragrance && fragranceInventory[currentFragrance]) {
+      setCurrentFragranceInventory(fragranceInventory[currentFragrance]);
+    } else {
+      setCurrentFragranceInventory({
+        stock: 0,
+        threshold: 10,
+        status: 'checking'
+      });
+    }
+  }, [selectedFragrance, selectedModelFragrance, fragranceInventory, product]);
+
+  // Update max quantity when current fragrance inventory changes
+  useEffect(() => {
+    if (currentFragranceInventory.status === 'in-stock' || currentFragranceInventory.status === 'low-stock') {
+      setMaxQuantity(currentFragranceInventory.stock);
+      if (quantity > currentFragranceInventory.stock) {
+        setQuantity(currentFragranceInventory.stock);
+      }
+    } else if (currentFragranceInventory.status === 'out-of-stock') {
+      setMaxQuantity(0);
+      setQuantity(0);
+    }
+  }, [currentFragranceInventory]);
 
   const checkAndSetOfferWithData = (productData, color, model, fragrance, offersArray) => {
     if (!color || !color.colorId) {
@@ -1623,7 +1730,7 @@ function ProductPage() {
 
       <section className="related-products-section">
         <RelatedProducts
-          productId={productId}
+          productId={product.productId}
           currentFragrances={getAvailableFragrances()}
           categoryId={product.categoryId}
           currentProductType={product.type}

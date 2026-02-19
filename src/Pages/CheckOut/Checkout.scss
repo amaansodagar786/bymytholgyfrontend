@@ -1,22 +1,27 @@
 /* ===================== FONTS ===================== */
 @font-face {
   font-family: "Heading";
-  src: url("../../../assets/fonts/TT Ramillas Trial Medium.ttf")
-    format("truetype");
+  src: url("../../../assets/fonts/TT Ramillas Trial Medium.ttf") format("truetype");
   font-style: normal;
 }
 
 @font-face {
   font-family: "LightHeading";
-  src: url("../../../assets/fonts/TT Ramillas Trial Light.ttf")
-    format("truetype");
+  src: url("../../../assets/fonts/TT Ramillas Trial Light.ttf") format("truetype");
   font-style: normal;
+}
+
+
+@font-face {
+  font-family: "Bold";
+  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+  font-style: normal;
+  // font-weight: 500; 
 }
 
 @font-face {
   font-family: "Content";
-  src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf")
-    format("truetype");
+  src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf") format("truetype");
   font-style: normal;
 }
 
@@ -38,7 +43,7 @@
     margin-top: 40px;
 
     h2 {
-      font-family: "Heading";
+      font-family: "Bold";
       color: #222;
       margin-bottom: 16px;
       font-size: 28px;
@@ -159,17 +164,17 @@
 
     &:not(.current):not(.active):hover {
       opacity: 0.8;
-      
+
       .step-circle {
         border-color: #999;
         transform: scale(1.05);
       }
-      
+
       .step-name {
         color: #333;
       }
     }
-    
+
     &.current {
       .step-circle {
         animation: pulse 2s infinite;
@@ -190,7 +195,7 @@
       transition: all 0.3s;
 
       .step-number {
-        font-family: "Heading";
+        font-family: "Bold";
         font-size: 20px;
         font-weight: 500;
         color: #999;
@@ -208,7 +213,7 @@
       max-width: 100px;
 
       .step-name {
-        font-family: "Heading";
+        font-family: "Bold";
         font-size: 14px;
         color: #666;
         margin-bottom: 4px;
@@ -258,7 +263,7 @@
         background: #000;
         transition: width 0.6s cubic-bezier(0.65, 0, 0.35, 1);
         transform-origin: left center;
-        
+
         &.filled {
           width: 100% !important;
         }
@@ -310,7 +315,7 @@
     }
 
     h2 {
-      font-family: "Heading";
+      font-family: "Bold";
       font-size: 28px;
       color: #222;
       margin: 0;
@@ -363,7 +368,7 @@
       flex: 1;
 
       .item-name {
-        font-family: "Heading";
+        font-family: "Bold";
         font-size: 18px;
         color: #222;
         margin: 0 0 12px 0;
@@ -406,7 +411,7 @@
         justify-content: space-between;
         align-items: center;
         margin-top: 12px;
-        
+
         @media (max-width: 768px) {
           flex-direction: column;
           align-items: flex-start;
@@ -417,7 +422,7 @@
           display: flex;
           align-items: center;
           gap: 8px;
-          
+
           .quantity-btn {
             width: 32px;
             height: 32px;
@@ -429,42 +434,42 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
-            
+
             &:hover:not(:disabled) {
               background: #f5f5f5;
               border-color: #999;
             }
-            
+
             &:disabled {
               opacity: 0.4;
               cursor: not-allowed;
             }
-            
+
             &.minus {
               color: #666;
             }
-            
+
             &.plus {
               color: #000;
               border-color: #000;
               background: #000;
               color: white;
-              
+
               &:hover:not(:disabled) {
                 background: #333;
                 border-color: #333;
               }
             }
           }
-          
+
           .quantity-display {
             min-width: 40px;
             text-align: center;
-            font-family: "Heading";
+            font-family: "Bold";
             font-size: 16px;
             color: #222;
             position: relative;
-            
+
             .quantity-loading {
               display: inline-block;
               width: 16px;
@@ -483,7 +488,7 @@
           gap: 12px;
 
           .price {
-            font-family: "Heading";
+            font-family: "Bold";
             font-weight: 600;
             font-size: 18px;
             color: #222;
@@ -527,7 +532,7 @@
   }
 
   .summary-title {
-    font-family: "Heading";
+    font-family: "Bold";
     font-size: 20px;
     color: #222;
     margin: 0 0 24px 0;
@@ -558,7 +563,7 @@
         margin-top: 24px;
         padding-top: 24px;
         border-top: 2px solid #e5e5e5;
-        font-family: "Heading";
+        font-family: "Bold";
         font-weight: 600;
         font-size: 20px;
         color: #222;
@@ -605,7 +610,7 @@
 
 .selected-address-section {
   .section-subtitle {
-    font-family: "Heading";
+    font-family: "Bold";
     font-size: 18px;
     color: #2e7d32;
     margin: 0 0 20px 0;
@@ -666,7 +671,7 @@
 
 .address-options-section {
   .section-subtitle {
-    font-family: "Heading";
+    font-family: "Bold";
     font-size: 18px;
     color: #222;
     margin: 0 0 20px 0;
@@ -735,7 +740,7 @@
         flex: 1;
 
         h4 {
-          font-family: "Heading";
+          font-family: "Bold";
           font-size: 16px;
           color: #222;
           margin: 0 0 6px 0;
@@ -915,7 +920,7 @@
         flex: 1;
 
         .method-name {
-          font-family: "Heading";
+          font-family: "Bold";
           font-weight: 500;
           color: #222;
           font-size: 16px;
@@ -957,7 +962,7 @@
   }
 
   .confirmation-title {
-    font-family: "Heading";
+    font-family: "Bold";
     font-size: 20px;
     color: #222;
     margin: 0 0 24px 0;
@@ -1028,7 +1033,7 @@
           margin-top: 16px;
           padding-top: 16px;
           border-top: 2px solid #eee;
-          font-family: "Heading";
+          font-family: "Bold";
           font-weight: 600;
           font-size: 18px;
           color: #222;
@@ -1124,6 +1129,7 @@
   .next-btn {
     background: #000;
     color: white;
+    font-family: "LightHeading";
 
     &:hover:not(:disabled) {
       background: #333;
@@ -1161,8 +1167,13 @@
 
 /* ===================== ANIMATIONS ===================== */
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes slideUp {
@@ -1170,6 +1181,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1180,9 +1192,11 @@
   0% {
     box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2);
   }
+
   70% {
     box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
   }
@@ -1247,25 +1261,25 @@
           padding: 3px 8px;
         }
       }
-      
+
       .item-quantity-price {
         .quantity-controls {
           .quantity-btn {
             width: 28px;
             height: 28px;
-            
+
             svg {
               width: 12px;
               height: 12px;
             }
           }
-          
+
           .quantity-display {
             min-width: 32px;
             font-size: 14px;
           }
         }
-        
+
         .price-wrapper {
           .price {
             font-size: 15px;
@@ -1299,7 +1313,7 @@
       }
     }
   }
-  
+
   .step-connector {
     height: 1px;
   }
