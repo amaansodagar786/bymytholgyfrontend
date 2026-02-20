@@ -75,3 +75,48 @@
 }
 
 /* ❌ NO MOBILE STYLES INTENTIONALLY */
+
+
+/* ===== CLICKABLE FRAGRANCES STYLES ===== */
+.kishkindha-list {
+  .kishkindha-fragrance-item {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    list-style-type: disc;
+    margin-bottom: 2px;
+    padding: 0;
+    
+    &:hover {
+      color: #c49a6c;
+    }
+    
+    &:active {
+      opacity: 0.8;
+    }
+  }
+}
+
+/* Make title clickable */
+.kishkindha-title {
+  cursor: pointer;
+  transition: color 0.3s ease;
+  display: inline-block;
+  
+  &:hover {
+    color: #c49a6c;
+  }
+}
+
+/* Make image clickable */
+.kishkindha-model__image {
+  cursor: pointer;
+  
+  img {
+    transition: transform 0.3s ease;
+    
+    &:hover {
+      transform: scale(1.02);
+    }
+  }
+}

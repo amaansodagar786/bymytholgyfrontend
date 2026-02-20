@@ -76,3 +76,41 @@
 }
 
 /* ❌ NO MOBILE STYLES INTENTIONALLY */
+
+/* ===== CLICKABLE FRAGRANCES STYLES ===== */
+.valmiki-list {
+  .valmiki-fragrance-item {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    list-style-type: disc; /* Keep your original bullet style */
+    margin-bottom: 2px; /* Match your existing li margin */
+    padding: 0; /* Remove any extra padding */
+    
+    /* Minimal hover effect - just color change */
+    &:hover {
+      color: #c49a6c;
+    }
+    
+    /* No extra movement or dots */
+    &:active {
+      opacity: 0.8;
+    }
+  }
+}
+
+/* Make title clickable */
+.valmiki-title {
+  cursor: pointer;
+  transition: color 0.3s ease;
+  display: inline-block; /* So cursor only shows on text */
+  
+  &:hover {
+    color: #c49a6c;
+  }
+}
+
+/* Make image clickable */
+.valmiki-model__image {
+  cursor: pointer;
+}

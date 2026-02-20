@@ -26,6 +26,9 @@ function ProductPage() {
   const productIdFromState = location.state?.productId;
   const fragranceFromWishlist = location.state?.fragranceFromWishlist;
 
+  const selectedFragranceFromState = location.state?.selectedFragrance;
+
+
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
@@ -329,10 +332,18 @@ function ProductPage() {
 
   // Function to get pre-selected fragrance with priority
   const getPreSelectedFragrance = () => {
+    // 👇 Priority 1: Fragrance from model click (new!)
+    if (selectedFragranceFromState) {
+      console.log("🌸 Fragrance from model click:", selectedFragranceFromState);
+      return selectedFragranceFromState;
+    }
+
+    // Priority 2: Fragrance from wishlist
     if (fragranceFromWishlist) {
       return fragranceFromWishlist;
     }
 
+    // Priority 3: Fragrance from URL
     const urlParams = new URLSearchParams(window.location.search);
     const urlFragrance = urlParams.get('fragrance');
     if (urlFragrance) {
@@ -663,11 +674,13 @@ function ProductPage() {
 
   // Handle pre-selection from URL parameters
   useEffect(() => {
-    if (fragranceFromWishlist) {
+
+    if (selectedFragranceFromState) {
       return;
     }
 
     const urlParams = new URLSearchParams(window.location.search);
+
 
     if (product) {
       const modelId = urlParams.get('model');
