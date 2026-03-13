@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import "./Footer.scss";
 import { FaInstagram, FaFacebookF, FaLinkedinIn, FaYoutube } from "react-icons/fa";
-import logo from "../../assets/logo/logo.png";
+import logo from "../../assets/logo/logo_white.png";
 
 const Footer = () => {
   // Animation variants

@@ -14,7 +14,7 @@ import Ramsetu from "./Models/Ramsetu/Ramsetu";
 import Sanjeevani from "./Models/Sanjeevani/Sanjeevani";
 import Vijayagamanam from "./Models/Vijayagamanam/Vijayagamanam";
 import "./RamayanNavbar.scss";
-import logo from "../../../assets/logo/newlogo.png"
+import logo from "../../../assets/logo/logo_black.png"
 
 const MENU = [
   "VALMIKI JYOT",
