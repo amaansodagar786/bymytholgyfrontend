@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import "./CtaSection.scss";
 import cta from "../../../assets/images/home/ctabg.png"
+// import cta from "../../../assets/images/home/showcase1.jpg"
 
 const CtaSection = () => {
   // Text animation variants

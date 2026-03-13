@@ -1,27 +1,27 @@
 /* ===================== FONTS ===================== */
 @font-face {
   font-family: "Heading";
-  src: url("../../../assets/fonts/TT Ramillas Trial Medium.ttf") format("truetype");
+  src: url("../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Medium.ttf") format("truetype");
   font-style: normal;
 }
 
 @font-face {
   font-family: "LightHeading";
-  src: url("../../../assets/fonts/TT Ramillas Trial Light.ttf") format("truetype");
+  src: url("../../assets/fonts/TT Ramillas Trial Light.ttf") format("truetype");
   font-style: normal;
 }
 
 
 @font-face {
   font-family: "Bold";
-  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
+  src: url("../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
   font-style: normal;
   // font-weight: 500; 
 }
 
 @font-face {
   font-family: "Content";
-  src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf") format("truetype");
+  src: url("../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Regular.ttf") format("truetype");
   font-style: normal;
 }
 
@@ -978,6 +978,7 @@
         margin: 0 0 12px 0;
         color: #222;
         font-size: 15px;
+        // font-family: "Content" !important; 
       }
 
       .selected-address-summary {

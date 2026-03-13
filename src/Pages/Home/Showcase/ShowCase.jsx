@@ -1,8 +1,8 @@
 import React from "react";
 import "./Showcase.scss";
 
-import showcase1 from "../../../assets/images/home/showcase1.png"
-import showcase2 from "../../../assets/images/home/showcase2.png"
+import showcase1 from "../../../assets/images/home/showcase1.jpg"
+import showcase2 from "../../../assets/images/home/showcase2.jpg"
 
 const Showcase = () => {
   return (

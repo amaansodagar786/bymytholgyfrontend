@@ -310,7 +310,7 @@ $transition-medium: 0.3s ease;
         position: relative;
 
         @include responsive(small-mobile) {
-          height: 300px !important;
+          height: 235px !important;
         }
 
         // Ensure swiper wrapper fills container
