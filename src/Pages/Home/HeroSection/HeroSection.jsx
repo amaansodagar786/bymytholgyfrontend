@@ -28,12 +28,12 @@ const HeroSection = () => {
           />
         </SwiperSlide>
 
-        <SwiperSlide>
+        {/* <SwiperSlide>
           <div
             className="hero-slide"
             style={{ backgroundImage: `url(${heroImage})` }}
           />
-        </SwiperSlide>
+        </SwiperSlide> */}
       </Swiper>
     </section>
   );
