@@ -1,5 +1,5 @@
 // ============================================================
-//  Products — Baobab-style layout
+//  ProductsSection2 — Baobab-style Light Theme (Same as Products)
 //  BG: #fbf7f3 | Desktop 4 | Tablet 3 | Mobile 2
 //  Font: Poppins | No overflow
 // ============================================================
@@ -7,7 +7,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
 
 // ── Section ───────────────────────────────────────────────────
-.ps-section {
+.ps2-section {
     background-color: #fbf7f3;
     padding: 60px 48px;
     width: 100%;
@@ -24,7 +24,7 @@
 }
 
 // ── Header ───────────────────────────────────────────────────
-.ps-header {
+.ps2-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -35,7 +35,7 @@
     }
 }
 
-.ps-title {
+.ps2-title {
     font-family: "Poppins", sans-serif;
     font-size: clamp(1.1rem, 2vw, 1.5rem);
     font-weight: 500;
@@ -46,13 +46,13 @@
 }
 
 // ── Arrows ───────────────────────────────────────────────────
-.ps-arrows {
+.ps2-arrows {
     display: flex;
     gap: 10px;
     flex-shrink: 0;
 }
 
-.ps-arrow {
+.ps2-arrow {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -78,24 +78,21 @@
         pointer-events: none;
     }
 
-
     @media (max-width: 500px) {
         width: 60px;
         height: 28px;
     }
-
-
 }
 
-// ── Swiper wrapper — THE KEY FIX ─────────────────────────────
-.ps-slider-wrap {
+// ── Swiper wrapper ────────────────────────────────────────────
+.ps2-slider-wrap {
     width: 100%;
     box-sizing: border-box;
-    overflow: hidden; // stop any bleed
+    overflow: hidden;
 
     .swiper {
         width: 100%;
-        overflow: hidden; // NOT visible — keeps slides clipped
+        overflow: hidden;
         box-sizing: border-box;
     }
 
@@ -106,7 +103,7 @@
 }
 
 // ── Card ─────────────────────────────────────────────────────
-.ps-card {
+.ps2-card {
     display: flex;
     flex-direction: column;
     cursor: pointer;
@@ -114,13 +111,13 @@
     width: 100%;
     box-sizing: border-box;
 
-    &:hover .ps-img-wrap img {
+    &:hover .ps2-img-wrap img {
         transform: scale(1.03);
     }
 }
 
-// ── Image wrapper ─────────────────────────────────────────────
-.ps-img-wrap {
+// ── Image wrapper ────────────────────────────────────────────
+.ps2-img-wrap {
     position: relative;
     width: 100%;
     aspect-ratio: 3 / 4;
@@ -137,7 +134,7 @@
 }
 
 // ── Offer badge ───────────────────────────────────────────────
-.ps-offer-badge {
+.ps2-offer-badge {
     position: absolute;
     top: 12px;
     left: 12px;
@@ -154,7 +151,7 @@
 }
 
 // ── Wishlist btn — icon only, no bg, no circle ────────────────
-.ps-wish-btn {
+.ps2-wish-btn {
     position: absolute;
     top: 15px;
     right: 10px;
@@ -175,7 +172,7 @@
         transform: scale(1.15);
     }
 
-    &.ps-wish-active {
+    &.ps2-wish-active {
         color: #c0392b;
     }
 
@@ -185,22 +182,22 @@
     }
 }
 
-.ps-wish-spinner {
+.ps2-wish-spinner {
     display: block;
     width: 14px;
     height: 14px;
     border: 2px solid rgba(26, 26, 26, 0.2);
     border-top-color: #1a1a1a;
     border-radius: 50%;
-    animation: ps-spin 0.6s linear infinite;
+    animation: ps2-spin 0.6s linear infinite;
 }
 
 // ── Card info ─────────────────────────────────────────────────
-.ps-info {
+.ps2-info {
     padding: 12px 2px 6px;
 }
 
-.ps-name {
+.ps2-name {
     font-family: "Poppins", sans-serif;
     font-size: 1.15rem;
     font-weight: 500;
@@ -214,20 +211,19 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
 
-
     @media (max-width: 500px) {
         font-size: 0.95rem;
     }
 }
 
-.ps-prices {
+.ps2-prices {
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
     gap: 6px;
 }
 
-.ps-price {
+.ps2-price {
     font-family: "Poppins", sans-serif;
     font-size: 1.1rem;
     font-weight: 500;
@@ -238,7 +234,7 @@
     }
 }
 
-.ps-original {
+.ps2-original {
     font-family: "Poppins", sans-serif;
     font-size: 1rem;
     font-weight: 400;
@@ -250,7 +246,7 @@
     }
 }
 
-.ps-discount {
+.ps2-discount {
     font-family: "Poppins", sans-serif;
     font-size: 0.9rem;
     font-weight: 600;
@@ -264,9 +260,9 @@
 }
 
 // ── States ───────────────────────────────────────────────────
-.ps-loading,
-.ps-error,
-.ps-empty {
+.ps2-loading,
+.ps2-error,
+.ps2-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -296,16 +292,16 @@
     }
 }
 
-.ps-spinner {
+.ps2-spinner {
     width: 32px;
     height: 32px;
     border: 2px solid #e0dbd5;
     border-top-color: #1a1a1a;
     border-radius: 50%;
-    animation: ps-spin 0.8s linear infinite;
+    animation: ps2-spin 0.8s linear infinite;
 }
 
-@keyframes ps-spin {
+@keyframes ps2-spin {
     to {
         transform: rotate(360deg);
     }

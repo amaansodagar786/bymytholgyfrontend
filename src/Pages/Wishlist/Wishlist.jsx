@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify"; // ✅ Added ToastContainer import
+import { toast, ToastContainer } from "react-toastify";
+import { FaRegHeart, FaHeart } from "react-icons/fa";
 import "./Wishlist.scss";
 import LoginModal from "../../Components/Login/LoginModel/LoginModal";
-import "react-toastify/dist/ReactToastify.css"; // ✅ Added CSS import
+import "react-toastify/dist/ReactToastify.css";
+import placeholderimg from "../../assets/logo/logo.png";
 
 function Wishlist() {
   const [wishlistItems, setWishlistItems] = useState([]);
@@ -63,35 +65,29 @@ function Wishlist() {
     }
   };
 
-  const removeFromWishlist = async (productId, selectedFragrance) => {
+  const removeFromWishlist = async (productId, selectedFragrance, e) => {
+    e.stopPropagation();
     try {
       setRemovingItem(productId);
 
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("userId");
 
-      // ✅ SIMPLE: Always pass the fragrance (it's always there)
       const url = `${import.meta.env.VITE_API_URL}/wishlist/remove/${productId}?userId=${userId}&fragrance=${selectedFragrance}`;
 
-      await axios.delete(
-        url,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+      await axios.delete(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
+      });
 
-      // ✅ Remove from local state - match BOTH productId AND fragrance
-      setWishlistItems(prev => prev.filter(item => 
+      setWishlistItems(prev => prev.filter(item =>
         !(item.productId === productId && item.selectedFragrance === selectedFragrance)
       ));
 
-      // Dispatch event for navbar update
       window.dispatchEvent(new Event('wishlistUpdated'));
-
-      toast.success("Item removed from wishlist");
+      toast.success("Removed from wishlist");
 
     } catch (err) {
       console.error("Error removing from wishlist:", err);
@@ -135,13 +131,12 @@ function Wishlist() {
     }
 
     navigate(url, {
-      state: { 
+      state: {
         productId: item.productId,
         ...(item.selectedModel && { modelId: item.selectedModel.modelId }),
         ...(item.selectedColor && { colorId: item.selectedColor.colorId }),
         ...(item.selectedFragrance && { fragrance: item.selectedFragrance }),
-        ...(item.selectedSize && { size: item.selectedSize }) ,
-        // fragranceFromWishlist: item.selectedFragrance,
+        ...(item.selectedSize && { size: item.selectedSize })
       }
     });
   };
@@ -149,7 +144,7 @@ function Wishlist() {
   const calculateDiscount = (item) => {
     const originalPrice = item.originalPrice || 0;
     const currentPrice = item.currentPrice || 0;
-    
+
     if (originalPrice > 0 && currentPrice < originalPrice) {
       const discountAmount = originalPrice - currentPrice;
       const discountPercentage = Math.round((discountAmount / originalPrice) * 100);
@@ -159,7 +154,7 @@ function Wishlist() {
         discountPercentage
       };
     }
-    
+
     return {
       hasDiscount: false,
       discountAmount: 0,
@@ -182,7 +177,177 @@ function Wishlist() {
     };
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   const summary = calculateSummary();
+
+  // Function to render products with summary in correct position
+  const renderProductsWithSummary = () => {
+    const items = [...wishlistItems];
+    const summaryData = summary;
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+      // Mobile: Show all products first, then summary at bottom
+      return (
+        <>
+          <div className="wishlist-products-grid">
+            {items.map((item) => renderProductCard(item))}
+          </div>
+          <div className="wishlist-summary-mobile">
+            {renderSummaryCard(summaryData)}
+          </div>
+        </>
+      );
+    } else {
+      // Desktop/Tablet: Summary as 4th item (desktop) or 3rd item (tablet)
+      const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
+      const itemsPerRow = isTablet ? 2 : 3;
+
+      // If items count is less than or equal to itemsPerRow, summary goes after products
+      if (items.length <= itemsPerRow) {
+        return (
+          <>
+            <div className="wishlist-products-grid">
+              {items.map((item) => renderProductCard(item))}
+              {renderSummaryCard(summaryData)}
+            </div>
+          </>
+        );
+      } else {
+        // More than itemsPerRow: First row has itemsPerRow products + summary
+        const firstRowItems = items.slice(0, itemsPerRow);
+        const remainingItems = items.slice(itemsPerRow);
+
+        return (
+          <>
+            <div className="wishlist-products-grid">
+              {firstRowItems.map((item) => renderProductCard(item))}
+              {renderSummaryCard(summaryData)}
+            </div>
+            {remainingItems.length > 0 && (
+              <div className="wishlist-products-grid">
+                {remainingItems.map((item) => renderProductCard(item))}
+              </div>
+            )}
+          </>
+        );
+      }
+    }
+  };
+
+  const renderProductCard = (item) => {
+    const discount = calculateDiscount(item);
+    const image = item.thumbnailImage || placeholderimg;
+    const isRemoving = removingItem === item.productId;
+
+    return (
+      <div
+        key={`${item.wishlistId}-${item.selectedFragrance}`}
+        className="wishlist-product-card"
+        onClick={() => handleProductClick(item)}
+      >
+        <div className="wishlist-product-img-wrap">
+          {discount.hasDiscount && (
+            <span className="wishlist-offer-badge">
+              {discount.discountPercentage}% OFF
+            </span>
+          )}
+
+          <button
+            className={`wishlist-remove-btn`}
+            onClick={(e) => removeFromWishlist(item.productId, item.selectedFragrance, e)}
+            disabled={isRemoving}
+            aria-label="Remove from wishlist"
+          >
+            {isRemoving ? (
+              <span className="wishlist-remove-spinner"></span>
+            ) : (
+              <FaHeart />
+            )}
+          </button>
+
+          <img
+            src={image}
+            alt={item.productName}
+            loading="lazy"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = placeholderimg;
+            }}
+          />
+        </div>
+
+        <div className="wishlist-product-info">
+          <h3 className="wishlist-product-name">{item.productName}</h3>
+
+          {item.selectedFragrance && (
+            <p className="wishlist-product-fragrance">
+              Fragrance :  {item.selectedFragrance}
+            </p>
+          )}
+
+          <div className="wishlist-product-prices">
+            <span className="wishlist-current-price">
+              ₹{formatCurrency(item.currentPrice)}
+            </span>
+            {item.originalPrice && item.originalPrice > item.currentPrice && (
+              <>
+                <span className="wishlist-original-price">
+                  ₹{formatCurrency(item.originalPrice)}
+                </span>
+                {discount.hasDiscount && (
+                  <span className="wishlist-discount-badge">
+                    {discount.discountPercentage}% OFF
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSummaryCard = (summaryData) => {
+    return (
+      <div className="wishlist-summary-card">
+        <h2>Wishlist Summary</h2>
+
+        <div className="wishlist-summary-row">
+          <span>Total Items</span>
+          <span>{summaryData.totalItems}</span>
+        </div>
+
+        {summaryData.totalDiscount > 0 && (
+          <div className="wishlist-summary-row">
+            <span>Total Discount</span>
+            <span>₹{formatCurrency(summaryData.totalDiscount)}</span>
+          </div>
+        )}
+
+        <div className="wishlist-summary-row total">
+          <span>Total Value</span>
+          <span>₹{formatCurrency(summaryData.totalPrice)}</span>
+        </div>
+
+        <button
+          className="wishlist-continue-btn"
+          onClick={() => {
+            toast.info("Continue shopping");
+            navigate('/');
+          }}
+        >
+          CONTINUE SHOPPING
+        </button>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -199,8 +364,8 @@ function Wishlist() {
           pauseOnHover
           theme="light"
         />
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
+        <div className="wishlist-loading-container">
+          <div className="wishlist-loading-spinner"></div>
         </div>
       </div>
     );
@@ -221,12 +386,12 @@ function Wishlist() {
           pauseOnHover
           theme="light"
         />
-        <div className="login-prompt">
+        <div className="wishlist-login-prompt">
           <h2>Login Required</h2>
           <p>Please login to view your wishlist.</p>
-          <div className="auth-buttons">
+          <div className="wishlist-auth-buttons">
             <button
-              className="auth-btn login-btn"
+              className="wishlist-login-btn"
               onClick={() => setShowLoginModal(true)}
             >
               Login
@@ -266,34 +431,18 @@ function Wishlist() {
           pauseOnHover
           theme="light"
         />
-        <div className="wishlist-hero">
-          <img
-            src="https://images.unsplash.com/photo-1540555700478-4be289fbecef"
-            alt="Wishlist Hero"
-          />
-        </div>
-
-        <div className="wishlist-wrapper">
-          <div className="wishlist-header">
-            <h1>Wishlist</h1>
-            <button onClick={() => navigate(-1)}>×</button>
-          </div>
-
-          <div className="wishlist-body">
-            <div className="empty-wishlist-center">
-              <div className="empty-wishlist-icon">💔</div>
-              <h2>Your wishlist is empty</h2>
-              <p className="empty-wishlist-message">
-                Looks like you haven't added any items to your wishlist yet.
-              </p>
-              <button
-                className="empty-wishlist-button"
-                onClick={() => navigate('/')}
-              >
-                Continue Shopping
-              </button>
-            </div>
-          </div>
+        <div className="wishlist-empty-container">
+          <div className="wishlist-empty-icon">💔</div>
+          <h2>Your wishlist is empty</h2>
+          <p className="wishlist-empty-message">
+            Looks like you haven't added any items to your wishlist yet.
+          </p>
+          <button
+            className="wishlist-empty-btn"
+            onClick={() => navigate('/')}
+          >
+            Continue Shopping
+          </button>
         </div>
       </div>
     );
@@ -314,32 +463,16 @@ function Wishlist() {
           pauseOnHover
           theme="light"
         />
-        <div className="wishlist-hero">
-          <img
-            src="https://images.unsplash.com/photo-1540555700478-4be289fbecef"
-            alt="Wishlist Hero"
-          />
-        </div>
-
-        <div className="wishlist-wrapper">
-          <div className="wishlist-header">
-            <h1>Wishlist</h1>
-            <button onClick={() => navigate(-1)}>×</button>
-          </div>
-
-          <div className="wishlist-body">
-            <div className="empty-wishlist-center">
-              <div className="empty-wishlist-icon">⚠️</div>
-              <h2>Oops! Something went wrong</h2>
-              <p className="empty-wishlist-message">{error}</p>
-              <button
-                className="empty-wishlist-button"
-                onClick={fetchWishlist}
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
+        <div className="wishlist-empty-container">
+          <div className="wishlist-empty-icon">⚠️</div>
+          <h2>Oops! Something went wrong</h2>
+          <p className="wishlist-empty-message">{error}</p>
+          <button
+            className="wishlist-empty-btn"
+            onClick={fetchWishlist}
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -359,122 +492,14 @@ function Wishlist() {
         pauseOnHover
         theme="light"
       />
-      
-      <div className="wishlist-hero">
-        <img
-          src="https://images.unsplash.com/photo-1540555700478-4be289fbecef"
-          alt="Wishlist Hero"
-        />
-      </div>
 
-      <div className="wishlist-wrapper">
+      <div className="wishlist-container">
         <div className="wishlist-header">
-          <h1>Wishlist</h1>
-          <button onClick={() => navigate(-1)}>×</button>
+          <h1>My Wishlist</h1>
         </div>
 
-        <div className="wishlist-body">
-          <div className="wishlist-left">
-            {wishlistItems.map((item) => {
-              const discount = calculateDiscount(item);
-              
-              return (
-                <div className="wishlist-item" key={item.wishlistId}>
-                  <img
-                    src={item.thumbnailImage || "https://via.placeholder.com/140x140?text=No+Image"}
-                    alt={item.productName}
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "https://via.placeholder.com/140x140?text=No+Image";
-                    }}
-                  />
-
-                  <div className="wishlist-info">
-                    <h3>{item.productName}</h3>
-
-                    {/* ✅ ALWAYS show fragrance (it's always there) */}
-                    <p className="fragrance">
-                      Fragrance : {item.selectedFragrance}
-                    </p>
-
-                    <div className="variants">
-                      {item.selectedModel && (
-                        <span className="variant-tag">Model: {item.selectedModel.modelName}</span>
-                      )}
-                      {item.selectedSize && (
-                        <span className="variant-tag">Size: {item.selectedSize}</span>
-                      )}
-                    </div>
-
-                    <div className="price-row">
-                      <span className="price">₹{item.currentPrice.toLocaleString()}</span>
-                      
-                      {item.originalPrice && item.originalPrice > item.currentPrice && (
-                        <>
-                          <span className="old">₹{item.originalPrice.toLocaleString()}</span>
-                          {discount.hasDiscount && (
-                            <span className="off-badge">
-                              {discount.discountPercentage}% OFF
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    <div className="wishlist-actions">
-                      <button
-                        className="view-details-btn"
-                        onClick={() => handleProductClick(item)}
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* ✅ PASS FRAGRANCE TO REMOVE FUNCTION */}
-                  <button
-                    className="remove"
-                    onClick={() => removeFromWishlist(item.productId, item.selectedFragrance)}
-                    disabled={removingItem === item.productId}
-                    title="Remove from wishlist"
-                  >
-                    {removingItem === item.productId ? '⏳' : '×'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="wishlist-right">
-            <h2>WISHLIST SUMMARY</h2>
-
-            <div className="row">
-              <span>Total Items</span>
-              <span>{summary.totalItems}</span>
-            </div>
-
-            {summary.totalDiscount > 0 && (
-              <div className="row">
-                <span>Total Discount</span>
-                <span>₹{summary.totalDiscount.toLocaleString()}</span>
-              </div>
-            )}
-
-            <div className="row total">
-              <span>Total Value</span>
-              <span>₹{summary.totalPrice.toLocaleString()}</span>
-            </div>
-
-            <button
-              className="continue-shopping-btn"
-              onClick={() => {
-                toast.info("Continue shopping");
-                navigate('/');
-              }}
-            >
-              CONTINUE SHOPPING
-            </button>
-          </div>
+        <div className="wishlist-content">
+          {renderProductsWithSummary()}
         </div>
       </div>
     </div>

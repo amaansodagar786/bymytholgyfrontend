@@ -1,0 +1,204 @@
+// ============================================================
+//  CraftsmanSection
+//  Desktop : 100vh | image left 85vh | text right scroll-pinned
+//  Tablet/Mobile : static, image top + text below centered
+//  No overflow anywhere
+// ============================================================
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap');
+
+// ── Section ───────────────────────────────────────────────────
+.cs-section {
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    background-color: #f5f0ea;
+
+    // Desktop: fixed 100vh so scroll effect works inside it
+    @media (min-width: 1025px) {
+        height: 100vh;
+    }
+
+    // Tablet / Mobile: auto height, no fixed
+    @media (max-width: 1024px) {
+        height: auto;
+    }
+}
+
+// ── Inner wrapper ─────────────────────────────────────────────
+.cs-inner {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+
+    @media (max-width: 1024px) {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+// ── Left: Image column ────────────────────────────────────────
+.cs-image-wrap {
+    flex: 0 0 48%;
+    width: 48%;
+    box-sizing: border-box;
+    padding: 40px 0 40px 48px;
+    overflow: hidden;
+
+    @media (max-width: 1024px) {
+        flex: none;
+        width: 100%;
+        // padding: 0; 
+         padding: 40px 20px 20px;
+    }
+}
+
+.cs-image {
+    display: block;
+    width: 100%;
+    height: 85vh;
+    object-fit: cover;
+    object-position: center;
+
+    @media (max-width: 1024px) {
+        height: 55vw; // nice ratio on tablet
+        min-height: 260px;
+        max-height: 480px;
+    }
+
+    @media (max-width: 600px) {
+        height: 72vw;
+        min-height: 220px;
+    }
+}
+
+// ── Right: Text column ────────────────────────────────────────
+.cs-text-outer {
+    flex: 1;
+    width: 52%;
+    box-sizing: border-box;
+    overflow: hidden; // clip text if it overflows column
+
+    // Desktop: full height so text can travel inside it
+    @media (min-width: 1025px) {
+        height: 100%;
+        padding: 0 48px;
+        position: relative;
+    }
+
+    @media (max-width: 1024px) {
+        flex: none;
+        width: 100%;
+        padding: 36px 24px 48px;
+        display: flex;
+        justify-content: center;
+    }
+}
+
+// ── Text block (the one that moves on desktop) ────────────────
+.cs-text-inner {
+    will-change: transform; // hint GPU for smooth movement
+
+    @media (min-width: 1025px) {
+        position: absolute; // positioned inside .cs-text-outer
+        top: 48px;
+        left: 48px;
+        right: 48px;
+        // transform: translateY() applied by JS
+    }
+
+    @media (max-width: 1024px) {
+        position: static;
+        max-width: 560px;
+        text-align: center;
+        transform: none !important; // kill any JS transform on mobile
+    }
+}
+
+// ── Eyebrow line ──────────────────────────────────────────────
+.cs-eyebrow {
+    display: block;
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(0.75rem, 1.1vw, 0.9rem);
+    font-weight: 400;
+    color: #7a6f65;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+
+    @media (max-width: 1024px) {
+        margin-bottom: 8px;
+    }
+}
+
+// ── Main heading ──────────────────────────────────────────────
+.cs-heading {
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(1.8rem, 3vw, 2.8rem);
+    font-weight: 600;
+    color: #1a1a1a;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.15;
+    margin: 0 0 20px;
+
+    @media (max-width: 600px) {
+        font-size: clamp(1.5rem, 6vw, 2rem);
+    }
+}
+
+// ── Sub line ──────────────────────────────────────────────────
+.cs-sub {
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(0.78rem, 1vw, 0.88rem);
+    font-weight: 300;
+    font-style: italic;
+    color: #5a5249;
+    line-height: 1.7;
+    margin: 0 0 16px;
+    padding-left: 16px;
+    border-left: 2px solid #c8bfb5;
+
+    @media (max-width: 1024px) {
+        padding-left: 0;
+        border-left: none;
+        padding-top: 0;
+    }
+}
+
+// ── Body paragraph ────────────────────────────────────────────
+.cs-body {
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(0.78rem, 1vw, 0.88rem);
+    font-weight: 400;
+    color: #5a5249;
+    line-height: 1.8;
+    margin: 0 0 32px;
+}
+
+// ── CTA Button ────────────────────────────────────────────────
+.cs-cta {
+    display: inline-block;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    background: transparent;
+    border: 1px solid #1a1a1a;
+    padding: 11px 28px;
+    cursor: pointer;
+    transition: background 0.25s, color 0.25s;
+
+    &:hover {
+        background: #1a1a1a;
+        color: #f5f0ea;
+    }
+
+    @media (max-width: 480px) {
+        font-size: 0.65rem;
+        padding: 10px 22px;
+    }
+}

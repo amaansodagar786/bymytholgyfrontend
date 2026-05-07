@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   FiSearch,
   FiHeart,
@@ -17,6 +17,7 @@ import CartSidebar from "../../Pages/Cart/Sidebar/CartSidebar";
 
 function Navbar({ isModelOpen = false }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [wishlistCount, setWishlistCount] = useState(0);
@@ -55,12 +56,9 @@ function Navbar({ isModelOpen = false }) {
       setShowLoginModal(true);
       return;
     }
-    if (window.innerWidth <= 768) {
-      navigate("/wishlist");
-      if (menuOpen) setMenuOpen(false);
-    } else {
-      setShowWishlistSidebar(true);
-    }
+    // Always navigate to wishlist page, regardless of screen size
+    navigate("/wishlist");
+    if (menuOpen) setMenuOpen(false);
   };
 
   const handleCartClick = (e) => {
@@ -115,8 +113,16 @@ function Navbar({ isModelOpen = false }) {
     if (showLoginModal) setMenuOpen(false);
   }, [showLoginModal]);
 
-  // Determine navbar classes based on model state AND scroll state
+  // Determine navbar classes based on current route, scroll state, and model state
   const getNavbarClass = () => {
+    const isHomePage = location.pathname === "/";
+
+    // If NOT on home page, always show brown background
+    if (!isHomePage) {
+      return "navbar-model-open";
+    }
+
+    // If ON home page, use scroll-based classes or model state
     if (isModelOpen) return "navbar-model-open";
     if (isScrolled) return "navbar-scrolled";
     return "navbar-transparent";

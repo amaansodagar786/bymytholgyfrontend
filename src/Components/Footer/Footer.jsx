@@ -1,11 +1,18 @@
 import React from "react";
 import { motion } from "framer-motion";
 import "./Footer.scss";
-import { FaInstagram, FaFacebookF, FaLinkedinIn, FaYoutube } from "react-icons/fa";
+import {
+  FaInstagram,
+  FaFacebookF,
+  FaLinkedinIn,
+  FaYoutube,
+  FaPhoneAlt,
+  FaEnvelope,
+  FaMapMarkerAlt
+} from "react-icons/fa";
 import logo from "../../assets/logo/logo_white.png";
 
 const Footer = () => {
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -42,7 +49,6 @@ const Footer = () => {
     }),
     hover: {
       scale: 1.2,
-      rotate: 360,
       transition: {
         duration: 0.4,
         ease: "easeOut"
@@ -53,7 +59,7 @@ const Footer = () => {
   const linkVariants = {
     hover: {
       x: 10,
-      color: "#f5d47f",
+      color: "#ffffff",
       transition: {
         duration: 0.3,
         ease: "easeOut"
@@ -61,7 +67,6 @@ const Footer = () => {
     }
   };
 
-  // Social media links
   const socialLinks = {
     instagram: "https://instagram.com",
     facebook: "https://facebook.com",
@@ -69,7 +74,6 @@ const Footer = () => {
     youtube: "https://youtube.com"
   };
 
-  // Company links
   const companyLinks = {
     home: "/",
     about: "/about",
@@ -77,7 +81,6 @@ const Footer = () => {
     comingSoon: "/coming-soon"
   };
 
-  // Series links
   const seriesLinks = {
     ramayan: "/series/ramayan",
     swaminarayan: "/series/swaminarayan",
@@ -87,41 +90,24 @@ const Footer = () => {
   return (
     <footer className="footer">
       <motion.div
-        className="footer__top"
+        className="footer__container"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.1 }}
         variants={containerVariants}
       >
-        {/* LEFT LOGO */}
-        <motion.div className="footer__logo" variants={itemVariants}>
-          <img src={logo} alt="By Mythology" />
-          <div className="footer__icons">
-            {[
-              { icon: <FaInstagram />, link: socialLinks.instagram, index: 0 },
-              { icon: <FaFacebookF />, link: socialLinks.facebook, index: 1 },
-              { icon: <FaLinkedinIn />, link: socialLinks.linkedin, index: 2 },
-              { icon: <FaYoutube />, link: socialLinks.youtube, index: 3 }
-            ].map(({ icon, link, index }) => (
-              <motion.a
-                key={index}
-                href={link}
-                target="_blank"
-                rel="noopener noreferrer"
-                custom={index}
-                variants={iconVariants}
-                initial="hidden"
-                animate="visible"
-                whileHover="hover"
-                className="footer__icon-link"
-              >
-                {icon}
-              </motion.a>
-            ))}
+        {/* FIRST COLUMN - Logo + Description */}
+        <motion.div className="footer__col footer__col--logo" variants={itemVariants}>
+          <div className="footer__logo-wrapper">
+            <img src={logo} alt="By Mythology" className="footer__logo" />
           </div>
+          <p className="footer__description">
+            Bringing mythology to life through art and storytelling.
+            We create timeless pieces that capture the essence of ancient.
+          </p>
         </motion.div>
 
-        {/* COMPANY */}
+        {/* SECOND COLUMN - COMPANY */}
         <motion.div className="footer__col" variants={itemVariants}>
           <h4>COMPANY</h4>
           <ul>
@@ -132,14 +118,16 @@ const Footer = () => {
                 whileHover="hover"
                 className="footer__link-item"
               >
-                <a href={link}>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</a>
+                <a href={link}>
+                  {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                </a>
               </motion.li>
             ))}
           </ul>
         </motion.div>
 
-        {/* SERIES */}
-        <motion.div className="footer__col" variants={itemVariants}>
+        {/* THIRD COLUMN - SERIES (Hidden on tablet & mobile) */}
+        <motion.div className="footer__col footer__col--series" variants={itemVariants}>
           <h4>SERIES</h4>
           <ul>
             {Object.entries(seriesLinks).map(([key, link]) => (
@@ -157,50 +145,88 @@ const Footer = () => {
           </ul>
         </motion.div>
 
-        {/* CONTACT */}
-        <motion.div className="footer__col" variants={itemVariants}>
+        {/* FOURTH COLUMN - CONTACT (Social icons removed from here) */}
+        <motion.div className="footer__col footer__col--contact" variants={itemVariants}>
           <h4>CONTACT</h4>
-          <motion.p whileHover={{ scale: 1.05 }}>
-            <a href="tel:+911233456781">+91 1233456781</a>
-          </motion.p>
-          <motion.p whileHover={{ scale: 1.05 }}>
-            <a href="mailto:bymythology@gmail.com">bymythology@gmail.com</a>
-          </motion.p>
-          <motion.p whileHover={{ scale: 1.05 }}>
-            <a
-              href="https://maps.google.com/?q=41,Luna+Road,Taluko:Padra,District:Vadodara-391440,Gujarat"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              41, Luna Rd, Taluka: Padra,
-              <br />
-              District: Vadodara-391440,
-              <br />
-              Gujarat.
-            </a>
-          </motion.p>
+
+          {/* Phone */}
+          <div className="footer__contact-item">
+            <FaPhoneAlt className="footer__contact-icon" />
+            <motion.p whileHover={{ scale: 1.05 }}>
+              <a href="tel:+911233456781">+91 1233456781</a>
+            </motion.p>
+          </div>
+
+          {/* Email */}
+          <div className="footer__contact-item">
+            <FaEnvelope className="footer__contact-icon" />
+            <motion.p whileHover={{ scale: 1.05 }}>
+              <a href="mailto:bymythology@gmail.com">bymythology@gmail.com</a>
+            </motion.p>
+          </div>
+
+          {/* Address with map icon only on first line */}
+          <div className="footer__contact-item">
+            <FaMapMarkerAlt className="footer__contact-icon" />
+            <p className="footer__address">
+              <a
+                href="https://maps.google.com/?q=41,Luna+Road,Taluko:Padra,District:Vadodara-391440,Gujarat"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                41, Luna Rd, Taluka: Padra,<br />
+                District: Vadodara-391440,<br />
+                Gujarat.
+              </a>
+            </p>
+          </div>
         </motion.div>
 
-        {/* COPYRIGHT */}
-        <motion.div
-          className="footer__bottom"
-          variants={itemVariants}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, duration: 0.8 }}
-        >
-          Copyright © 2026 ByMythology - All Rights Reserved.
-          <span>
-            Design and Developed by{" "}
-            <motion.b
-              whileHover={{ scale: 1.1, color: "#f5d47f" }}
-              transition={{ duration: 0.3 }}
-            >
-              <a href="https://techorses.com" target="_blank" rel="noopener noreferrer">
-                TECHORSES
-              </a>
-            </motion.b>
-          </span>
+        {/* COPYRIGHT + SOCIAL ICONS in same row */}
+        <motion.div className="footer__bottom" variants={itemVariants}>
+          <div className="footer__bottom-wrapper">
+            <div className="footer__copyright">
+              Copyright © 2026 ByMythology - All Rights Reserved.
+              <span className="footer__credit">
+                Design and Developed by{" "}
+                <motion.b
+                  whileHover={{ scale: 1.1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <a href="https://techorses.com" target="_blank" rel="noopener noreferrer">
+                    TECHORSES
+                  </a>
+                </motion.b>
+              </span>
+            </div>
+
+            {/* Social Icons - Desktop: Right side, Mobile/Tablet: Below Contact */}
+            <div className="footer__social-icons">
+              <div className="footer__icons">
+                {[
+                  { icon: <FaInstagram />, link: socialLinks.instagram, index: 0 },
+                  { icon: <FaFacebookF />, link: socialLinks.facebook, index: 1 },
+                  { icon: <FaLinkedinIn />, link: socialLinks.linkedin, index: 2 },
+                  { icon: <FaYoutube />, link: socialLinks.youtube, index: 3 }
+                ].map(({ icon, link, index }) => (
+                  <motion.a
+                    key={index}
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    custom={index}
+                    variants={iconVariants}
+                    initial="hidden"
+                    animate="visible"
+                    whileHover="hover"
+                    className="footer__icon-link"
+                  >
+                    {icon}
+                  </motion.a>
+                ))}
+              </div>
+            </div>
+          </div>
         </motion.div>
       </motion.div>
     </footer>

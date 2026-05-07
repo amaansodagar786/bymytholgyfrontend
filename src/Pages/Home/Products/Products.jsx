@@ -4,11 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
-import { BsArrowRight , BsArrowLeft } from "react-icons/bs";
+import { BsArrowRight, BsArrowLeft } from "react-icons/bs";
 
 import { FaRegHeart, FaHeart } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
-import WishlistSidebar from "../../Wishlist/Sidebar/WishlistSidebar";
 import LoginModal from "../../../Components/Login/LoginModel/LoginModal";
 import "swiper/css";
 import "swiper/css/navigation";
@@ -19,7 +18,6 @@ import placeholderimg from "../../../assets/logo/logo.png";
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [wishlist, setWishlist] = useState({});
-  const [showWishlistSidebar, setShowWishlistSidebar] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -218,9 +216,8 @@ const Products = () => {
           }
         );
         toast.success("Added to wishlist!");
-        if (window.innerWidth > 768) {
-          setShowWishlistSidebar(true);
-        }
+        // ✅ CHANGED: Navigate to wishlist page instead of opening sidebar
+        navigate("/wishlist");
       }
 
       setUpdatingProductId(null);
@@ -267,11 +264,6 @@ const Products = () => {
         draggable
         pauseOnHover
         theme="light"
-      />
-
-      <WishlistSidebar
-        isOpen={showWishlistSidebar}
-        onClose={() => setShowWishlistSidebar(false)}
       />
 
       {showLoginModal && (

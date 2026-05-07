@@ -11,25 +11,24 @@ const About = () => {
         </button> */}
 
         <p className="about-subtitle">
-          The glass is brought to life
+          Brymthology
         </p>
 
         <h2 className="about-title">
-          THROUGH THE ARTISAN’S BREATH.
+          RAMAYAN SERIES
         </h2>
 
         <p className="about-description">
-          The subtle soul of man shines through in the creation of our
-          hand-blown glasses. The incandescent material is wrapped around
-          a rod, as the craftsman's breath brings the form to life.
-          Colors appear thanks to the inclusion of confetti or strands
-          of glass that appear randomly, as if by magic. Hand-blown
-          glass is a precious technique that embodies the craftsman's
-          know-how.
+          At Brymthology, we don't just create candles - we bring ancient stories to life through light.
+          Rooted in Indian culture and inspired by timeless epics, our candles are designed
+          to celebrate mythology, spirituality, and art.
+          <br /><br />
+          Introducing: The Ramayan Series - A sacred collection inspired by the eternal journey of Shri Ram,
+          symbolizing Dharma, Bhakti, Courage, Sacrifice, and Victory of Truth.
         </p>
 
         <button className="about-bottom-btn">
-          DISCOVER MORE
+          DISCOVER THE COLLECTION
         </button>
 
       </div>
