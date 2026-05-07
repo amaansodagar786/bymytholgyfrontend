@@ -1,0 +1,283 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Cabin:wght@400;500;600&display=swap");
+
+// ─── Variables ───────────────────────────────────────────────
+$orange: #e07c3a;
+$dark: #1a1a2e;
+$text-muted: #6b7280;
+$stat-bg: #f3f4f6;
+$white: #ffffff;
+$border-radius-img: 22px;
+
+// ─── Section ─────────────────────────────────────────────────
+.aboutus {
+    background: $white;
+    padding: 80px 40px;
+    font-family: "Cabin", sans-serif;
+
+    &__container {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 80px;
+    }
+
+    // ─── LEFT: Image Stack ──────────────────────────────────────
+    &__images {
+        position: relative;
+        flex-shrink: 0;
+
+        // Canvas sized to contain the full diagonal cascade
+        width: 460px;
+        height: 400px;
+    }
+
+    &__img-card {
+        position: absolute;
+        border-radius: $border-radius-img;
+        overflow: hidden;
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.09);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        &:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        // ── Venice canal: top-left, largest of the two top cards
+        // Sits at the back (z-index 1), forms the left anchor of the top row
+        &--venice {
+            width: 360px;
+            height: 340px;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        // ── Aerial beach: top-right, slightly smaller
+        // Overlaps venice on the right, slightly lower start — mid layer
+        &--beach {
+            width: 170px;
+            height: 160px;
+            top: 30px;
+            left: 280px; // overlaps venice by ~40px on the left edge
+            z-index: 3;
+        }
+
+        // ── Hot air balloon: bottom card — widest, tallest, front layer
+        // Slides down-left, overlapping BOTH top images creating the cascade
+        &--balloon {
+            width: 260px;
+            height: 210px;
+            top: 135px; // overlaps top row by ~30px
+            left: 105px; // centered-left under the two top cards
+            z-index: 2;
+        }
+    }
+
+    // ─── RIGHT: Text Content ───────────────────────────────────
+    &__content {
+        flex: 1;
+    }
+
+    &__label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+
+        span:first-child {
+            font-family: "Cabin", sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: $orange;
+            letter-spacing: 0.5px;
+        }
+
+        &-line {
+            display: inline-block;
+            width: 30px;
+            height: 2px;
+            background: $orange;
+            border-radius: 2px;
+        }
+    }
+
+    &__heading {
+        font-family: "Poppins", sans-serif;
+        font-size: 36px;
+        font-weight: 700;
+        color: $dark;
+        line-height: 1.25;
+        margin: 0 0 18px 0;
+
+        // First word "We Recommend" — bold weight (already bold but we can accent)
+        strong {
+            font-weight: 800;
+        }
+    }
+
+    &__description {
+        font-family: "Cabin", sans-serif;
+        font-size: 14px;
+        color: $text-muted;
+        line-height: 1.7;
+        max-width: 420px;
+        margin-bottom: 32px;
+    }
+
+    // ─── Stats ─────────────────────────────────────────────────
+    &__stats {
+        display: flex;
+        gap: 14px;
+    }
+
+    &__stat {
+        background: $stat-bg;
+        border-radius: 14px;
+        padding: 16px 22px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        min-width: 100px;
+    }
+
+    &__stat-number {
+        font-family: "Poppins", sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        color: $dark;
+    }
+
+    &__stat-label {
+        font-family: "Cabin", sans-serif;
+        font-size: 12px;
+        color: $text-muted;
+        text-align: center;
+        font-weight: 500;
+    }
+}
+
+// ─── Tablet View (768px – 1024px) ────────────────────────────
+@media (max-width: 1024px) and (min-width: 769px) {
+    .aboutus {
+        padding: 60px 30px;
+
+        &__container {
+            gap: 50px;
+        }
+
+        &__images {
+            width: 340px;
+            height: 320px;
+        }
+
+        &__img-card {
+            &--venice {
+                width: 168px;
+                height: 148px;
+            }
+
+            &--beach {
+                width: 148px;
+                height: 148px;
+                left: 136px;
+            }
+
+            &--balloon {
+                width: 208px;
+                height: 168px;
+                top: 124px;
+                left: 44px;
+            }
+        }
+
+        &__heading {
+            font-size: 28px;
+        }
+
+        &__stat {
+            padding: 12px 16px;
+            min-width: 82px;
+        }
+
+        &__stat-number {
+            font-size: 17px;
+        }
+    }
+}
+
+// ─── Mobile View (≤ 768px) — Column layout ───────────────────
+@media (max-width: 768px) {
+    .aboutus {
+        padding: 50px 20px;
+
+        &__container {
+            flex-direction: column;
+            gap: 60px;
+            align-items: center;
+        }
+
+        // Keep overlapping layout on mobile too, just centered
+        &__images {
+            width: 310px;
+            height: 295px;
+        }
+
+        &__img-card {
+            &--venice {
+                width: 255px;
+                height: 256px;
+            }
+
+            &--beach {
+                width: 135px;
+                height: 136px;
+                left: 174px;
+                 top: 20px;
+            }
+
+            &--balloon {
+                width: 190px;
+                height: 155px;
+                top: 122px;
+                left: 90px;
+            }
+        }
+
+        &__content {
+            text-align: center;
+        }
+
+        &__label {
+            justify-content: center;
+        }
+
+        &__heading {
+            font-size: 26px;
+        }
+
+        &__description {
+            margin: 0 auto 28px auto;
+            font-size: 13.5px;
+        }
+
+        &__stats {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        &__stat {
+            min-width: 90px;
+            padding: 12px 18px;
+        }
+    }
+}

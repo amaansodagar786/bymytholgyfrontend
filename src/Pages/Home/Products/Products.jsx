@@ -373,6 +373,18 @@ const Products = () => {
                           src={image || placeholderimg}
                           alt={product.productName}
                           loading="lazy"
+                          onMouseEnter={(e) => {
+                            const firstImage = product.colors?.[0]?.images?.[0];
+                            if (firstImage && firstImage !== e.target.src) {
+                              e.target.src = firstImage;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            const originalImage = product.thumbnailImage || product.colors?.[0]?.images?.[0];
+                            if (originalImage && originalImage !== e.target.src) {
+                              e.target.src = originalImage;
+                            }
+                          }}
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = placeholderimg;

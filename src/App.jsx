@@ -25,6 +25,7 @@ import ScrollToTop from "./Components/GoToTop/ScrollToTop";
 import Cart from "./Pages/Cart/Cart";
 import AdminAuth from "./Pages/AdminAuth/AdminAuth";
 import RamayanNavbar from "./Components/SeriesNavbar/RamayanNav/RamayanNavbar";
+import Dummy from "./Pages/Dummy/Dummy";
 
 function AppContent() {
   const location = useLocation();
@@ -43,6 +44,7 @@ function AppContent() {
       />}
       <Routes>
         <Route path="/" element={<Home  />} />
+        {/* <Route path="/dummy" element={<Dummy  />} />  */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/adminlogin" element={<AdminAuth />} />

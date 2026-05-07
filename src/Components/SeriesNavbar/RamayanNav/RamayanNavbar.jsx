@@ -65,6 +65,28 @@ const RamayanNavbar = ({ onMenuClick, onValmikiClick, onModelStateChange }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // DISABLE SCROLLING WHEN MODEL IS OPEN
+  useEffect(() => {
+    if (activeModel) {
+      // Disable scrolling when model is open
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      // Re-enable scrolling when model is closed
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+
+    // Cleanup function - ensures scrolling is re-enabled if component unmounts
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [activeModel]);
+
   // Calculate position of navbar to place model directly below it
   useEffect(() => {
     if (activeModel && navbarRef.current) {

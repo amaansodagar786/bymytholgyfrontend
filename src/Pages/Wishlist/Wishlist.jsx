@@ -2,18 +2,132 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
-import { FaRegHeart, FaHeart } from "react-icons/fa";
+import { FaHeart } from "react-icons/fa";
 import "./Wishlist.scss";
 import LoginModal from "../../Components/Login/LoginModel/LoginModal";
 import "react-toastify/dist/ReactToastify.css";
 import placeholderimg from "../../assets/logo/logo.png";
 
+// Product Card Component
+const WishlistProductCard = ({ item, removingItem, removeFromWishlist, handleProductClick, productImages }) => {
+  const [currentImage, setCurrentImage] = useState(placeholderimg);
+
+  useEffect(() => {
+    const images = productImages[item.productId];
+    if (images) {
+      setCurrentImage(images.defaultImage);
+    }
+  }, [productImages, item.productId]);
+
+  const discount = (() => {
+    const originalPrice = item.originalPrice || 0;
+    const currentPrice = item.currentPrice || 0;
+    if (originalPrice > 0 && currentPrice < originalPrice) {
+      const discountPercentage = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+      return { hasDiscount: true, discountPercentage };
+    }
+    return { hasDiscount: false, discountPercentage: 0 };
+  })();
+
+  const isRemoving = removingItem === item.productId;
+  const images = productImages[item.productId];
+
+  const handleMouseEnter = () => {
+    if (images?.hoverImage) {
+      setCurrentImage(images.hoverImage);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (images?.defaultImage) {
+      setCurrentImage(images.defaultImage);
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  return (
+    <div
+      className="wishlist-product-card"
+      onClick={() => handleProductClick(item)}
+    >
+      <div className="wishlist-product-img-wrap">
+        {discount.hasDiscount && (
+          <span className="wishlist-offer-badge">
+            {discount.discountPercentage}% OFF
+          </span>
+        )}
+
+        <button
+          className="wishlist-remove-btn"
+          onClick={(e) => removeFromWishlist(item.productId, item.selectedFragrance, e)}
+          disabled={isRemoving}
+          aria-label="Remove from wishlist"
+        >
+          {isRemoving ? (
+            <span className="wishlist-remove-spinner"></span>
+          ) : (
+            <FaHeart />
+          )}
+        </button>
+
+        <img
+          src={currentImage}
+          alt={item.productName}
+          loading="lazy"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = placeholderimg;
+          }}
+        />
+      </div>
+
+      <div className="wishlist-product-info">
+        <h3 className="wishlist-product-name">{item.productName}</h3>
+
+        {item.selectedFragrance && (
+          <p className="wishlist-product-fragrance">
+            Fragrance : {item.selectedFragrance}
+          </p>
+        )}
+
+        <div className="wishlist-product-prices">
+          <span className="wishlist-current-price">
+            ₹{formatCurrency(item.currentPrice)}
+          </span>
+          {item.originalPrice && item.originalPrice > item.currentPrice && (
+            <>
+              <span className="wishlist-original-price">
+                ₹{formatCurrency(item.originalPrice)}
+              </span>
+              {discount.hasDiscount && (
+                <span className="wishlist-discount-badge">
+                  {discount.discountPercentage}% OFF
+                </span>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main Wishlist Component
 function Wishlist() {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [removingItem, setRemovingItem] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [productImages, setProductImages] = useState({});
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -47,7 +161,10 @@ function Wishlist() {
         }
       );
 
-      setWishlistItems(response.data.wishlist || []);
+      const wishlistData = response.data.wishlist || [];
+      setWishlistItems(wishlistData);
+
+      await fetchProductImages(wishlistData);
 
     } catch (err) {
       console.error("Error fetching wishlist:", err);
@@ -63,6 +180,35 @@ function Wishlist() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchProductImages = async (items) => {
+    const imagesMap = {};
+
+    for (const item of items) {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/products/${item.productId}`
+        );
+        const productData = response.data;
+
+        const thumbnailImage = productData.thumbnailImage || placeholderimg;
+        const firstImage = productData.colors?.[0]?.images?.[0] || thumbnailImage;
+
+        imagesMap[item.productId] = {
+          defaultImage: thumbnailImage,
+          hoverImage: firstImage
+        };
+      } catch (error) {
+        console.error(`Error fetching product ${item.productId}:`, error);
+        imagesMap[item.productId] = {
+          defaultImage: placeholderimg,
+          hoverImage: placeholderimg
+        };
+      }
+    }
+
+    setProductImages(imagesMap);
   };
 
   const removeFromWishlist = async (productId, selectedFragrance, e) => {
@@ -85,6 +231,12 @@ function Wishlist() {
       setWishlistItems(prev => prev.filter(item =>
         !(item.productId === productId && item.selectedFragrance === selectedFragrance)
       ));
+
+      setProductImages(prev => {
+        const newMap = { ...prev };
+        delete newMap[productId];
+        return newMap;
+      });
 
       window.dispatchEvent(new Event('wishlistUpdated'));
       toast.success("Removed from wishlist");
@@ -141,27 +293,6 @@ function Wishlist() {
     });
   };
 
-  const calculateDiscount = (item) => {
-    const originalPrice = item.originalPrice || 0;
-    const currentPrice = item.currentPrice || 0;
-
-    if (originalPrice > 0 && currentPrice < originalPrice) {
-      const discountAmount = originalPrice - currentPrice;
-      const discountPercentage = Math.round((discountAmount / originalPrice) * 100);
-      return {
-        hasDiscount: true,
-        discountAmount,
-        discountPercentage
-      };
-    }
-
-    return {
-      hasDiscount: false,
-      discountAmount: 0,
-      discountPercentage: 0
-    };
-  };
-
   const calculateSummary = () => {
     const totalItems = wishlistItems.length;
     const totalPrice = wishlistItems.reduce((sum, item) => sum + (item.currentPrice || 0), 0);
@@ -185,134 +316,6 @@ function Wishlist() {
   };
 
   const summary = calculateSummary();
-
-  // Function to render products with summary in correct position
-  const renderProductsWithSummary = () => {
-    const items = [...wishlistItems];
-    const summaryData = summary;
-    const isMobile = window.innerWidth <= 768;
-
-    if (isMobile) {
-      // Mobile: Show all products first, then summary at bottom
-      return (
-        <>
-          <div className="wishlist-products-grid">
-            {items.map((item) => renderProductCard(item))}
-          </div>
-          <div className="wishlist-summary-mobile">
-            {renderSummaryCard(summaryData)}
-          </div>
-        </>
-      );
-    } else {
-      // Desktop/Tablet: Summary as 4th item (desktop) or 3rd item (tablet)
-      const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
-      const itemsPerRow = isTablet ? 2 : 3;
-
-      // If items count is less than or equal to itemsPerRow, summary goes after products
-      if (items.length <= itemsPerRow) {
-        return (
-          <>
-            <div className="wishlist-products-grid">
-              {items.map((item) => renderProductCard(item))}
-              {renderSummaryCard(summaryData)}
-            </div>
-          </>
-        );
-      } else {
-        // More than itemsPerRow: First row has itemsPerRow products + summary
-        const firstRowItems = items.slice(0, itemsPerRow);
-        const remainingItems = items.slice(itemsPerRow);
-
-        return (
-          <>
-            <div className="wishlist-products-grid">
-              {firstRowItems.map((item) => renderProductCard(item))}
-              {renderSummaryCard(summaryData)}
-            </div>
-            {remainingItems.length > 0 && (
-              <div className="wishlist-products-grid">
-                {remainingItems.map((item) => renderProductCard(item))}
-              </div>
-            )}
-          </>
-        );
-      }
-    }
-  };
-
-  const renderProductCard = (item) => {
-    const discount = calculateDiscount(item);
-    const image = item.thumbnailImage || placeholderimg;
-    const isRemoving = removingItem === item.productId;
-
-    return (
-      <div
-        key={`${item.wishlistId}-${item.selectedFragrance}`}
-        className="wishlist-product-card"
-        onClick={() => handleProductClick(item)}
-      >
-        <div className="wishlist-product-img-wrap">
-          {discount.hasDiscount && (
-            <span className="wishlist-offer-badge">
-              {discount.discountPercentage}% OFF
-            </span>
-          )}
-
-          <button
-            className={`wishlist-remove-btn`}
-            onClick={(e) => removeFromWishlist(item.productId, item.selectedFragrance, e)}
-            disabled={isRemoving}
-            aria-label="Remove from wishlist"
-          >
-            {isRemoving ? (
-              <span className="wishlist-remove-spinner"></span>
-            ) : (
-              <FaHeart />
-            )}
-          </button>
-
-          <img
-            src={image}
-            alt={item.productName}
-            loading="lazy"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = placeholderimg;
-            }}
-          />
-        </div>
-
-        <div className="wishlist-product-info">
-          <h3 className="wishlist-product-name">{item.productName}</h3>
-
-          {item.selectedFragrance && (
-            <p className="wishlist-product-fragrance">
-              Fragrance :  {item.selectedFragrance}
-            </p>
-          )}
-
-          <div className="wishlist-product-prices">
-            <span className="wishlist-current-price">
-              ₹{formatCurrency(item.currentPrice)}
-            </span>
-            {item.originalPrice && item.originalPrice > item.currentPrice && (
-              <>
-                <span className="wishlist-original-price">
-                  ₹{formatCurrency(item.originalPrice)}
-                </span>
-                {discount.hasDiscount && (
-                  <span className="wishlist-discount-badge">
-                    {discount.discountPercentage}% OFF
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const renderSummaryCard = (summaryData) => {
     return (
@@ -349,6 +352,90 @@ function Wishlist() {
     );
   };
 
+  const renderProductsWithSummary = () => {
+    const items = [...wishlistItems];
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+      return (
+        <>
+          <div className="wishlist-products-grid">
+            {items.map((item) => (
+              <WishlistProductCard
+                key={`${item.wishlistId}-${item.selectedFragrance}`}
+                item={item}
+                removingItem={removingItem}
+                removeFromWishlist={removeFromWishlist}
+                handleProductClick={handleProductClick}
+                productImages={productImages}
+              />
+            ))}
+          </div>
+          <div className="wishlist-summary-mobile">
+            {renderSummaryCard(summary)}
+          </div>
+        </>
+      );
+    } else {
+      const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
+      const itemsPerRow = isTablet ? 2 : 3;
+
+      if (items.length <= itemsPerRow) {
+        return (
+          <div className="wishlist-products-grid">
+            {items.map((item) => (
+              <WishlistProductCard
+                key={`${item.wishlistId}-${item.selectedFragrance}`}
+                item={item}
+                removingItem={removingItem}
+                removeFromWishlist={removeFromWishlist}
+                handleProductClick={handleProductClick}
+                productImages={productImages}
+              />
+            ))}
+            {renderSummaryCard(summary)}
+          </div>
+        );
+      } else {
+        const firstRowItems = items.slice(0, itemsPerRow);
+        const remainingItems = items.slice(itemsPerRow);
+
+        return (
+          <>
+            <div className="wishlist-products-grid">
+              {firstRowItems.map((item) => (
+                <WishlistProductCard
+                  key={`${item.wishlistId}-${item.selectedFragrance}`}
+                  item={item}
+                  removingItem={removingItem}
+                  removeFromWishlist={removeFromWishlist}
+                  handleProductClick={handleProductClick}
+                  productImages={productImages}
+                />
+              ))}
+              {renderSummaryCard(summary)}
+            </div>
+            {remainingItems.length > 0 && (
+              <div className="wishlist-products-grid">
+                {remainingItems.map((item) => (
+                  <WishlistProductCard
+                    key={`${item.wishlistId}-${item.selectedFragrance}`}
+                    item={item}
+                    removingItem={removingItem}
+                    removeFromWishlist={removeFromWishlist}
+                    handleProductClick={handleProductClick}
+                    productImages={productImages}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        );
+      }
+    }
+  };
+
+  // Loading State
   if (loading) {
     return (
       <div className="wishlist-page">
@@ -371,6 +458,7 @@ function Wishlist() {
     );
   }
 
+  // No Token State
   if (!token) {
     return (
       <div className="wishlist-page">
@@ -398,7 +486,6 @@ function Wishlist() {
             </button>
           </div>
         </div>
-
         {showLoginModal && (
           <LoginModal
             onClose={() => {
@@ -416,6 +503,7 @@ function Wishlist() {
     );
   }
 
+  // Empty Wishlist State
   if (wishlistItems.length === 0 && !error) {
     return (
       <div className="wishlist-page">
@@ -448,6 +536,7 @@ function Wishlist() {
     );
   }
 
+  // Error State
   if (error) {
     return (
       <div className="wishlist-page">
@@ -478,6 +567,7 @@ function Wishlist() {
     );
   }
 
+  // Main Render
   return (
     <div className="wishlist-page">
       <ToastContainer
