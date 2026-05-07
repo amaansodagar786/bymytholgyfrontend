@@ -1,40 +1,28 @@
 import React from "react";
 import "./HeroSection.scss";
-
-// Swiper
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay } from "swiper/modules";
-import "swiper/css";
-
-// Hero Image
-import heroImage from "../../../assets/images/home/hero.png";
+import herovideo from "../../../assets/images/home/hero.mp4";
 
 const HeroSection = () => {
   return (
     <section className="hero-section">
-      <Swiper
-        modules={[Autoplay]}
-        autoplay={{
-          delay: 3000,
-          disableOnInteraction: false,
-        }}
-        loop={true}
-        className="hero-swiper"
+      <video
+        className="hero-video"
+        autoPlay
+        loop
+        muted
+        playsInline
+        disablePictureInPicture
+        controlsList="nodownload nofullscreen noremoteplayback"
       >
-        <SwiperSlide>
-          <div
-            className="hero-slide"
-            style={{ backgroundImage: `url(${heroImage})` }}
-          />
-        </SwiperSlide>
+        <source src={herovideo} type="video/mp4" />
+      </video>
 
-        {/* <SwiperSlide>
-          <div
-            className="hero-slide"
-            style={{ backgroundImage: `url(${heroImage})` }}
-          />
-        </SwiperSlide> */}
-      </Swiper>
+      <div className="hero-content">
+        <p className="hero-subheading">Collection</p>
+        <h1 className="hero-heading">Bymythology</h1>
+        <p className="hero-subtitle">Discover our premium collection</p>
+        <button className="hero-btn">SHOP NOW</button>
+      </div>
     </section>
   );
 };

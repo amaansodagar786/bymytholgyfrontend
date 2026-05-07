@@ -1,140 +1,126 @@
-@font-face {
-  font-family: "Heading";
-  src: url("../../../assets/fonts/TT Ramillas Trial Medium.ttf") format("truetype");
-}
-
-@font-face {
-  font-family: "LightHeading";
-  src: url("../../../assets/fonts/TT Ramillas Trial Light.ttf") format("truetype");
-}
-
-
-@font-face {
-  font-family: "Bold";
-  src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
-  font-style: normal;
-  // font-weight: 500; 
-}
-
-@font-face {
-  font-family: "Content";
-  src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf") format("truetype");
-}
-
-/* SECTION */
-.about-ramayan {
-  background: #f6f3ef; // 👈 same soft background as reference
-  padding: 40px 0 0; // no bottom padding (image touches bottom)
+.about-section {
+  width: 100%;
+  background: #141414;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 40px 0px;
   overflow: hidden;
+  overflow-x: hidden;
+
+  @media (max-width: 768px) {
+    padding: 40px 20px;
+    width: 90%;
+  }
 }
 
-/* LAYOUT */
 .about-container {
-  max-width: 1100px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 0 90px;
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  align-items: stretch;
-}
-
-/* TEXT */
-.about-content {
-  padding-bottom: 40px;
-
-  .about-small {
-    font-family: "LightHeading";
-    font-size: 35px;
-    margin-bottom: -10px;
-  }
-
-  .about-title {
-    font-family: "Bold" , sans-serif; 
-    font-size: 48px;
-    margin-bottom: 10px;
-    margin-top: 0;
-  }
-
-  p {
-    font-family: "Content";
-    font-size: 16px;
-    line-height: 1.7;
-    margin-bottom: 18px;
-    color: #000;
-    max-width: 520px;
-  }
-
-  .about-intro {
-    margin-top: 30px;
-    
-    font-size: 16px ;
-  }
-}
-
-/* IMAGE */
-.about-image {
+  text-align: center;
   display: flex;
-  align-items: flex-end; // 👈 touches bottom
-  justify-content: center;
-  transform-style: preserve-3d; // For 3D rotation effect
-  perspective: 1000px; // For 3D depth
+  flex-direction: column;
+  align-items: center;
+}
 
-  img {
-    width: 100%;
-    max-height: 500px;
-    object-fit: contain;
-    display: block;
-    backface-visibility: hidden; // Smooth 3D rotation
+.about-top-btn,
+.about-bottom-btn {
+  min-width: 280px;
+  height: 56px;
+  padding: 0 34px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: #f5f5f5;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.35s ease;
+  text-transform: uppercase;
+
+  &:hover {
+    background: #f5f5f5;
+    color: #141414;
+  }
+
+  @media (max-width: 768px) {
+    min-width: 240px;
+    height: 52px;
+    font-size: 12px;
+    letter-spacing: 1.5px;
   }
 }
 
-/* ---------------- MOBILE ---------------- */
-@media (max-width: 768px) {
-  .about-container {
-    grid-template-columns: 1fr;
-    padding: 0 20px;
-    text-align: center;
-  }
+.about-top-btn {
+  margin-bottom: 70px;
 
-  .about-content {
-    order: 1;
-    padding-bottom: 40px;
-
-    .about-small {
-      font-size: 22px;
-      margin-top: 0px;
-    }
-
-    .about-title {
-      font-size: 34px;
-    }
-
-    p {
-      max-width: 100%;
-      text-align: center;
-    }
-  }
-
-  .about-image {
-    order: 2;
-    margin-bottom: 30px;
-    perspective: none; // Remove 3D effect on mobile for better performance
-
-    img {
-      max-height: 420px;
-    }
+  @media (max-width: 768px) {
+    margin-bottom: 45px;
   }
 }
 
-/* Animation Performance Optimizations */
-.about-container {
-  will-change: transform, opacity;
+.about-subtitle {
+  font-family: "Poppins", sans-serif;
+  font-size: 24px;
+  font-weight: 300;
+  color: #cfcfcf;
+  margin-bottom: 22px;
+  line-height: 1.4;
+
+  @media (max-width: 768px) {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
 }
 
-.about-content * {
-  will-change: transform, opacity;
+.about-title {
+  font-family: "Poppins", sans-serif;
+  font-size: 56px;
+  line-height: 1.1;
+  font-weight: 300;
+  color: #ffffff;
+  letter-spacing: 1px;
+  margin-bottom: 42px;
+  margin-top: 10px;
+  text-transform: uppercase;
+
+  @media (max-width: 1200px) {
+    font-size: 46px;
+  }
+
+  @media (max-width: 992px) {
+    font-size: 48px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 34px;
+    line-height: 1.25;
+    margin-bottom: 28px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 25px;
+  }
 }
 
-.about-image {
-  will-change: transform, opacity;
+.about-description {
+  max-width: 820px;
+  margin: 0 auto;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  line-height: 2;
+  font-weight: 300;
+  color: #bdbdbd;
+  margin-bottom: 75px;
+
+  @media (max-width: 992px) {
+    font-size: 18px;
+    line-height: 1.9;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 15px;
+    line-height: 1.9;
+    margin-bottom: 50px;
+    text-align: justify;
+  }
 }

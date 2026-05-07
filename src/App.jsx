@@ -1,13 +1,11 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 
 import "./App.css";
 import Home from "./Pages/Home/Home";
 import Navbar from "./Components/Navbar/Navbar";
 import Login from "./Components/Login/Login";
 import Register from "./Components/Register/Register";
-import AdminLogin from "./Pages/AdminAuth/AdminLogin/AdminLogin";
-import AdminRegister from "./Pages/AdminAuth/AdminReg/AdminRegister";
 import AdminDashboard from "./Pages/AdminPanel/AdminDashboard/AdminDashboard";
 import AdminLayout from "./Pages/AdminPanel/AdminLayout/AdminLayout";
 import AdminCategories from "./Pages/AdminPanel/Categories/AdminCategories";
@@ -22,25 +20,31 @@ import Checkout from "./Pages/CheckOut/Checkout";
 import UserOrders from "./Pages/Profile/UserOrders/UserOrders";
 import AdminOrders from "./Pages/AdminPanel/AdminOrders/AdminOrders";
 import UserReviews from "./Pages/Profile/UserReviews/UserReviews";
-// import AllProducts from "./Pages/AllProducts/AllProducts"; 
-// import CategoryProducts from "./Pages/CategoryProducts/CategoryProducts";
 import Footer from "./Components/Footer/Footer";
 import ScrollToTop from "./Components/GoToTop/ScrollToTop";
 import Cart from "./Pages/Cart/Cart";
 import AdminAuth from "./Pages/AdminAuth/AdminAuth";
-import Scroll from "./Pages/Dummy/Scroll";
+import RamayanNavbar from "./Components/SeriesNavbar/RamayanNav/RamayanNavbar";
 
-function App() {
+function AppContent() {
+  const location = useLocation();
+  const [showValmiki, setShowValmiki] = useState(false);
+  const [isModelOpen, setIsModelOpen] = useState(false);
+
+  const showRamayanNav = location.pathname === "/";
 
   return (
-    <Router>
-       <ScrollToTop /> 
-      <Navbar />
+    <>
+      <ScrollToTop />
+      <Navbar isModelOpen={isModelOpen} />
+      {showRamayanNav && <RamayanNavbar
+        onValmikiClick={setShowValmiki}
+        onModelStateChange={setIsModelOpen}
+      />}
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home  />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        {/* <Route path="/adminregister" element={<AdminRegister />} /> */}
         <Route path="/adminlogin" element={<AdminAuth />} />
         <Route path="/product/:productName" element={<ProductPage />} />
         <Route path="*" element={<NotFound />} />
@@ -50,66 +54,23 @@ function App() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<UserOrders />} />
         <Route path="/my-reviews" element={<UserReviews />} />
-        {/* <Route path="/products" element={<AllProducts />} /> */}
-        <Route path="/dummy" element={<Scroll />} />
 
-        {/* <Route path="/category/:categoryId" element={<CategoryProducts />} /> */}
-
-
-        <Route
-          path="/admin/dashboard"
-          element={
-            <AdminLayout>
-              <AdminDashboard />
-            </AdminLayout>
-          }
-        />
-
-        <Route
-          path="/admin/categories"
-          element={
-            <AdminLayout>
-              <AdminCategories />
-            </AdminLayout>
-          }
-        />
-
-        <Route
-          path="/admin/products"
-          element={
-            
-              <ListProducts />
-            
-          }
-        />
-        <Route
-          path="/admin/inventories"
-          element={
-            <AdminLayout>
-              <Inventories />
-            </AdminLayout>
-          }
-        />
-        <Route
-          path="/admin/productoffers"
-          element={
-            <AdminLayout>
-              <ProductOffers />
-            </AdminLayout>
-          }
-        />
-
-        <Route
-          path="/admin/orders"
-          element={
-            <AdminLayout> 
-              <AdminOrders />
-            </AdminLayout>
-          }
-        />
-
+        <Route path="/admin/dashboard" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
+        <Route path="/admin/categories" element={<AdminLayout><AdminCategories /></AdminLayout>} />
+        <Route path="/admin/products" element={<ListProducts />} />
+        <Route path="/admin/inventories" element={<AdminLayout><Inventories /></AdminLayout>} />
+        <Route path="/admin/productoffers" element={<AdminLayout><ProductOffers /></AdminLayout>} />
+        <Route path="/admin/orders" element={<AdminLayout><AdminOrders /></AdminLayout>} />
       </Routes>
-      <Footer/>
+      <Footer />
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

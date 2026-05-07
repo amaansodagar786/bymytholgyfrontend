@@ -1,77 +1,87 @@
-@font-face {
-    font-family: "Bold";
-    src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Content";
-    src: url("../../../assets/fonts/TT\ Interphases\ Pro\ Trial\ Regular.ttf") format("truetype");
-}
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
 /* ROOT SECTION */
 .ramsetu-model {
   width: 100%;
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  padding: 15px 0;
+  background: #fbf7f3;
+  padding: 30px 0;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 /* INNER WRAP */
 .ramsetu-model__inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 15px 70px 15px 100px;
+  padding: 20px 70px 20px 100px;
   display: flex;
   align-items: flex-start;
-  gap: 40px;
-  min-height: 350px;
+  gap: 60px;
 }
 
 /* LEFT CONTENT */
 .ramsetu-model__content {
-  flex: 0.9;
-  padding: 5px 0;
+  flex: 1;
+  padding: 10px 0;
 }
 
 .ramsetu-title {
-  font-family: "Bold";
-  font-size: 28px;
-  margin-bottom: 12px;
-  margin-top: 25px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 24px;
+  margin-top: 0;
+  cursor: pointer;
+  display: inline-block;
+  color: #2c2c2c;
 }
 
-/* LIST */
+/* LIST - COLUMN VIEW, NO BULLET POINTS */
 .ramsetu-list {
-  list-style: disc;
-  padding-left: 18px;
-  font-family: "Content";
-  font-size: 16px;
-  line-height: 1.5;
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+}
 
-  li {
-    margin-bottom: 2px;
+/* ALL LIST ITEMS - SAME STYLE */
+.ramsetu-fragrance-item {
+  cursor: pointer;
+  transition: color 0.3s ease;
+  padding: 4px 0;
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #4a4a4a;
+  letter-spacing: 0.3px;
+  display: inline-block;
+  width: auto;
+
+  &:hover {
+    color: #3C280D;
   }
 }
 
-/* RIGHT IMAGE - FIXED DIMENSIONS */
+/* RIGHT IMAGE */
 .ramsetu-model__image {
-  flex: 1.1;
+  flex: 1;
   display: flex;
   justify-content: flex-end;
-  
+  cursor: pointer;
+
   img {
     width: 880px;
     height: 350px;
     object-fit: contain;
     object-position: center;
-    
-    /* Force these exact dimensions */
     min-width: 750px;
     max-width: 900px;
     min-height: 350px;
     max-height: 350px;
   }
 }
-
-/* ❌ NO MOBILE STYLES INTENTIONALLY */

@@ -1,513 +1,326 @@
-@font-face {
-    font-family: "Content";
-    src: url("../../../assets/fonts/TT Interphases Pro Trial Regular.ttf") format("truetype");
-    font-style: normal;
-}
+// ============================================================
+//  Products — Dark Theme
+//  BG: #1a1a1a shade | Font: Poppins
+//  Desktop 4 | Tablet 3 | Mobile 2 | No overflow
+// ============================================================
 
-@font-face {
-    font-family: "Bold";
-    src: url("../../../assets/fonts/TT\ Ramillas\ Trial\ Bold.ttf") format("truetype");
-    font-style: normal;
-}
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
 
-.product-showcase {
-    padding: 10px 100px 80px;
-    text-align: center;
-    font-family: "Content", sans-serif;
-    background: #fff;
-    border-top: 1px solid #eee;
-    position: relative;
-}
-
-.product-section-header {
-    margin-bottom: 40px;
-    padding: 0 20px;
-}
-
-.product-section-title {
-    font-size: 40px;
-    font-weight: 600;
-    margin-bottom: 0px !important;
-    font-family: "Bold", sans-serif;
-    color: #222;
-}
-
-.product-section-subtitle {
-    font-size: 20px;
-    color: #666;
-    max-width: 600px;
-    margin: 0 auto;
-    font-family: "Content", sans-serif;
-}
-
-.product-slider-container {
-    position: relative;
-    padding: 0 20px;
-    min-height: 320px;
-}
-
-/* ✅ PRODUCT CARD */
-.product-card {
-    text-align: left;
-    cursor: pointer;
-    transition: transform 0.3s ease;
-    padding: 10px;
-    height: 100%;
+// ── Section ───────────────────────────────────────────────────
+.ps-section {
+    background-color: #141414;
+    padding: 60px 48px;
     width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 
-    &:hover {
-        transform: translateY(-5px);
+    @media (max-width: 1024px) {
+        padding: 48px 32px;
+    }
+
+    @media (max-width: 768px) {
+        padding: 36px 16px;
     }
 }
 
-.product-image-container {
-    position: relative;
-    width: 100%;
-    height: 240px;
+// ── Header ───────────────────────────────────────────────────
+.ps-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+
+    @media (max-width: 480px) {
+        margin-bottom: 20px;
+    }
+}
+
+.ps-title {
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: #f0ece6;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+// ── Arrows ───────────────────────────────────────────────────
+.ps-arrows {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.ps-arrow {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 15px;
+    width: 65px;
+    height: 28px;
+    border: 1px solid #3a3a3a;
+    background: WHITE;
+    color: black;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    border-radius: 20px;
+    font-size: 13px;
+    flex-shrink: 0;
+
+    &:hover {
+        background: #f0ece6;
+        color: #141414;
+        border-color: #f0ece6;
+    }
+
+    &.swiper-button-disabled {
+        opacity: 0.25;
+        pointer-events: none;
+    }
+
+    @media (max-width: 500px) {
+        width: 60px;
+        height: 28px;
+    }
+}
+
+// ── Swiper wrapper ────────────────────────────────────────────
+.ps-slider-wrap {
+    width: 100%;
+    box-sizing: border-box;
     overflow: hidden;
-    border-radius: 8px;
-    // background: #fff; 
-    // box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    // padding-right: 10px; 
+
+    .swiper {
+        width: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
+         padding-right: 3px;
+    }
+
+    .swiper-slide {
+        height: auto;
+        box-sizing: border-box;
+    }
+}
+
+// ── Card ─────────────────────────────────────────────────────
+.ps-card {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+
+    &:hover .ps-img-wrap img {
+        transform: scale(1.03);
+    }
+}
+
+// ── Image wrapper — border so black images are visible ────────
+.ps-img-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    background: #1e1e1e;
+
+    // Border that wraps the image — visible against dark bg
+    border: 1px solid #fff9f9;
+
+    // Subtle inner glow on hover so image edges pop
+    transition: border-color 0.3s, box-shadow 0.3s;
+
+    &:hover {
+        border-color: #4a4a4a;
+        box-shadow: 0 0 0 1px #3a3a3a, inset 0 0 20px rgba(255, 255, 255, 0.03);
+    }
 
     img {
         width: 100%;
         height: 100%;
-        object-fit: contain;
-        padding: 12px;
-        transition: transform 0.3s ease;
-        background: #f7f7f7;
-        border-radius: 15px;
-
-        &:hover {
-            transform: scale(1.05);
-        }
+        object-fit: cover;
+        display: block;
+        transition: transform 0.5s ease;
     }
 }
 
-/* ✅ SPECIAL OFFER BADGE */
-.product-special-badge {
+// ── Offer badge ───────────────────────────────────────────────
+.ps-offer-badge {
     position: absolute;
     top: 12px;
     left: 12px;
-    background: linear-gradient(135deg, #ff416c, #ff4b2b);
-    color: white;
-    font-size: 9px;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 4px;
-    z-index: 3;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 3px 8px rgba(255, 75, 43, 0.4);
-    animation: product-pulse 2s infinite;
-    white-space: nowrap;
-    font-family: "Content", sans-serif;
-}
-
-@keyframes product-pulse {
-    0% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.05);
-    }
-
-    100% {
-        transform: scale(1);
-    }
-}
-
-/* ✅ WISHLIST BUTTON */
-.product-wishlist-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(255, 255, 255, 0.9);
-    cursor: pointer;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
     z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-
-
-    @media (max-width: 576px) {
-
-        right: 20px;
-        width: 30px;
-        height: 25px;
-    }
-
-    &:hover {
-        background: #000;
-        transform: scale(1.1);
-
-        .product-wishlist-icon {
-            color: #fff;
-        }
-    }
-
-    &.product-wishlisted {
-        background: #FFF;
-
-        .product-wishlist-icon.product-filled {
-            color: red;
-        }
-    }
-
-    .product-wishlist-icon {
-        font-size: 16px;
-        color: #666;
-        transition: color 0.3s ease;
-
-        &.product-filled {
-            color: #e74c3c;
-        }
-    }
-
-    &:hover .product-wishlist-icon {
-        color: #fff;
-    }
-}
-
-.product-loading-small {
-    width: 16px;
-    height: 16px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #3498db;
-    border-radius: 50%;
-    animation: product-spin 1s linear infinite;
-}
-
-/* ✅ PRODUCT TEXT */
-.product-card-name {
-    font-size: 15px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #222;
-    line-height: 1.3;
-    min-height: 22px;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    font-family: "Content", sans-serif;
-}
-
-.product-card-desc {
-    font-size: 14px;
-    color: #444;
-    margin-bottom: 12px;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-height: 40px;
-    max-height: 40px;
-}
-
-.product-price-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    font-family: "Content", sans-serif;
-
-    .product-price-current {
-        font-size: 18px;
-        font-weight: 700;
-        color: #111;
-    }
-
-    .product-price-original {
-        font-size: 15px;
-        color: #999;
-        text-decoration: line-through;
-    }
-
-    .product-discount-badge {
-        font-size: 12px;
-        font-weight: 600;
-        color: #fff;
-        background: #2ecc71;
-        padding: 4px 9px;
-        border-radius: 999px;
-    }
-}
-
-/* ✅ SLIDER ARROWS */
-.product-slider-arrows {
-    position: absolute;
-    right: 15px;
-    bottom: -50px;
-    display: flex;
-    gap: 14px;
-    z-index: 10;
-
-    button {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: transparent;
-
-        .product-arrow-icon {
-            font-size: 20px;
-            color: #000;
-        }
-    }
-}
-
-/* ✅ LOADING STATE */
-.product-loading {
-    text-align: center;
-    padding: 40px 0;
-
-    .product-loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #f3f3f3;
-        border-top: 3px solid #3498db;
-        border-radius: 50%;
-        animation: product-spin 1s linear infinite;
-        margin: 0 auto 15px;
-    }
-
-    p {
-        color: #666;
-        font-size: 14px;
-    }
-}
-
-@keyframes product-spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-/* ✅ ERROR STATE */
-.product-error-state,
-.product-empty-state {
-    text-align: center;
-    padding: 40px 0;
-
-    .product-error-message {
-        color: #e74c3c;
-        margin-bottom: 20px;
-        font-size: 16px;
-    }
-
-    .product-retry-btn {
-        background: #3498db;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background 0.3s;
-
-        &:hover {
-            background: #2980b9;
-        }
-    }
-}
-
-/* ✅ DESKTOP SPECIFIC STYLES */
-@media (min-width: 1200px) {
-    .product-slider-container {
-        .product-card {
-            max-width: 240px;
-            margin: 0 auto;
-        }
-
-        .product-image-container {
-            height: 250px;
-        }
-    }
-}
-
-/* ✅ MOBILE RESPONSIVE */
-@media (max-width: 768px) {
-    .product-showcase {
-        padding: 40px 0;
-        // margin-top: 40px; 
-    }
-
-    .product-section-title {
-        font-size: 24px;
-    }
-
-    .product-section-subtitle {
-        font-size: 14px;
-    }
-
-    .product-slider-container {
-        padding: 0 15px;
-    }
-
-    .product-image-container {
-        height: 200px;
-        width: 95%; // Image container width
-        margin: 0 auto 15px;
-        max-width: 280px;
-
-        img {
-            width: 90%; // Image inside container width
-            height: auto;
-            max-height: 180px;
-            padding: 8px;
-        }
-    }
-
-    // ✅ ADDED: Make product card content match image width
-    .product-card {
-        width: 85%; // Match image container width
-        max-width: 280px; // Match image max-width
-        margin: 0 auto; // Center it
-        padding: 10px 0; // Adjust padding
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start; // Center content
-        text-align: left; // Center text
-    }
-
-    .product-card-name {
-        font-size: 15px;
-        margin-bottom: 0 !important;
-        min-height: 15px;
-        width: 100%; // Take full width of container
-        text-align: left; // Center text
-        margin-left: 15px;
-    }
-
-    .product-card-desc {
-        font-size: 13px;
-        min-height: 36px;
-        width: 100%; // Take full width of container
-        text-align: left; // Center text
-        margin-left: 15px;
-    }
-
-    .product-price-container {
-        width: 100%; // Take full width of container
-        justify-content: left; // Center price items
-        text-align: left; // Center text
-        margin-left: 15px;
-
-        .product-price-current {
-            font-size: 16px;
-        }
-
-        .product-price-original {
-            font-size: 14px;
-        }
-
-        .product-discount-badge {
-            font-size: 11px;
-            padding: 3px 8px;
-        }
-    }
-
-    .product-special-badge {
-        font-size: 9px;
-        padding: 4px 8px;
-        top: 8px;
-        left: 8px;
-    }
-
-    .product-slider-arrows {
-        position: static;
-        justify-content: center;
-        margin-top: 30px;
-    }
-}
-
-@media (max-width: 576px) {
-    .product-showcase {
-        padding: 10px 0 30px 0;
-    }
-
-    .product-image-container {
-        height: 200px;
-        width: 90%; // Even smaller on very small screens
-        max-width: 250px;
-
-        img {
-            width: 85%;
-            max-height: 180px;
-        }
-    }
-
-    // ✅ ADDED: Match product card width with image container
-    .product-card {
-        width: 100%; // Match image container width
-        max-width: 270px; // Match image max-width
-    }
-
-    .product-special-badge {
-        font-size: 8px;
-        padding: 3px 6px;
-    }
-
-    .product-card-name {
-        font-size: 14px;
-    }
-
-    .product-price-container {
-        .product-price-current {
-            font-size: 15px;
-        }
-
-        .product-price-original {
-            font-size: 13px;
-        }
-    }
-}
-
-/* ✅ TABLET STYLES */
-@media (min-width: 769px) and (max-width: 1199px) {
-    .product-image-container {
-        height: 220px;
-    }
-
-    .product-card-name {
-        font-size: 15px;
-    }
-
-    .product-price-container {
-        .product-price-current {
-            font-size: 17px;
-        }
-    }
-}
-
-/* ✅ Ensure Swiper buttons are visible */
-.swiper-button-disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
+    background: #f0ece6;
+    color: #141414;
+    font-family: "Poppins", sans-serif;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 9px;
     pointer-events: none;
 }
 
-.swiper-button-lock {
-    display: none;
+// ── Wishlist btn — icon only, no bg, no circle ────────────────
+.ps-wish-btn {
+    position: absolute;
+    top: 15px;
+    right: 10px;
+    z-index: 3;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #c8c0b5;
+    font-size: 22px;
+    line-height: 1;
+    transition: color 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+        transform: scale(1.15);
+        color: #f0ece6;
+    }
+
+    &.ps-wish-active {
+        color: #e05545;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: default;
+    }
+}
+
+.ps-wish-spinner {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-top-color: #f0ece6;
+    border-radius: 50%;
+    animation: ps-spin 0.6s linear infinite;
+}
+
+// ── Card info ─────────────────────────────────────────────────
+.ps-info {
+    padding: 12px 2px 6px;
+}
+
+.ps-name {
+    font-family: "Poppins", sans-serif;
+    font-size: 1.15rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #f0ece6;
+    margin: 0 0 6px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    @media (max-width: 500px) {
+        font-size: 0.95rem;
+    }
+}
+
+.ps-prices {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ps-price {
+    font-family: "Poppins", sans-serif;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #f0ece6;
+
+    @media (max-width: 500px) {
+        font-size: 0.85rem;
+    }
+}
+
+.ps-original {
+    font-family: "Poppins", sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+    color: #666;
+    text-decoration: line-through;
+
+    @media (max-width: 500px) {
+        font-size: 0.75rem;
+    }
+}
+
+.ps-discount {
+    font-family: "Poppins", sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e05545;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+
+    @media (max-width: 500px) {
+        font-size: 0.65rem;
+    }
+}
+
+// ── States ───────────────────────────────────────────────────
+.ps-loading,
+.ps-error,
+.ps-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+    gap: 14px;
+    color: #666;
+    font-size: 0.9rem;
+    font-family: "Poppins", sans-serif;
+
+    p {
+        color: #888;
+    }
+
+    button {
+        padding: 8px 24px;
+        border: 1px solid #3a3a3a;
+        background: transparent;
+        color: #f0ece6;
+        cursor: pointer;
+        font-family: "Poppins", sans-serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        transition: background 0.2s, color 0.2s;
+
+        &:hover {
+            background: #f0ece6;
+            color: #141414;
+        }
+    }
+}
+
+.ps-spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #2e2e2e;
+    border-top-color: #f0ece6;
+    border-radius: 50%;
+    animation: ps-spin 0.8s linear infinite;
+}
+
+@keyframes ps-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }

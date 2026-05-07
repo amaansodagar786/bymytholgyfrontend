@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
+import { BsArrowRight , BsArrowLeft } from "react-icons/bs";
+
 import { FaRegHeart, FaHeart } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import WishlistSidebar from "../../Wishlist/Sidebar/WishlistSidebar";
@@ -12,7 +14,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "react-toastify/dist/ReactToastify.css";
 import "./Products.scss";
-import placeholderimg from "../../../assets/logo/logo.png"
+import placeholderimg from "../../../assets/logo/logo.png";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -40,29 +42,24 @@ const Products = () => {
   const fetchUserWishlist = async () => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
-
-    if (!token || !userId) {
-      return;
-    }
+    if (!token || !userId) return;
 
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/wishlist/my-wishlist`,
         {
           params: { userId },
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
       const wishlistStatus = {};
       if (response.data?.wishlist?.length > 0) {
-        response.data.wishlist.forEach(item => {
+        response.data.wishlist.forEach((item) => {
           if (item.productId && item.isActive) {
             wishlistStatus[item.productId] = true;
           }
         });
       }
-
       setWishlist(wishlistStatus);
     } catch (error) {
       console.error("Error fetching wishlist:", error);
@@ -96,8 +93,6 @@ const Products = () => {
     }
   };
 
-
-  // Add this debug useEffect
   useEffect(() => {
     if (products.length > 0) {
       console.log("======= PRODUCT IMAGE DEBUG =======");
@@ -110,10 +105,12 @@ const Products = () => {
           thumbnailImage: product.thumbnailImage,
           colorImages: color?.images,
           finalImageUrl: image,
-          fullUrl: image ? `${window.location.origin}${image}` : 'No image',
-          // Check if URL is relative or absolute
-          isRelativeUrl: image?.startsWith('/') || image?.startsWith('./') || image?.startsWith('../'),
-          isAbsoluteUrl: image?.startsWith('http')
+          fullUrl: image ? `${window.location.origin}${image}` : "No image",
+          isRelativeUrl:
+            image?.startsWith("/") ||
+            image?.startsWith("./") ||
+            image?.startsWith("../"),
+          isAbsoluteUrl: image?.startsWith("http"),
         });
       });
       console.log("====================================");
@@ -138,7 +135,9 @@ const Products = () => {
     }
 
     if (originalPrice > 0 && currentPrice < originalPrice) {
-      discount = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+      discount = Math.round(
+        ((originalPrice - currentPrice) / originalPrice) * 100
+      );
     }
 
     return {
@@ -147,7 +146,7 @@ const Products = () => {
       discount: discount,
       hasOffer: hasOffer,
       offerLabel: offerLabel,
-      offerPercentage: offerPercentage
+      offerPercentage: offerPercentage,
     };
   };
 
@@ -166,13 +165,12 @@ const Products = () => {
     const productId = product.productId;
     const firstFragrance = product.colors?.[0]?.fragrances?.[0] || null;
 
-    setUpdatingProductId(productId); // ✅ Set updating
+    setUpdatingProductId(productId);
 
     try {
-      // ✅ Update UI immediately
-      setWishlist(prev => ({
+      setWishlist((prev) => ({
         ...prev,
-        [productId]: !isCurrentlyWishlisted
+        [productId]: !isCurrentlyWishlisted,
       }));
 
       if (isCurrentlyWishlisted) {
@@ -181,8 +179,8 @@ const Products = () => {
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+              "Content-Type": "application/json",
+            },
           }
         );
         toast.success("Removed from wishlist");
@@ -199,12 +197,14 @@ const Products = () => {
           selectedFragrance: firstFragrance,
           selectedModel: null,
           selectedSize: null,
-          selectedColor: color ? {
-            colorId: color.colorId,
-            colorName: color.colorName,
-            currentPrice: priceInfo.finalPrice,
-            originalPrice: priceInfo.originalPrice
-          } : null
+          selectedColor: color
+            ? {
+              colorId: color.colorId,
+              colorName: color.colorName,
+              currentPrice: priceInfo.finalPrice,
+              originalPrice: priceInfo.originalPrice,
+            }
+            : null,
         };
 
         await axios.post(
@@ -213,8 +213,8 @@ const Products = () => {
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+              "Content-Type": "application/json",
+            },
           }
         );
         toast.success("Added to wishlist!");
@@ -223,33 +223,20 @@ const Products = () => {
         }
       }
 
-      // ✅ IMPORTANT: Reset updating flag after successful operation
       setUpdatingProductId(null);
-
-      // Refresh wishlist to sync with server
       fetchUserWishlist();
-
-      window.dispatchEvent(new Event('wishlistUpdated'));
-
+      window.dispatchEvent(new Event("wishlistUpdated"));
     } catch (error) {
       console.error("Error toggling wishlist:", error);
-
-      // ✅ Rollback UI on error
-      setWishlist(prev => ({
+      setWishlist((prev) => ({
         ...prev,
-        [productId]: isCurrentlyWishlisted
+        [productId]: isCurrentlyWishlisted,
       }));
-
-      // ✅ Reset updating flag on error too
       setUpdatingProductId(null);
 
       if (error.response?.data?.message) {
         if (error.response.data.message.includes("already in your wishlist")) {
-          // If already in wishlist, mark it as wishlisted
-          setWishlist(prev => ({
-            ...prev,
-            [productId]: true
-          }));
+          setWishlist((prev) => ({ ...prev, [productId]: true }));
           toast.info("Already in your wishlist");
         } else {
           toast.error(error.response.data.message);
@@ -261,7 +248,7 @@ const Products = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
+    return new Intl.NumberFormat("en-IN", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -297,143 +284,125 @@ const Products = () => {
         />
       )}
 
-      <section className="product-showcase">
-        <div className="product-section-header">
-          <h2 className="product-section-title">Our Products</h2>
-          <p className="product-section-subtitle">Discover our exclusive collection</p>
+      <section className="ps-section">
+        {/* Header row: title left, arrows right */}
+        <div className="ps-header">
+          <h2 className="ps-title">Products</h2>
+
+          <div className="ps-arrows">
+            <button className="ps-arrow ps-prev" aria-label="Previous">
+              <BsArrowLeft />
+            </button>
+            <button className="ps-arrow ps-next" aria-label="Next">
+              <BsArrowRight />
+            </button>
+          </div>
         </div>
 
-        <div className="product-slider-container">
+        <div className="ps-slider-wrap">
           {isLoading ? (
-            <div className="product-loading">
-              <div className="product-loading-spinner"></div>
+            <div className="ps-loading">
+              <div className="ps-spinner"></div>
               <p>Loading products...</p>
             </div>
           ) : error ? (
-            <div className="product-error-state">
-              <p className="product-error-message">{error}</p>
-              <button className="product-retry-btn" onClick={fetchProducts}>
-                Try Again
-              </button>
+            <div className="ps-error">
+              <p>{error}</p>
+              <button onClick={fetchProducts}>Try Again</button>
             </div>
           ) : products.length === 0 ? (
-            <div className="product-empty-state">
+            <div className="ps-empty">
               <p>No products found</p>
             </div>
           ) : (
-            <>
-              <Swiper
-                ref={swiperRef}
-                modules={[Navigation]}
-                slidesPerView={5}
-                spaceBetween={48}
-                loop={false}
-                navigation={{
-                  nextEl: ".product-next",
-                  prevEl: ".product-prev",
-                }}
-                breakpoints={{
-                  0: {
-                    slidesPerView: 1,
-                    spaceBetween: 15
-                  },
-                  576: {
-                    slidesPerView: 2,
-                    spaceBetween: 20
-                  },
-                  768: {
-                    slidesPerView: 2,
-                    spaceBetween: 20
-                  },
-                  992: {
-                    slidesPerView: 3,
-                    spaceBetween: 30
-                  },
-                  1200: {
-                    slidesPerView: 5,
-                    spaceBetween: 48
-                  },
-                }}
-              >
-                {products.map((product) => {
-                  const color = product.colors?.[0];
-                  const image = product.thumbnailImage || color?.images?.[0];
-                  const isWishlisted = wishlist[product.productId] || false;
-                  const isUpdating = updatingProductId === product.productId;
-                  const priceInfo = calculatePrice(color);
+            <Swiper
+              ref={swiperRef}
+              modules={[Navigation]}
+              loop={false}
+              navigation={{
+                nextEl: ".ps-next",
+                prevEl: ".ps-prev",
+              }}
+              breakpoints={{
+                0: { slidesPerView: 2, spaceBetween: 12 },
+                768: { slidesPerView: 3, spaceBetween: 20 },
+                1024: { slidesPerView: 4, spaceBetween: 24 },
+              }}
+            >
+              {products.map((product) => {
+                const color = product.colors?.[0];
+                const image = product.thumbnailImage || color?.images?.[0];
+                const isWishlisted = wishlist[product.productId] || false;
+                const isUpdating = updatingProductId === product.productId;
+                const priceInfo = calculatePrice(color);
 
-                  return (
-                    <SwiperSlide key={product.productId}>
-                      <div
-                        className="product-card"
-                        onClick={() => {
-                          const urlName = product.productName
-                            .toLowerCase()
-                            .replace(/[^\w\s]/g, '')
-                            .replace(/\s+/g, '-');
-                          navigate(`/product/${urlName}`, {
-                            state: { productId: product.productId }
-                          });
-                        }}
-                      >
-                        <div className="product-image-container">
-                          {priceInfo.hasOffer && (
-                            <div className="product-special-badge">
-                              {priceInfo.offerLabel}
-                            </div>
+                return (
+                  <SwiperSlide key={product.productId}>
+                    <div
+                      className="ps-card"
+                      onClick={() => {
+                        const urlName = product.productName
+                          .toLowerCase()
+                          .replace(/[^\w\s]/g, "")
+                          .replace(/\s+/g, "-");
+                        navigate(`/product/${urlName}`, {
+                          state: { productId: product.productId },
+                        });
+                      }}
+                    >
+                      {/* Image area */}
+                      <div className="ps-img-wrap">
+                        {priceInfo.hasOffer && (
+                          <span className="ps-offer-badge">
+                            {priceInfo.offerLabel}
+                          </span>
+                        )}
+
+                        <button
+                          className={`ps-wish-btn${isWishlisted ? " ps-wish-active" : ""}`}
+                          onClick={(e) => toggleWishlist(product, e)}
+                          aria-label={
+                            isWishlisted
+                              ? "Remove from wishlist"
+                              : "Add to wishlist"
+                          }
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? (
+                            <span className="ps-wish-spinner"></span>
+                          ) : isWishlisted ? (
+                            <FaHeart />
+                          ) : (
+                            <FaRegHeart />
                           )}
+                        </button>
 
-                          <button
-                            className={`product-wishlist-btn ${isWishlisted ? 'product-wishlisted' : ''} ${isUpdating ? 'product-updating' : ''}`}
-                            onClick={(e) => toggleWishlist(product, e)}
-                            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-                            disabled={isUpdating}
-                          >
-                            {isUpdating ? (
-                              <span className="product-loading-small"></span>
-                            ) : isWishlisted ? (
-                              <FaHeart className="product-wishlist-icon product-filled" />
-                            ) : (
-                              <FaRegHeart className="product-wishlist-icon" />
-                            )}
-                          </button>
+                        <img
+                          src={image || placeholderimg}
+                          alt={product.productName}
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = placeholderimg;
+                          }}
+                        />
+                      </div>
 
-                          {image && (
-                            <img
-                              src={image}
-                              alt={product.productName}
-                              loading="lazy"
-                              onError={(e) => {
-                                console.log("❌ Failed to load image URL:", e.target.src); // 👈 ADD THIS
-                                console.log("Product:", product.productName, "Product ID:", product.productId); // 👈 ADD THIS
-                                console.log("Full image path that failed:", image); // 👈 ADD THIS
-                                e.target.onerror = null;
-                                e.target.src = placeholderimg;
-                              }}
-                            />
-                          )}
-                        </div>
+                      {/* Info */}
+                      <div className="ps-info">
+                        <h3 className="ps-name">{product.productName}</h3>
 
-                        <h3 className="product-card-name">
-                          {product.productName}
-                        </h3>
-
-                        <p className="product-card-desc">
-                          {product.description || "Premium quality product"}
-                        </p>
-
-                        <div className="product-price-container">
-                          <span className="product-price-current">
+                        <div className="ps-prices">
+                          <span className="ps-price">
                             ₹{formatCurrency(priceInfo.finalPrice)}
                           </span>
-
                           {priceInfo.originalPrice > priceInfo.finalPrice && (
                             <>
-                              <span className="product-price-original">
+                              <span className="ps-original">
                                 ₹{formatCurrency(priceInfo.originalPrice)}
                               </span>
                               {priceInfo.discount > 0 && (
-                                <span className="product-discount-badge">
+                                <span className="ps-discount">
                                   {priceInfo.discount}% OFF
                                 </span>
                               )}
@@ -441,23 +410,11 @@ const Products = () => {
                           )}
                         </div>
                       </div>
-                    </SwiperSlide>
-                  );
-                })}
-              </Swiper>
-
-              {/* ✅ ARROWS - Show only when there are enough products */}
-              {products.length > 5 && (
-                <div className="product-slider-arrows">
-                  <button className="product-prev" aria-label="Previous">
-                    <FaArrowLeft className="product-arrow-icon" />
-                  </button>
-                  <button className="product-next" aria-label="Next">
-                    <FaArrowRight className="product-arrow-icon" />
-                  </button>
-                </div>
-              )}
-            </>
+                    </div>
+                  </SwiperSlide>
+                );
+              })}
+            </Swiper>
           )}
         </div>
       </section>

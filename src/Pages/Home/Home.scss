@@ -1,0 +1,10 @@
+.fixed-nav-spacer {
+  height: 160px;
+  width: 100%;
+  
+  @media (max-width: 768px) {
+    height: 140px;
+  }
+}
+
+/* Your existing Home.scss styles below (if any) */
